@@ -9,6 +9,7 @@ import sqlite3
 import threading
 import time
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -2522,6 +2523,92 @@ def create_app() -> Flask:
     except Exception as exc:
         print(f"[PBIX] Error registering PBIX blueprint: {exc}")
 
+    # ────────────────────────────────────────────────────────────
+    # PROJECT PERFORMANCE MONITORING — API Endpoints
+    # ────────────────────────────────────────────────────────────
+
+    @app.get("/api/project-portfolio")
+    def project_portfolio() -> object:
+        """Return the full project portfolio dashboard."""
+        try:
+            data = load_project_performance_data()
+            if "error" in data:
+                return jsonify(json_safe({"ok": False, "error": data["error"]}))
+            return jsonify(json_safe({"ok": True, **data}))
+        except Exception as exc:
+            return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
+
+    @app.get("/api/project-portfolio/<slug>")
+    def project_detail(slug: str) -> object:
+        """Return a single project's detailed data."""
+        try:
+            data = load_project_performance_data()
+            if "error" in data:
+                return jsonify(json_safe({"ok": False, "error": data["error"]}))
+            project = data.get("projects", {}).get(slug)
+            if not project:
+                return jsonify(json_safe({"ok": False, "error": f"Project '{slug}' not found"})), 404
+            return jsonify(json_safe({"ok": True, "project": project}))
+        except Exception as exc:
+            return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
+
+    @app.get("/api/project-portfolio/<slug>/chart-data")
+    def project_chart_data(slug: str) -> object:
+        """Return pre-computed chart data for a project."""
+        try:
+            data = load_project_performance_data()
+            if "error" in data:
+                return jsonify(json_safe({"ok": False, "error": data["error"]}))
+            project = data.get("projects", {}).get(slug)
+            if not project:
+                return jsonify(json_safe({"ok": False, "error": f"Project '{slug}' not found"})), 404
+
+            sec_a = project.get("section_a", {})
+            budget_lines = sec_a.get("budget_lines", [])
+            sec_b = project.get("section_b", {})
+            indicators = sec_b.get("indicators", [])
+            sec_c = project.get("section_c", {})
+
+            # ── Budget Burn Rate (bar: actual vs planned per budget line) ──
+            burn_chart = {
+                "categories": [bl["budget_line"] for bl in budget_lines],
+                "planned": [bl["planned_cumulative"] for bl in budget_lines],
+                "actual": [bl["actual_cumulative"] for bl in budget_lines],
+            }
+
+            # ── Indicator Achievement ──
+            indicator_chart = {
+                "categories": [ind["indicator"] for ind in indicators],
+                "annual_targets": [ind["annual_target"] for ind in indicators],
+                "actual_results": [ind["actual_cumulative"] for ind in indicators],
+                "achievement_pcts": [ind["achievement_pct"] for ind in indicators],
+            }
+
+            # ── Budget Line RAG Distribution ──
+            rag_dist = {"On Track": 0, "Watch": 0, "Off Track": 0, "N/A": 0}
+            for bl in budget_lines:
+                r = bl.get("rag", "N/A")
+                if r in rag_dist:
+                    rag_dist[r] += 1
+                else:
+                    rag_dist["N/A"] += 1
+
+            return jsonify(json_safe({
+                "ok": True,
+                "slug": slug,
+                "burn_chart": burn_chart,
+                "indicator_chart": indicator_chart,
+                "rag_distribution": rag_dist,
+                "overall_rag": sec_c.get("overall_rag", "N/A"),
+                "financial_rag": sec_c.get("financial_rag", "N/A"),
+                "technical_rag": sec_c.get("technical_rag", "N/A"),
+                "total_annual_budget": sec_a.get("total_annual_budget", 0),
+                "total_expenditure": sec_a.get("total_cumulative_expenditure", 0),
+                "total_variance_pct": sec_a.get("total_variance_pct"),
+            }))
+        except Exception as exc:
+            return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
+
     return app
 
 
@@ -3509,6 +3596,261 @@ def render_html_table(dataframe: pd.DataFrame) -> str:
         f"<tbody>{''.join(body_rows)}</tbody>"
         "</table></div>"
     )
+
+
+# ────────────────────────────────────────────────────────────
+# PROJECT PERFORMANCE MONITORING — Excel Data Loader
+# ────────────────────────────────────────────────────────────
+PERFORMANCE_XLSX_PATH = BASE_DIR.parent / "CHAK Monthly Project Performance Monitoring Template - Topline Indicators.xlsx"
+
+_PROJECT_CACHE: dict[str, Any] | None = None
+_PROJECT_CACHE_MTIME: float = 0
+
+PROJECT_SHEET_MAP = {
+    "jamii-tekelezi": "Jamii Tekelezi",
+    "chap-stawisha": "CHAP Stawisha",
+    "eye-health": "Eye Health - ACSP & GitLab",
+    "eis": "EIS",
+    "bftw-hss": "BFTW HSS",
+    "bftw-rmncah": "BFTW RMNCAH",
+    "pep": "PEP",
+    "gf-mnch": "GF-MNCH",
+    "impact": "IMPACT",
+    "cdic-icare": "CDIC-iCARE",
+}
+
+BUDGET_LINE_NAMES = [
+    "Personnel & HR",
+    "Technical / Program Activities",
+    "Equipment, Supplies & Commodities",
+    "Training & Capacity Building",
+    "Sub-awards / Partner Disbursements",
+    "Monitoring, Evaluation & Learning",
+    "Travel & Transport",
+    "Administration & Overheads",
+    "Other Direct Costs / Contingency",
+]
+
+
+def _parse_cell(cell: Any) -> float | str | None:
+    """Parse a cell value: return float if numeric, stripped string if text, None if blank."""
+    # Handle openpyxl Cell objects
+    if hasattr(cell, "value"):
+        value = cell.value
+    else:
+        value = cell
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, datetime):
+        return value.strftime("%B %Y")
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return s
+
+
+def _rag_class(rag: str | None) -> str:
+    """Normalize RAG string."""
+    if not rag:
+        return "N/A"
+    r = str(rag).strip().lower()
+    if r == "on track":
+        return "On Track"
+    if r == "watch":
+        return "Watch"
+    if r == "off track":
+        return "Off Track"
+    return str(rag).strip()
+
+
+def load_project_performance_data(force_reload: bool = False) -> dict[str, Any]:
+    """Load and cache the project performance Excel workbook. Returns a dict with
+    'portfolio' (aggregate dashboard) and 'projects' (per-project detail)."""
+    global _PROJECT_CACHE, _PROJECT_CACHE_MTIME
+
+    xlsx = PERFORMANCE_XLSX_PATH
+    if not xlsx.exists():
+        return {"error": f"File not found: {xlsx.name}"}
+
+    current_mtime = xlsx.stat().st_mtime
+    if not force_reload and _PROJECT_CACHE is not None and current_mtime == _PROJECT_CACHE_MTIME:
+        return _PROJECT_CACHE
+
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx, data_only=True)
+
+    # ── Portfolio Dashboard Sheet ──
+    portfolio_raw = _parse_portfolio_dashboard(wb["Portfolio Dashboard"])
+    # ── Project Sheets ──
+    projects: dict[str, Any] = {}
+    for slug, sheet_name in PROJECT_SHEET_MAP.items():
+        if sheet_name in wb.sheetnames:
+            projects[slug] = _parse_project_sheet(wb[sheet_name], slug)
+
+    wb.close()
+
+    result = {
+        "portfolio": portfolio_raw,
+        "projects": projects,
+        "loaded_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "sheet_count": len(PROJECT_SHEET_MAP),
+    }
+    _PROJECT_CACHE = result
+    _PROJECT_CACHE_MTIME = current_mtime
+    return result
+
+
+def _parse_portfolio_dashboard(ws: Any) -> dict[str, Any]:
+    """Parse the Portfolio Dashboard sheet."""
+    rows_data: list[dict[str, Any]] = []
+    # Data rows 6-15 (Excel rows); row 5 is header
+    for excel_row in range(6, 16):
+        proj = _parse_cell(ws.cell(row=excel_row, column=2))
+        if not proj or proj == "PORTFOLIO TOTAL":
+            break
+        rows_data.append({
+            "project": str(proj),
+            "donor": str(_parse_cell(ws.cell(row=excel_row, column=3)) or ""),
+            "total_annual_budget": _parse_cell(ws.cell(row=excel_row, column=4)) or 0,
+            "cumulative_expenditure": _parse_cell(ws.cell(row=excel_row, column=5)) or 0,
+            "budget_variance_pct": _parse_cell(ws.cell(row=excel_row, column=6)),
+            "financial_rag": _rag_class(_parse_cell(ws.cell(row=excel_row, column=7))),
+            "technical_rag": _rag_class(_parse_cell(ws.cell(row=excel_row, column=8))),
+            "indicators_off_track": str(_parse_cell(ws.cell(row=excel_row, column=9)) or ""),
+            "overall_rag": _rag_class(_parse_cell(ws.cell(row=excel_row, column=10))),
+        })
+
+    # Portfolio total (row 16)
+    total_annual = _parse_cell(ws.cell(row=16, column=4)) or 0
+    total_expenditure = _parse_cell(ws.cell(row=16, column=5)) or 0
+
+    # CEO Snapshot (rows 19-20)
+    on_track_count = str(_parse_cell(ws.cell(row=19, column=4)) or "")
+    on_watch_count = str(_parse_cell(ws.cell(row=19, column=7)) or "")
+    off_track_count = str(_parse_cell(ws.cell(row=20, column=4)) or "")
+    budget_utilisation = _parse_cell(ws.cell(row=20, column=7))
+
+    return {
+        "projects": rows_data,
+        "portfolio_total_annual_budget": total_annual,
+        "portfolio_total_expenditure": total_expenditure,
+        "ceo_snapshot": {
+            "on_track": on_track_count,
+            "on_watch": on_watch_count,
+            "off_track": off_track_count,
+            "budget_utilisation_pct": round(budget_utilisation * 100, 1) if isinstance(budget_utilisation, (int, float)) else None,
+        },
+    }
+
+
+def _parse_project_sheet(ws: Any, slug: str) -> dict[str, Any]:
+    """Parse an individual project sheet. Returns structured sections A, B, C."""
+    # ── Header ──
+    donor = str(_parse_cell(ws.cell(row=4, column=3)) or "")
+    project_code = str(_parse_cell(ws.cell(row=5, column=3)) or "")
+    reporting_month = ws.cell(row=4, column=7).value
+    project_duration = _parse_cell(ws.cell(row=4, column=11))
+    months_elapsed = _parse_cell(ws.cell(row=5, column=11))
+
+    # Format reporting month
+    if isinstance(reporting_month, datetime):
+        reporting_month_str = reporting_month.strftime("%B %Y")
+    else:
+        reporting_month_str = str(reporting_month or "")
+
+    # ── SECTION A: Financial Performance ──
+    budget_lines: list[dict[str, Any]] = []
+    for i, name in enumerate(BUDGET_LINE_NAMES):
+        row = 9 + i
+        budget_lines.append({
+            "budget_line": name,
+            "annual_budget": _parse_cell(ws.cell(row=row, column=3)) or 0,
+            "planned_cumulative": _parse_cell(ws.cell(row=row, column=4)) or 0,
+            "actual_cumulative": _parse_cell(ws.cell(row=row, column=5)) or 0,
+            "variance_amount": _parse_cell(ws.cell(row=row, column=6)),
+            "variance_pct": _parse_cell(ws.cell(row=row, column=7)),
+            "current_month_expenditure": _parse_cell(ws.cell(row=row, column=8)) or 0,
+            "avg_monthly_burn_rate": _parse_cell(ws.cell(row=row, column=9)) or 0,
+            "projected_annual_expenditure": _parse_cell(ws.cell(row=row, column=10)) or 0,
+            "months_remaining": _parse_cell(ws.cell(row=row, column=11)),
+            "rag": _rag_class(_parse_cell(ws.cell(row=row, column=12))),
+        })
+
+    # Total row (row 18)
+    total_budget_line = {
+        "budget_line": "TOTAL PROJECT BUDGET",
+        "annual_budget": _parse_cell(ws.cell(row=18, column=3)) or 0,
+        "planned_cumulative": _parse_cell(ws.cell(row=18, column=4)) or 0,
+        "actual_cumulative": _parse_cell(ws.cell(row=18, column=5)) or 0,
+        "variance_amount": _parse_cell(ws.cell(row=18, column=6)),
+        "variance_pct": _parse_cell(ws.cell(row=18, column=7)),
+        "current_month_expenditure": _parse_cell(ws.cell(row=18, column=8)) or 0,
+        "avg_monthly_burn_rate": _parse_cell(ws.cell(row=18, column=9)) or 0,
+        "projected_annual_expenditure": _parse_cell(ws.cell(row=18, column=10)) or 0,
+        "months_remaining": _parse_cell(ws.cell(row=18, column=11)),
+        "rag": _rag_class(_parse_cell(ws.cell(row=18, column=12))),
+    }
+
+    # ── SECTION B: Technical / Donor Indicators ──
+    indicators: list[dict[str, Any]] = []
+    for row in range(23, 31):
+        ind_name = _parse_cell(ws.cell(row=row, column=2))
+        if not ind_name:
+            continue
+        indicators.append({
+            "indicator": str(ind_name),
+            "definition": str(_parse_cell(ws.cell(row=row, column=3)) or ""),
+            "annual_target": _parse_cell(ws.cell(row=row, column=4)) or 0,
+            "planned_cumulative": _parse_cell(ws.cell(row=row, column=5)) or 0,
+            "actual_cumulative": _parse_cell(ws.cell(row=row, column=6)) or 0,
+            "achievement_pct": _parse_cell(ws.cell(row=row, column=7)),
+            "rag": _rag_class(_parse_cell(ws.cell(row=row, column=12))),
+        })
+
+    # ── SECTION C: Overall Project Health ──
+    financial_rag = _rag_class(_parse_cell(ws.cell(row=34, column=5)))
+    off_track_budget_lines = str(_parse_cell(ws.cell(row=34, column=10)) or "")
+    technical_rag = _rag_class(_parse_cell(ws.cell(row=35, column=5)))
+    off_track_indicators = str(_parse_cell(ws.cell(row=35, column=10)) or "")
+    overall_rag = _rag_class(_parse_cell(ws.cell(row=36, column=5)))
+
+    # Compute financial variance pct from total budget line
+    total_annual = total_budget_line["annual_budget"] or 0
+    total_actual = total_budget_line["actual_cumulative"] or 0
+    total_planned = total_budget_line["planned_cumulative"] or 0
+    total_variance_pct = total_budget_line["variance_pct"]
+
+    return {
+        "slug": slug,
+        "donor": donor,
+        "project_code": project_code,
+        "reporting_month": reporting_month_str,
+        "project_duration_months": project_duration,
+        "months_elapsed": months_elapsed,
+        "section_a": {
+            "budget_lines": budget_lines,
+            "total": total_budget_line,
+            "total_annual_budget": total_annual,
+            "total_cumulative_expenditure": total_actual,
+            "total_planned_cumulative": total_planned,
+            "total_variance_pct": total_variance_pct,
+        },
+        "section_b": {
+            "indicators": indicators,
+        },
+        "section_c": {
+            "financial_rag": financial_rag,
+            "off_track_budget_lines": off_track_budget_lines,
+            "technical_rag": technical_rag,
+            "off_track_indicators": off_track_indicators,
+            "overall_rag": overall_rag,
+        },
+    }
 
 
 app = create_app()

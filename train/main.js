@@ -765,6 +765,13 @@ function renderCurrentView() {
     return;
   }
 
+  // ── Financial Analysis / Project Performance Dashboard ──
+  if (pageId === "financial_analysis") {
+    elements.chartRoot.innerHTML = `<div id="projectPerfRoot" class="space-y-6"></div>`;
+    renderProjectPerformanceDashboard(document.getElementById("projectPerfRoot"));
+    return;
+  }
+
   // ── Jamii Tekelezi Page ──
   if (pageId === "jamii") {
     elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6">
@@ -3814,7 +3821,8 @@ function loadTxCurrAnalytics(data) {
   locationParams.set("county", data.county || "Meru County");
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
-  if (state.projectFilter && state.projectFilter !== "all") locationParams.set("project", state.projectFilter);
+  if (state.projectFilter && state.projectFilter !== "all")
+    locationParams.set("project", state.projectFilter);
   const params = locationParams.toString();
   const cfg = {}; // dummy config, not used by renderers
 
@@ -3843,7 +3851,8 @@ function loadTxNewAnalytics(data) {
   locationParams.set("county", data.county || "Meru County");
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
-  if (state.projectFilter && state.projectFilter !== "all") locationParams.set("project", state.projectFilter);
+  if (state.projectFilter && state.projectFilter !== "all")
+    locationParams.set("project", state.projectFilter);
   const params = locationParams.toString();
 
   const views = [
@@ -7109,4 +7118,696 @@ function renderChakPage(container, slug, apiPageId) {
     .catch((err) => {
       container.innerHTML = `<div class="chak-error-card"><i class="fas fa-exclamation-triangle"></i><br>Failed to load CHAK data: ${escapeHtml(err.message)}</div>`;
     });
+}
+
+// ────────────────────────────────────────────────────────────
+// PROJECT PERFORMANCE MONITORING DASHBOARD (from Excel)
+// ────────────────────────────────────────────────────────────
+
+const PROJECT_PERF_STYLES = `
+  <style>
+    .pp-card { @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm; }
+    .pp-card-header { @apply text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2; }
+    .pp-kpi-card { @apply rounded-xl border p-4 flex flex-col items-center justify-center text-center; }
+    .pp-kpi-value { @apply text-2xl font-bold mt-1; }
+    .pp-kpi-label { @apply text-xs font-medium uppercase tracking-wider text-slate-500; }
+    .rag-on-track { color: #16a34a; background: #f0fdf4; border-color: #bbf7d0; }
+    .rag-watch { color: #d97706; background: #fffbeb; border-color: #fde68a; }
+    .rag-off-track { color: #dc2626; background: #fef2f2; border-color: #fecaca; }
+    .rag-na { color: #94a3b8; background: #f8fafc; border-color: #e2e8f0; }
+    .pp-table { @apply w-full text-xs; }
+    .pp-table th { @apply px-3 py-2 text-left font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50; }
+    .pp-table td { @apply px-3 py-2 text-slate-700 border-b border-slate-100; }
+    .pp-badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+    .pp-project-btn { @apply cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5; }
+    .pp-filter-active { @apply ring-2 ring-sky-500; }
+  </style>
+`;
+
+// ── Colors ──
+const PP_COLORS = {
+  green: "#16a34a",
+  yellow: "#d97706",
+  red: "#dc2626",
+  blue: "#2563eb",
+  teal: "#0d9488",
+  purple: "#7c3aed",
+  slate: "#94a3b8",
+};
+
+// ── State for project performance ──
+let ppState = {
+  data: null,
+  currentProject: null, // null = portfolio overview
+  loading: false,
+  error: null,
+};
+
+// ── Main entry point ──
+async function renderProjectPerformanceDashboard(container) {
+  container.innerHTML = PROJECT_PERF_STYLES + `
+    <div id="ppContent" class="space-y-5">
+      <div class="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
+        <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
+        Loading project performance data…
+      </div>
+    </div>
+  `;
+
+  try {
+    const resp = await fetch("/api/project-portfolio");
+    const data = await resp.json();
+    if (!data.ok) {
+      throw new Error(data.error || "Failed to load");
+    }
+    ppState.data = data;
+    ppState.currentProject = null;
+    renderPortfolioOverview(container);
+  } catch (err) {
+    ppState.error = err.message;
+    container.innerHTML = PROJECT_PERF_STYLES + `
+      <div class="pp-card">
+        <div class="flex flex-col items-center justify-center py-16 text-center gap-3">
+          <div class="text-4xl">📊</div>
+          <p class="text-sm font-medium text-slate-700">Project Performance Data Unavailable</p>
+          <p class="text-xs text-slate-400 max-w-md">${escapeHtml(err.message)}. Ensure the Excel file is in the project root directory.</p>
+          <button onclick="retryLoadProjectPerformance()" class="px-4 py-2 bg-sky-600 text-white text-xs rounded-lg hover:bg-sky-700 transition-colors">Retry</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ── Retry ──
+function retryLoadProjectPerformance() {
+  const container = document.getElementById("projectPerfRoot");
+  if (container) renderProjectPerformanceDashboard(container);
+}
+
+// ── Portfolio Overview ──
+function renderPortfolioOverview(container) {
+  const data = ppState.data;
+  if (!data) return;
+  const portfolio = data.portfolio || {};
+  const projects = portfolio.projects || [];
+  const ceo = portfolio.ceo_snapshot || {};
+
+  // ── Top Navigation / Filter Bar ──
+  let html = PROJECT_PERF_STYLES;
+
+  // Breadcrumb
+  html += `
+    <div class="flex items-center gap-2 text-xs text-slate-400 mb-1">
+      <span class="font-medium text-slate-600">Project Performance</span>
+      <span>›</span>
+      <span class="text-sky-600 font-medium">Portfolio Overview</span>
+    </div>
+  `;
+
+  // ── CEO Snapshot Cards ──
+  const totalProj = projects.length;
+  const onTrackCount = parseInt(ceo.on_track) || 0;
+  const onWatchCount = parseInt(ceo.on_watch) || 0;
+  const offTrackCount = parseInt(ceo.off_track) || 0;
+  const budgetUtil = ceo.budget_utilisation_pct;
+
+  html += `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="pp-kpi-card rag-on-track border">
+        <div class="pp-kpi-label">On Track</div>
+        <div class="pp-kpi-value">${onTrackCount}<span class="text-sm font-normal text-slate-400 ml-1">/ ${totalProj}</span></div>
+      </div>
+      <div class="pp-kpi-card rag-watch border">
+        <div class="pp-kpi-label">On Watch</div>
+        <div class="pp-kpi-value">${onWatchCount}<span class="text-sm font-normal text-slate-400 ml-1">/ ${totalProj}</span></div>
+      </div>
+      <div class="pp-kpi-card rag-off-track border">
+        <div class="pp-kpi-label">Off Track</div>
+        <div class="pp-kpi-value">${offTrackCount}<span class="text-sm font-normal text-slate-400 ml-1">/ ${totalProj}</span></div>
+      </div>
+      <div class="pp-kpi-card border border-slate-200" style="background:#f0f9ff;">
+        <div class="pp-kpi-label">Budget Utilisation</div>
+        <div class="pp-kpi-value" style="color:#0369a1;">${budgetUtil !== null && budgetUtil !== undefined ? budgetUtil + '%' : 'N/A'}</div>
+      </div>
+    </div>
+  `;
+
+  // ── RAG Distribution Pie + Portfolio Summary ──
+  const ragCounts = { "On Track": 0, "Watch": 0, "Off Track": 0, "N/A": 0 };
+  projects.forEach(p => {
+    const r = p.overall_rag || "N/A";
+    if (ragCounts[r] !== undefined) ragCounts[r]++;
+    else ragCounts["N/A"]++;
+  });
+
+  const totalBudget = portfolio.portfolio_total_annual_budget || 0;
+  const totalSpend = portfolio.portfolio_total_expenditure || 0;
+
+  html += `
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="pp-card lg:col-span-1">
+        <div class="pp-card-header"><i class="fas fa-chart-pie text-slate-400"></i> Portfolio RAG Distribution</div>
+        <div id="ppRagPieChart" style="height:220px;"></div>
+        <div class="flex justify-center gap-4 mt-2 text-xs">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:${PP_COLORS.green}"></span> On Track (${ragCounts["On Track"]})</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:${PP_COLORS.yellow}"></span> Watch (${ragCounts["Watch"]})</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full" style="background:${PP_COLORS.red}"></span> Off Track (${ragCounts["Off Track"]})</span>
+        </div>
+      </div>
+      <div class="pp-card lg:col-span-2">
+        <div class="pp-card-header"><i class="fas fa-chart-bar text-slate-400"></i> Portfolio Budget vs Expenditure</div>
+        <div id="ppPortfolioBudgetChart" style="height:220px;"></div>
+      </div>
+    </div>
+  `;
+
+  // ── Projects Table ──
+  html += `
+    <div class="pp-card">
+      <div class="pp-card-header"><i class="fas fa-table text-slate-400"></i> All Projects — Portfolio Health</div>
+      <div class="overflow-x-auto">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Donor</th>
+              <th class="text-right">Annual Budget</th>
+              <th class="text-right">Cumulative Expenditure</th>
+              <th class="text-right">Variance %</th>
+              <th class="text-center">Financial RAG</th>
+              <th class="text-center">Technical RAG</th>
+              <th class="text-center">Indicators</th>
+              <th class="text-center">Overall RAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${projects.map(p => {
+              const varPct = p.budget_variance_pct;
+              const varDisplay = varPct !== null && varPct !== undefined && varPct !== "N/A"
+                ? (typeof varPct === 'number' ? (varPct >= 0 ? '+' : '') + (varPct * 100).toFixed(1) + '%' : varPct)
+                : 'N/A';
+              return `<tr class="pp-project-btn" onclick="selectProjectFromTable('${slugify(p.project)}')" style="cursor:pointer;">
+                <td class="font-medium text-sky-700 hover:underline">${escapeHtml(p.project)}</td>
+                <td class="text-slate-500">${escapeHtml(p.donor)}</td>
+                <td class="text-right font-mono">${fmtCurrency(p.total_annual_budget)}</td>
+                <td class="text-right font-mono">${fmtCurrency(p.cumulative_expenditure)}</td>
+                <td class="text-right font-mono">${varDisplay}</td>
+                <td class="text-center">${ragBadge(p.financial_rag)}</td>
+                <td class="text-center">${ragBadge(p.technical_rag)}</td>
+                <td class="text-center text-xs text-slate-500">${p.indicators_off_track || '0'}</td>
+                <td class="text-center">${ragBadge(p.overall_rag)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-3 text-xs text-slate-400 flex items-center justify-between">
+        <span>Portfolio Total: <strong>${fmtCurrency(totalBudget)}</strong> budget · <strong>${fmtCurrency(totalSpend)}</strong> expended</span>
+        <span>Click any project row to drill down</span>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // ── Render Charts ──
+  renderRagPieChart("ppRagPieChart", ragCounts);
+  renderPortfolioBudgetChart("ppPortfolioBudgetChart", projects);
+}
+
+// ── RAG Pie Chart (Highcharts) ──
+function renderRagPieChart(containerId, counts) {
+  const data = [];
+  if (counts["On Track"] > 0) data.push({ name: "On Track", y: counts["On Track"], color: PP_COLORS.green });
+  if (counts["Watch"] > 0) data.push({ name: "Watch", y: counts["Watch"], color: PP_COLORS.yellow });
+  if (counts["Off Track"] > 0) data.push({ name: "Off Track", y: counts["Off Track"], color: PP_COLORS.red });
+  if (counts["N/A"] > 0) data.push({ name: "N/A", y: counts["N/A"], color: PP_COLORS.slate });
+  if (data.length === 0) return;
+
+  Highcharts.chart(containerId, {
+    chart: { type: "pie", height: 220, backgroundColor: "transparent", spacing: [5, 5, 5, 5] },
+    title: { text: null },
+    tooltip: { pointFormat: "{point.name}: <b>{point.y}</b> ({point.percentage:.0f}%)" },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: "pointer",
+        dataLabels: { enabled: true, format: "<b>{point.name}</b>: {point.y}", style: { fontSize: "10px" } },
+        showInLegend: false,
+        size: "90%",
+      },
+    },
+    series: [{ name: "Projects", data: data }],
+    credits: { enabled: false },
+  });
+}
+
+// ── Portfolio Budget Bar Chart (Highcharts) ──
+function renderPortfolioBudgetChart(containerId, projects) {
+  const categories = projects.map(p => truncateStr(p.project, 20));
+  const budgetData = projects.map(p => p.total_annual_budget || 0);
+  const spendData = projects.map(p => p.cumulative_expenditure || 0);
+
+  Highcharts.chart(containerId, {
+    chart: { type: "bar", height: 220, backgroundColor: "transparent" },
+    title: { text: null },
+    xAxis: { categories: categories, labels: { style: { fontSize: "9px" } } },
+    yAxis: {
+      title: { text: null },
+      labels: { enabled: false },
+      gridLineWidth: 0,
+    },
+    tooltip: {
+      formatter: function () { return this.series.name + ": <b>" + fmtCurrencyShort(this.y) + "</b>"; },
+    },
+    plotOptions: { bar: { groupPadding: 0.08, borderRadius: 2 } },
+    series: [
+      { name: "Annual Budget", data: budgetData, color: "#94a3b8" },
+      { name: "Cumulative Expenditure", data: spendData, color: "#2563eb" },
+    ],
+    legend: {
+      align: "right",
+      verticalAlign: "top",
+      layout: "horizontal",
+      itemStyle: { fontSize: "10px" },
+    },
+    credits: { enabled: false },
+  });
+}
+
+// ── Select project from table ──
+function selectProjectFromTable(slug) {
+  ppState.currentProject = slug;
+  const container = document.getElementById("projectPerfRoot");
+  if (container) renderProjectDetail(container, slug);
+}
+
+// ── Back to portfolio overview ──
+function backToPortfolioOverview() {
+  ppState.currentProject = null;
+  const container = document.getElementById("projectPerfRoot");
+  if (container) renderPortfolioOverview(container);
+}
+
+// ── Render Individual Project Detail ──
+async function renderProjectDetail(container, slug) {
+  container.innerHTML = PROJECT_PERF_STYLES + `
+    <div id="ppContent" class="space-y-5">
+      <div class="flex items-center justify-center py-20 text-slate-400 text-sm gap-2">
+        <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
+        Loading project details…
+      </div>
+    </div>
+  `;
+
+  try {
+    const [detailResp, chartResp] = await Promise.all([
+      fetch(`/api/project-portfolio/${encodeURIComponent(slug)}`),
+      fetch(`/api/project-portfolio/${encodeURIComponent(slug)}/chart-data`),
+    ]);
+
+    const detail = await detailResp.json();
+    const chartData = await chartResp.json();
+
+    if (!detail.ok) throw new Error(detail.error || "Project not found");
+    if (!chartData.ok) throw new Error(chartData.error || "Chart data not found");
+
+    renderProjectDetailHtml(container, detail.project, chartData);
+  } catch (err) {
+    container.innerHTML = PROJECT_PERF_STYLES + `
+      <div class="pp-card">
+        <div class="flex flex-col items-center justify-center py-16 text-center gap-3">
+          <div class="text-4xl">⚠️</div>
+          <p class="text-sm font-medium text-slate-700">Error loading project</p>
+          <p class="text-xs text-slate-400">${escapeHtml(err.message)}</p>
+          <button onclick="backToPortfolioOverview()" class="px-4 py-2 bg-slate-600 text-white text-xs rounded-lg hover:bg-slate-700 transition-colors">Back to Portfolio</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ── Render Project Detail HTML ──
+function renderProjectDetailHtml(container, project, chartData) {
+  const secA = project.section_a || {};
+  const secB = project.section_b || {};
+  const secC = project.section_c || {};
+
+  const displayName = getProjectDisplayName(project.slug);
+
+  let html = PROJECT_PERF_STYLES;
+
+  // ── Breadcrumb ──
+  html += `
+    <div class="flex items-center gap-2 text-xs text-slate-400 mb-1">
+      <a href="javascript:backToPortfolioOverview()" class="text-sky-600 hover:underline cursor-pointer">Portfolio Overview</a>
+      <span>›</span>
+      <span class="font-medium text-slate-600">${escapeHtml(displayName)}</span>
+    </div>
+  `;
+
+  // ── Project Header Cards ──
+  const monthsElapsed = project.months_elapsed || 0;
+  const totalMonths = project.project_duration_months || 0;
+  const progressPct = totalMonths > 0 ? Math.round((monthsElapsed / totalMonths) * 100) : 0;
+
+  html += `
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="pp-card col-span-2 md:col-span-2">
+        <div class="pp-kpi-label text-left">Project</div>
+        <div class="text-lg font-bold text-slate-800 mt-1">${escapeHtml(displayName)}</div>
+        <div class="text-xs text-slate-500 mt-1">${escapeHtml(project.donor || '')} · ${escapeHtml(project.project_code || '')}</div>
+        <div class="text-xs text-slate-400 mt-0.5">${escapeHtml(project.reporting_month || '')}</div>
+      </div>
+      <div class="pp-kpi-card border rag-${secC.overall_rag === 'On Track' ? 'on-track' : secC.overall_rag === 'Watch' ? 'watch' : secC.overall_rag === 'Off Track' ? 'off-track' : 'na'}">
+        <div class="pp-kpi-label">Overall RAG</div>
+        <div class="pp-kpi-value text-lg">${secC.overall_rag || 'N/A'}</div>
+      </div>
+      <div class="pp-kpi-card border rag-${secC.financial_rag === 'On Track' ? 'on-track' : secC.financial_rag === 'Watch' ? 'watch' : secC.financial_rag === 'Off Track' ? 'off-track' : 'na'}">
+        <div class="pp-kpi-label">Financial RAG</div>
+        <div class="pp-kpi-value text-lg">${secC.financial_rag || 'N/A'}</div>
+      </div>
+      <div class="pp-kpi-card border rag-${secC.technical_rag === 'On Track' ? 'on-track' : secC.technical_rag === 'Watch' ? 'watch' : secC.technical_rag === 'Off Track' ? 'off-track' : 'na'}">
+        <div class="pp-kpi-label">Technical RAG</div>
+        <div class="pp-kpi-value text-lg">${secC.technical_rag || 'N/A'}</div>
+      </div>
+    </div>
+  `;
+
+  // ── Section A: Financial Performance ──
+  const budgetLines = secA.budget_lines || [];
+  const totalBL = secA.total || {};
+
+  html += `
+    <div class="pp-card">
+      <div class="pp-card-header"><i class="fas fa-coins text-slate-400"></i> SECTION A · Financial Performance — Budget vs Actual (BVA)</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-slate-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-slate-500">Total Annual Budget</div>
+          <div class="text-lg font-bold text-slate-800">${fmtCurrency(secA.total_annual_budget || 0)}</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-slate-500">Total Cumulative Expenditure</div>
+          <div class="text-lg font-bold text-slate-800">${fmtCurrency(secA.total_cumulative_expenditure || 0)}</div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-slate-500">Budget Variance</div>
+          <div class="text-lg font-bold ${(secA.total_variance_pct || 0) > 0.2 ? 'text-red-600' : (secA.total_variance_pct || 0) < -0.2 ? 'text-orange-600' : 'text-green-600'}">
+            ${secA.total_variance_pct !== null && secA.total_variance_pct !== undefined
+              ? ((secA.total_variance_pct >= 0 ? '+' : '') + (secA.total_variance_pct * 100).toFixed(1) + '%')
+              : 'N/A'}
+          </div>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-slate-500">Project Progress</div>
+          <div class="text-lg font-bold text-slate-800">${monthsElapsed} / ${totalMonths} mo</div>
+          <div class="w-full bg-slate-200 rounded-full h-1.5 mt-1">
+            <div class="bg-sky-600 h-1.5 rounded-full" style="width:${progressPct}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div>
+          <div id="ppProjectBudgetChart" style="height:250px;"></div>
+        </div>
+        <div>
+          <div id="ppBudgetRagChart" style="height:250px;"></div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th>Budget Line</th>
+              <th class="text-right">Annual Budget</th>
+              <th class="text-right">Planned Cumulative</th>
+              <th class="text-right">Actual Cumulative</th>
+              <th class="text-right">Variance %</th>
+              <th class="text-right">Current Month</th>
+              <th class="text-right">Avg Monthly Burn</th>
+              <th class="text-right">Projected Annual</th>
+              <th class="text-center">RAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${budgetLines.map(bl => {
+              const vp = bl.variance_pct;
+              const vpDisplay = vp !== null && vp !== undefined && vp !== "N/A"
+                ? (typeof vp === 'number' ? (vp >= 0 ? '+' : '') + (vp * 100).toFixed(1) + '%' : vp)
+                : 'N/A';
+              return `<tr>
+                <td class="font-medium text-slate-700">${escapeHtml(bl.budget_line)}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.annual_budget)}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.planned_cumulative)}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.actual_cumulative)}</td>
+                <td class="text-right font-mono">${vpDisplay}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.current_month_expenditure)}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.avg_monthly_burn_rate)}</td>
+                <td class="text-right font-mono">${fmtCurrency(bl.projected_annual_expenditure)}</td>
+                <td class="text-center">${ragBadge(bl.rag)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="bg-slate-50 font-semibold">
+              <td>TOTAL PROJECT BUDGET</td>
+              <td class="text-right">${fmtCurrency(totalBL.annual_budget)}</td>
+              <td class="text-right">${fmtCurrency(totalBL.planned_cumulative)}</td>
+              <td class="text-right">${fmtCurrency(totalBL.actual_cumulative)}</td>
+              <td class="text-right">${totalBL.variance_pct !== null && totalBL.variance_pct !== undefined
+                ? ((totalBL.variance_pct >= 0 ? '+' : '') + (totalBL.variance_pct * 100).toFixed(1) + '%')
+                : 'N/A'}</td>
+              <td class="text-right">${fmtCurrency(totalBL.current_month_expenditure)}</td>
+              <td class="text-right">${fmtCurrency(totalBL.avg_monthly_burn_rate)}</td>
+              <td class="text-right">${fmtCurrency(totalBL.projected_annual_expenditure)}</td>
+              <td class="text-center">${ragBadge(totalBL.rag)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // ── Section B: Technical Indicators ──
+  const indicators = secB.indicators || [];
+  const offTrackInds = secC.off_track_indicators || "0";
+
+  html += `
+    <div class="pp-card">
+      <div class="pp-card-header"><i class="fas fa-bullseye text-slate-400"></i> SECTION B · Technical / Donor Indicator Performance</div>
+      <div class="flex items-center gap-4 mb-4 text-xs text-slate-500">
+        <span>Off-Track Indicators: <strong class="text-red-600">${offTrackInds}</strong></span>
+        <span>Technical RAG: ${ragBadge(secC.technical_rag)}</span>
+      </div>
+      <div id="ppIndicatorChart" style="height:220px;" class="mb-4"></div>
+      <div class="overflow-x-auto">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th>Indicator</th>
+              <th>Definition</th>
+              <th class="text-right">Annual Target</th>
+              <th class="text-right">Planned Cumulative</th>
+              <th class="text-right">Actual Cumulative</th>
+              <th class="text-right">Achievement %</th>
+              <th class="text-center">RAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${indicators.map(ind => {
+              const ach = ind.achievement_pct;
+              const achDisplay = ach !== null && ach !== undefined && ach !== "N/A"
+                ? (typeof ach === 'number' ? (ach * 100).toFixed(1) + '%' : ach)
+                : 'N/A';
+              return `<tr>
+                <td class="font-medium">${escapeHtml(ind.indicator)}</td>
+                <td class="text-slate-500 max-w-[200px] truncate">${escapeHtml(ind.definition)}</td>
+                <td class="text-right font-mono">${fmtNum(ind.annual_target)}</td>
+                <td class="text-right font-mono">${fmtNum(ind.planned_cumulative)}</td>
+                <td class="text-right font-mono">${fmtNum(ind.actual_cumulative)}</td>
+                <td class="text-right font-mono">${achDisplay}</td>
+                <td class="text-center">${ragBadge(ind.rag)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // ── Section C: Overall Health ──
+  html += `
+    <div class="pp-card">
+      <div class="pp-card-header"><i class="fas fa-heartbeat text-slate-400"></i> SECTION C · Overall Project Health</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="pp-kpi-card border rag-${secC.financial_rag === 'On Track' ? 'on-track' : secC.financial_rag === 'Watch' ? 'watch' : 'off-track'}">
+          <div class="pp-kpi-label">Financial RAG</div>
+          <div class="pp-kpi-value text-lg">${secC.financial_rag || 'N/A'}</div>
+          <div class="text-xs text-slate-400 mt-1">Off-Track Lines: ${secC.off_track_budget_lines || '0'}</div>
+        </div>
+        <div class="pp-kpi-card border rag-${secC.technical_rag === 'On Track' ? 'on-track' : secC.technical_rag === 'Watch' ? 'watch' : 'off-track'}">
+          <div class="pp-kpi-label">Technical RAG</div>
+          <div class="pp-kpi-value text-lg">${secC.technical_rag || 'N/A'}</div>
+          <div class="text-xs text-slate-400 mt-1">Off-Track Indicators: ${offTrackInds}</div>
+        </div>
+        <div class="pp-kpi-card border rag-${secC.overall_rag === 'On Track' ? 'on-track' : secC.overall_rag === 'Watch' ? 'watch' : 'off-track'}">
+          <div class="pp-kpi-label">Overall Health</div>
+          <div class="pp-kpi-value text-lg">${secC.overall_rag || 'N/A'}</div>
+          <div class="text-xs text-slate-400 mt-1">Worst of Financial & Technical</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // ── Render Charts ──
+  if (chartData) {
+    renderProjectBudgetChart("ppProjectBudgetChart", chartData.burn_chart);
+    renderBudgetRagDonut("ppBudgetRagChart", chartData.rag_distribution);
+    renderIndicatorChart("ppIndicatorChart", chartData.indicator_chart);
+  }
+}
+
+// ── Project Budget Burn Rate Chart ──
+function renderProjectBudgetChart(containerId, burnChart) {
+  if (!burnChart || !burnChart.categories || !burnChart.categories.length) return;
+  const cats = burnChart.categories.map(c => truncateStr(c, 22));
+
+  Highcharts.chart(containerId, {
+    chart: { type: "bar", height: 250, backgroundColor: "transparent" },
+    title: { text: "Planned vs Actual Cumulative Expenditure", style: { fontSize: "11px" } },
+    xAxis: { categories: cats, labels: { style: { fontSize: "8px" } } },
+    yAxis: {
+      title: { text: null },
+      labels: { formatter: function () { return fmtCurrencyShort(this.value); }, style: { fontSize: "9px" } },
+    },
+    tooltip: {
+      formatter: function () { return this.series.name + ": <b>" + fmtCurrencyShort(this.y) + "</b>"; },
+    },
+    plotOptions: { bar: { groupPadding: 0.06, borderRadius: 2 } },
+    series: [
+      { name: "Planned Cumulative", data: burnChart.planned || [], color: "#94a3b8" },
+      { name: "Actual Cumulative", data: burnChart.actual || [], color: "#2563eb" },
+    ],
+    legend: { align: "right", verticalAlign: "top", layout: "horizontal", itemStyle: { fontSize: "10px" } },
+    credits: { enabled: false },
+  });
+}
+
+// ── Budget RAG Donut ──
+function renderBudgetRagDonut(containerId, ragDist) {
+  if (!ragDist) return;
+  const data = [];
+  if (ragDist["On Track"] > 0) data.push({ name: "On Track", y: ragDist["On Track"], color: PP_COLORS.green });
+  if (ragDist["Watch"] > 0) data.push({ name: "Watch", y: ragDist["Watch"], color: PP_COLORS.yellow });
+  if (ragDist["Off Track"] > 0) data.push({ name: "Off Track", y: ragDist["Off Track"], color: PP_COLORS.red });
+  if (ragDist["N/A"] > 0) data.push({ name: "N/A", y: ragDist["N/A"], color: PP_COLORS.slate });
+  if (data.length === 0) return;
+
+  Highcharts.chart(containerId, {
+    chart: { type: "pie", height: 250, backgroundColor: "transparent" },
+    title: { text: "Budget Line RAG Distribution", style: { fontSize: "11px" } },
+    tooltip: { pointFormat: "{point.name}: <b>{point.y}</b> lines" },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: "pointer",
+        innerSize: "50%",
+        dataLabels: { enabled: true, format: "<b>{point.name}</b>: {point.y}", style: { fontSize: "9px" } },
+        size: "80%",
+      },
+    },
+    series: [{ name: "Budget Lines", data: data }],
+    credits: { enabled: false },
+  });
+}
+
+// ── Indicator Achievement Chart ──
+function renderIndicatorChart(containerId, indChart) {
+  if (!indChart || !indChart.categories || !indChart.categories.length) return;
+  const cats = indChart.categories.map(c => truncateStr(c, 20));
+
+  Highcharts.chart(containerId, {
+    chart: { type: "bar", height: 220, backgroundColor: "transparent" },
+    title: { text: "Annual Target vs Actual Cumulative Achievement", style: { fontSize: "11px" } },
+    xAxis: { categories: cats, labels: { style: { fontSize: "8px" } } },
+    yAxis: {
+      title: { text: null },
+      labels: { formatter: function () { return fmtCurrencyShort(this.value); }, style: { fontSize: "9px" } },
+    },
+    tooltip: {
+      formatter: function () { return this.series.name + ": <b>" + fmtCurrencyShort(this.y) + "</b>"; },
+    },
+    plotOptions: { bar: { groupPadding: 0.06, borderRadius: 2 } },
+    series: [
+      { name: "Annual Target", data: indChart.annual_targets || [], color: "#94a3b8" },
+      { name: "Actual Cumulative", data: indChart.actual_results || [], color: "#0d9488" },
+    ],
+    legend: { align: "right", verticalAlign: "top", layout: "horizontal", itemStyle: { fontSize: "10px" } },
+    credits: { enabled: false },
+  });
+}
+
+// ── Utility Functions ──
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function getProjectDisplayName(slug) {
+  const names = {
+    "jamii-tekelezi": "Jamii Tekelezi",
+    "chap-stawisha": "CHAP Stawisha",
+    "eye-health": "Eye Health - ACSP & GitLab",
+    "eis": "EIS",
+    "bftw-hss": "BFTW HSS",
+    "bftw-rmncah": "BFTW RMNCAH",
+    "pep": "PEP",
+    "gf-mnch": "GF-MNCH",
+    "impact": "IMPACT",
+    "cdic-icare": "CDIC / iCARE",
+  };
+  return names[slug] || slug;
+}
+
+function ragBadge(rag) {
+  if (!rag || rag === "N/A" || rag === "") return `<span class="pp-badge rag-na border text-slate-400">N/A</span>`;
+  const r = rag.toLowerCase();
+  if (r === "on track") return `<span class="pp-badge" style="background:#dcfce7;color:#16a34a;">● On Track</span>`;
+  if (r === "watch") return `<span class="pp-badge" style="background:#fef3c7;color:#d97706;">● Watch</span>`;
+  if (r === "off track") return `<span class="pp-badge" style="background:#fee2e2;color:#dc2626;">● Off Track</span>`;
+  return `<span class="pp-badge rag-na border text-slate-400">${escapeHtml(rag)}</span>`;
+}
+
+function fmtCurrency(val) {
+  if (val === null || val === undefined || val === "N/A") return "N/A";
+  const n = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(n)) return "N/A";
+  if (n >= 1e9) return "KSh " + (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return "KSh " + (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return "KSh " + (n / 1e3).toFixed(1) + "K";
+  return "KSh " + n.toFixed(0);
+}
+
+function fmtCurrencyShort(val) {
+  if (val === null || val === undefined) return "0";
+  const n = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(n)) return "0";
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  return n.toFixed(0);
+}
+
+function fmtNum(val) {
+  if (val === null || val === undefined || val === "N/A") return "N/A";
+  const n = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(n)) return "N/A";
+  if (Number.isInteger(n)) return n.toLocaleString();
+  return n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
+function truncateStr(str, maxLen) {
+  if (!str) return "";
+  return str.length > maxLen ? str.substring(0, maxLen) + "…" : str;
 }
