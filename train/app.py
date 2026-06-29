@@ -30,8 +30,8 @@ GUIDE_XLSX_PATH = BASE_DIR / "Copy of DATIM DATA ENTRY GUIDE FY26 Q2.xlsx"
 TABLE_NAME = "clinics"
 
 # ── Superpower module for DHIS2 live queries ──────────────────────
-SUPERPOWER_DIR = BASE_DIR / "dhis2_superpower"
-SUPERPOWER_ENV_PATH = SUPERPOWER_DIR / ".env"
+SUPERPOWER_DIR = BASE_DIR.parent  # ai_translator.py is in the repo root
+SUPERPOWER_ENV_PATH = BASE_DIR / ".env"
 if SUPERPOWER_ENV_PATH.exists():
     _sp_vars = {}
     with open(SUPERPOWER_ENV_PATH) as _f:
@@ -1514,7 +1514,7 @@ def create_app() -> Flask:
             "Bs5etPcLz7w","Ps8a7Mv1xIn","sQcd8UD8Mrs",
         }
 
-        dhis_base = os.getenv("DHIS_BASE_URL", "http://ereporting.chak.or.ke:8500/api/")
+        dhis_base = os.getenv("DHIS_BASE_URL") or "http://ereporting.chak.or.ke:8500/api/"
         url_base = dhis_base.rstrip("/") + "/analytics.json"
         pe = "LAST_12_MONTHS"
 
@@ -1644,9 +1644,9 @@ def create_app() -> Flask:
         subcounty = (request.args.get("subCounty") or "").strip()
 
         DX_TX_NEW = "gv7bbGesTTJ"
-        dhis_base = os.getenv("DHIS_BASE_URL", "http://ereporting.chak.or.ke:8500/api/")
-        username = os.getenv("DHIS_USERNAME", "Johnbrian")
-        password = os.getenv("DHIS_PASSWORD", "JOHNb123\\")
+        dhis_base = os.getenv("DHIS_BASE_URL") or "http://ereporting.chak.or.ke:8500/api/"
+        username = os.getenv("DHIS_USERNAME") or "Johnbrian"
+        password = os.getenv("DHIS_PASSWORD") or "JOHNb123\\"
 
         all_rows = []
         total = 0

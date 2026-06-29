@@ -120,14 +120,14 @@ def _direct_dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
     dx_str = ";".join(dx_ids) if isinstance(dx_ids, list) else dx_ids
     ou_str = ";".join(ou_id) if isinstance(ou_id, list) else ou_id
 
-    dhis_base = os.getenv("DHIS_BASE_URL", "http://ereporting.chak.or.ke:8500/api/")
+    dhis_base = os.getenv("DHIS_BASE_URL") or "http://ereporting.chak.or.ke:8500/api/"
     url = (
         f"{dhis_base.rstrip('/')}/analytics.json?"
         f"dimension=dx:{dx_str}&dimension=pe:{pe}&dimension=ou:{ou_str}"
         f"&displayProperty=NAME"
     )
-    username = os.getenv("DHIS_USERNAME", "Johnbrian")
-    password = os.getenv("DHIS_PASSWORD", "JOHNb123\\")
+    username = os.getenv("DHIS_USERNAME") or "Johnbrian"
+    password = os.getenv("DHIS_PASSWORD") or "JOHNb123\\"
     auth = HTTPBasicAuth(username, password)
 
     resp = req.get(url, auth=auth, timeout=120)
