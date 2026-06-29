@@ -1,0 +1,66 @@
+record_type,chart_id,chart_title,indicator_id,indicator_name,month,facility,value,source_file
+indicator,,,AFdikiNpC3e,Tx_New STA 45-49F,,,,hiv_newly_started_art.csv
+indicator,,,BFbmB3WxGPd,Tx_New STA 10-14F,,,,hiv_newly_started_art.csv
+indicator,,,Bs5etPcLz7w,Tx_New STA 55-59F,,,,hiv_newly_started_art.csv
+indicator,,,C2VtCtx8aNL,"AHD CALHIV TX_NEW STA 25+,F",,,,hiv_newly_started_art.csv
+indicator,,,DOvvDKvxCvH,TX_TB Numerator New on ART Total,,,,hiv_newly_started_art.csv
+indicator,,,E1o9WRKz4p9,"AHD CALHIV TX_NEW STA 25+,M",,,,hiv_newly_started_art.csv
+indicator,,,FDRjPKGGVC9,Tx_New STA 55-59M,,,,hiv_newly_started_art.csv
+indicator,,,GMoRCzegC6C,Tx_New STA 50-54F,,,,hiv_newly_started_art.csv
+indicator,,,IMfloSM8gxZ,PMTCT TX_New Started TPT,,,,hiv_newly_started_art.csv
+indicator,,,JprDjnAyB0f,Tx_New STA 5-9M,,,,hiv_newly_started_art.csv
+indicator,,,Lbs5RUpnwPD,Tx_New STA 35-39M,,,,hiv_newly_started_art.csv
+indicator,,,MOqDhGiw7W6,Tx_New STA 5-9F,,,,hiv_newly_started_art.csv
+indicator,,,Mt9G8jCODUw,Tx_New STA 50-54M,,,,hiv_newly_started_art.csv
+indicator,,,NBMvd95wp7t,Tx_New STA <1F,,,,hiv_newly_started_art.csv
+indicator,,,PG5Ynz9xGCu,Tx_New STA 10-14M,,,,hiv_newly_started_art.csv
+indicator,,,Ps8a7Mv1xIn,Tx_New STA 60-64F,,,,hiv_newly_started_art.csv
+indicator,,,QRV2YRNGYJ6,Tx_New STA 45-49M,,,,hiv_newly_started_art.csv
+indicator,,,SNOcc1Tq2iH,Tx_New STA 15-19M,,,,hiv_newly_started_art.csv
+indicator,,,ShO7o3bHsNr,Tx_New STA 60-64M,,,,hiv_newly_started_art.csv
+indicator,,,T7IyLUJbELo,"AHD CALHIV TX_NEW STA 1-4,M",,,,hiv_newly_started_art.csv
+indicator,,,UjIzCVxESAz,Tx_New STA 25-29F,,,,hiv_newly_started_art.csv
+indicator,,,VqYNMLji5U5,Tx_New STA 20-24M,,,,hiv_newly_started_art.csv
+indicator,,,X7QikQUsYB1,Tx_New STA 1-4F,,,,hiv_newly_started_art.csv
+indicator,,,Y4jKOMblgII,Tx_New STA 30-34F,,,,hiv_newly_started_art.csv
+indicator,,,a5LOUjCwVF8,"AHD CALHIV TX_NEW STA 1-4,F",,,,hiv_newly_started_art.csv
+indicator,,,aB1OM9Oevf1,"TX_TB N New on ART and Starting TB treatment >15,F",,,,hiv_newly_started_art.csv
+indicator,,,aq8pbumZLtN,"TX_TB N New on ART and Starting TB treatment <15,M",,,,hiv_newly_started_art.csv
+indicator,,,cQrYHDWkY2y,Tx_New STA 40-44M,,,,hiv_newly_started_art.csv
+indicator,,,dVBUgXQJVl2,PMTCT TX_New Cumm,,,,hiv_newly_started_art.csv
+indicator,,,f59E1kimKqe,Tx_New STA 20-24F,,,,hiv_newly_started_art.csv
+indicator,,,gjee9QyPTyW,"TX_TB N New on ART and Starting TB treatment >15,M",,,,hiv_newly_started_art.csv
+indicator,,,gv7bbGesTTJ,Tx_New STA,,,,hiv_newly_started_art.csv
+indicator,,,hUHq4KO9YMz,Tx_New STA 35-39F,,,,hiv_newly_started_art.csv
+indicator,,,ivLPgJtKgcN,Tx_New STA 65+M,,,,hiv_newly_started_art.csv
+indicator,,,jjXJNig8fxs,Tx_New STA 30-34M,,,,hiv_newly_started_art.csv
+indicator,,,oB8Yx1gsnSx,"TX_TB N New on ART and Starting TB treatment <15,F",,,,hiv_newly_started_art.csv
+indicator,,,rpL7wMYNPDH,Tx_New STA <1M,,,,hiv_newly_started_art.csv
+indicator,,,s9iBEnfSHhh,Tx_New STA 1-4M,,,,hiv_newly_started_art.csv
+indicator,,,sQcd8UD8Mrs,Tx_New STA 65+F,,,,hiv_newly_started_art.csv
+indicator,,,tWTgIibsKJ5,Tx_New STA 40-44F,,,,hiv_newly_started_art.csv
+indicator,,,wJWCrZVh1iu,Tx_New STA 25-29M,,,,hiv_newly_started_art.csv
+indicator,,,xz2f0oONxQx,Tx_New STA 15-19F,,,,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-06,,389,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-07,,351,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-08,,387,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-09,,330,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-10,,364,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-11,,318,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2025-12,,322,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2026-01,,354,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2026-02,,381,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2026-03,,392,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_monthly,New Starts on ART by Month,,,2026-04,,360,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Kikuyu Ward,266,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Nkuene Ward,185,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Maua Ward,174,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Hellsgate Ward,173,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Lari/Kirenga Ward,132,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Gathara Ward,130,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Limuru East Ward,126,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Ting'ang'a Ward,119,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Keekonyokie Ward,109,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Chogoria Ward,106,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Kijabe Ward,106,hiv_newly_started_art.csv
+chart_data,hiv_newly_started_art_top_facilities,Top Facilities – New Starts on ART,,,,Ruchu Ward,103,hiv_newly_started_art.csv

@@ -1,0 +1,2123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CHAK PBIX Dashboards</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f0f2f5;
+        color: #1a1a2e;
+      }
+
+      /* Header */
+      .header {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        color: white;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      .header h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .header .subtitle {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+      .header-controls {
+        margin-left: auto;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .header select {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        font-size: 13px;
+      }
+      .header select option {
+        color: #1a1a2e;
+        background: white;
+      }
+
+      /* Primary Tab Navigation (white) */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 12px 24px;
+        background: white;
+        border-bottom: 1px solid #e0e0e0;
+        overflow-x: auto;
+        position: sticky;
+        top: 60px;
+        z-index: 99;
+      }
+      .tabs::-webkit-scrollbar {
+        height: 3px;
+      }
+      .tabs::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+      }
+      .tab-btn {
+        padding: 8px 14px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        white-space: nowrap;
+        color: #555;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tab-btn:hover {
+        background: #f0f2f5;
+        color: #1a1a2e;
+      }
+      .tab-btn.active {
+        background: #1a1a2e;
+        color: white;
+      }
+      .tab-btn i {
+        font-size: 13px;
+      }
+
+      /* Secondary Sub-Tab Navigation (dark/black) */
+      .sub-tabs {
+        display: none;
+        gap: 3px;
+        padding: 8px 24px;
+        background: #1a1a2e;
+        border-bottom: 2px solid #333;
+        overflow-x: auto;
+        position: sticky;
+        top: 110px;
+        z-index: 98;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+      .sub-tabs.visible {
+        display: flex;
+      }
+      .sub-tabs::-webkit-scrollbar {
+        height: 2px;
+      }
+      .sub-tabs::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 2px;
+      }
+      .sub-tab-btn {
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        white-space: nowrap;
+        color: rgba(255, 255, 255, 0.6);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .sub-tab-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+      .sub-tab-btn.active {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-weight: 600;
+      }
+      .sub-tab-btn i {
+        font-size: 11px;
+      }
+
+      /* Adjustment for sticky when sub-tabs are visible */
+      .sub-tabs.visible ~ .content {
+        padding-top: 8px;
+      }
+
+      /* Content */
+      .content {
+        padding: 20px 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
+
+      /* Loading */
+      .loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+        color: #888;
+      }
+      .loading i {
+        font-size: 32px;
+        margin-bottom: 12px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Error */
+      .error-card {
+        background: #fff5f5;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        color: #dc2626;
+      }
+
+      /* KPI Cards */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s;
+      }
+      .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .kpi-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .kpi-value {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .kpi-sub {
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+      }
+      .kpi-value.green {
+        color: #059669;
+      }
+      .kpi-value.blue {
+        color: #2563eb;
+      }
+      .kpi-value.purple {
+        color: #7c3aed;
+      }
+      .kpi-value.pink {
+        color: #ec4899;
+      }
+      .kpi-value.orange {
+        color: #ea580c;
+      }
+      .kpi-value.teal {
+        color: #0891b2;
+      }
+
+      /* Chart Cards */
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .chart-card h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #333;
+      }
+      .chart-card .chart-container {
+        position: relative;
+        height: 300px;
+      }
+      .chart-card.full {
+        grid-column: 1 / -1;
+      }
+      .chart-card .chart-container-med {
+        position: relative;
+        height: 280px;
+      }
+      .pyramid-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      @media (max-width: 768px) {
+        .pyramid-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Table */
+      .table-wrap {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+      }
+      .table-wrap table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .table-wrap th {
+        background: #f8f9fa;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      .table-wrap td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .table-wrap tr:hover td {
+        background: #f8f9fa;
+      }
+
+      /* Page info */
+      .page-info {
+        margin-bottom: 16px;
+      }
+      .page-info h2 {
+        font-size: 22px;
+        font-weight: 600;
+        color: #1a1a2e;
+      }
+      .page-info p {
+        color: #666;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .chart-grid {
+          grid-template-columns: 1fr;
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .tabs {
+          padding: 8px 12px;
+        }
+        .sub-tabs {
+          padding: 6px 12px;
+          top: 108px;
+        }
+        .sub-tab-btn {
+          font-size: 10px;
+          padding: 4px 8px;
+        }
+        .content {
+          padding: 12px;
+        }
+        .header {
+          flex-wrap: wrap;
+        }
+        .header-controls {
+          margin-left: 0;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1><i class="fas fa-chart-pie"></i> CHAK PBIX Dashboards</h1>
+      <span class="subtitle"
+        >Replicated from CHAK Visuals (1) · Live DHIS2 Data</span
+      >
+      <div class="header-controls">
+        <select id="countySelect">
+          <option value="Meru County">Meru County</option>
+          <option value="Embu County">Embu County</option>
+          <option value="Nyandarua County">Nyandarua County</option>
+          <option value="Tharaka Nithi County">Tharaka Nithi County</option>
+        </select>
+        <select id="periodSelect">
+          <option value="LAST_12_MONTHS">Last 12 Months</option>
+          <option value="LAST_6_MONTHS">Last 6 Months</option>
+          <option value="LAST_3_MONTHS">Last 3 Months</option>
+          <option value="THIS_YEAR">This Year</option>
+        </select>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabNav"></nav>
+    <nav class="sub-tabs" id="subTabNav"></nav>
+
+    <div class="content" id="pageContent"></div>
+
+    <script>
+      // ── Chart.js global defaults ──
+      Chart.defaults.font.family =
+        "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      Chart.defaults.color = "#666";
+
+      // ── State ──
+      const state = {
+        groups: [],
+        flatPages: [], // all individual page objects (flat)
+        flatPageIds: [], // all individual page IDs (flat)
+        activeGroup: null, // current parent group ID
+        activePage: null, // current active page ID
+        county: "Meru County",
+        period: "LAST_12_MONTHS",
+        charts: {},
+        data: {},
+      };
+
+      // Group definitions (hardcoded lookup for nav building)
+      const GROUP_DEFS = {};
+
+      // ── Color palette ──
+      const COLORS = {
+        blue: "#2563eb",
+        green: "#059669",
+        purple: "#7c3aed",
+        pink: "#ec4899",
+        orange: "#ea580c",
+        teal: "#0891b2",
+        red: "#dc2626",
+        yellow: "#ca8a04",
+        indigo: "#4f46e5",
+        cyan: "#06b6d4",
+        rose: "#f43f5e",
+        amber: "#d97706",
+      };
+      const PALETTE = Object.values(COLORS);
+      function color(i) {
+        return PALETTE[i % PALETTE.length];
+      }
+
+      // ── Build flat list from groups ──
+      function buildFlatPages(groups) {
+        const flat = [];
+        const ids = [];
+        const defs = {};
+        groups.forEach((g) => {
+          if (g.standalone) {
+            flat.push(g);
+            ids.push(g.id);
+            defs[g.id] = g;
+          } else {
+            defs[g.id] = g;
+            (g.children || []).forEach((c) => {
+              flat.push(c);
+              ids.push(c.id);
+            });
+          }
+        });
+        state.flatPages = flat;
+        state.flatPageIds = ids;
+        state.groups = groups;
+        Object.assign(GROUP_DEFS, defs);
+      }
+
+      // ── Initialize ──
+      async function init() {
+        // Fetch grouped page list
+        const pagesRes = await fetch("/pbix/api/pages");
+        const pagesData = await pagesRes.json();
+        buildFlatPages(pagesData.groups);
+
+        const tabNav = document.getElementById("tabNav");
+        const subTabNav = document.getElementById("subTabNav");
+
+        // Build primary tab nav (groups + standalone tabs)
+        state.groups.forEach((g, i) => {
+          const btn = document.createElement("button");
+          const isActive = i === 0;
+          btn.className = "tab-btn" + (isActive ? " active" : "");
+          btn.dataset.group = g.id;
+
+          if (g.standalone) {
+            btn.innerHTML = `<i class="fas fa-${g.icon}"></i> ${g.label}`;
+            btn.onclick = () => switchPage(g.id);
+          } else {
+            btn.innerHTML = `<i class="fas fa-${g.icon}"></i> ${g.label} <i class="fas fa-chevron-down" style="font-size:9px;opacity:0.7"></i>`;
+            btn.onclick = () => switchGroup(g.id);
+          }
+          tabNav.appendChild(btn);
+        });
+
+        // Apply URL params for county/period before setting up listeners
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlCounty = urlParams.get("county");
+        const urlPeriod = urlParams.get("period");
+        if (urlCounty) {
+          const countySelect = document.getElementById("countySelect");
+          const match = Array.from(countySelect.options).find(
+            (o) => o.value.toLowerCase() === urlCounty.toLowerCase(),
+          );
+          if (match) {
+            countySelect.value = match.value;
+            state.county = match.value;
+          }
+        }
+        if (urlPeriod) {
+          const periodSelect = document.getElementById("periodSelect");
+          const match = Array.from(periodSelect.options).find(
+            (o) => o.value === urlPeriod,
+          );
+          if (match) {
+            periodSelect.value = match.value;
+            state.period = match.value;
+          }
+        }
+
+        // Event listeners
+        document.getElementById("countySelect").onchange = (e) => {
+          state.county = e.target.value;
+          reloadPage();
+        };
+        document.getElementById("periodSelect").onchange = (e) => {
+          state.period = e.target.value;
+          reloadPage();
+        };
+
+        // Load first group's first child or first standalone
+        const startPage = urlParams.get("page");
+        if (startPage && state.flatPageIds.includes(startPage)) {
+          // Find which group (if any) this page belongs to
+          for (const g of state.groups) {
+            if (g.standalone && g.id === startPage) {
+              switchPage(startPage);
+              return;
+            }
+            if (g.children) {
+              const match = g.children.find((c) => c.id === startPage);
+              if (match) {
+                switchGroup(g.id);
+                // Select the specific subtab
+                setTimeout(() => switchPage(startPage), 50);
+                return;
+              }
+            }
+          }
+        }
+        // Default: first group's first child
+        const firstGroup = state.groups[0];
+        if (firstGroup.children && firstGroup.children.length > 0) {
+          switchGroup(firstGroup.id);
+          switchPage(firstGroup.children[0].id);
+        } else if (firstGroup.standalone) {
+          switchPage(firstGroup.id);
+        }
+      }
+
+      // ── Switch group (parent tab clicked) ──
+      function switchGroup(groupId) {
+        state.activeGroup = groupId;
+        const group = GROUP_DEFS[groupId];
+        if (!group || group.standalone) return;
+
+        // Update primary tab buttons
+        document.querySelectorAll(".tab-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.group === groupId);
+        });
+
+        // Build & show sub-tabs
+        const subTabNav = document.getElementById("subTabNav");
+        subTabNav.innerHTML = "";
+        subTabNav.classList.add("visible");
+
+        group.children.forEach((c, i) => {
+          const btn = document.createElement("button");
+          btn.className = "sub-tab-btn" + (i === 0 ? " active" : "");
+          btn.dataset.page = c.id;
+          btn.innerHTML = `<i class="fas fa-${c.icon}"></i> ${c.label}`;
+          btn.onclick = () => switchPage(c.id);
+          subTabNav.appendChild(btn);
+        });
+
+        // Load first child page
+        if (group.children.length > 0) {
+          switchPage(group.children[0].id);
+        }
+      }
+
+      // ── Switch page (sub-tab or standalone) ──
+      async function switchPage(pageId) {
+        state.activePage = pageId;
+
+        // Update primary tab buttons – find parent group
+        for (const g of state.groups) {
+          if (g.standalone) {
+            document.querySelectorAll(".tab-btn").forEach((btn) => {
+              btn.classList.toggle(
+                "active",
+                btn.dataset.group === g.id && pageId === g.id,
+              );
+            });
+          } else if (g.children) {
+            const hasChild = g.children.some((c) => c.id === pageId);
+            if (hasChild) {
+              // Mark parent as active
+              document.querySelectorAll(".tab-btn").forEach((btn) => {
+                btn.classList.toggle("active", btn.dataset.group === g.id);
+              });
+              // Update sub-tab buttons
+              document.querySelectorAll(".sub-tab-btn").forEach((btn) => {
+                btn.classList.toggle("active", btn.dataset.page === pageId);
+              });
+              break;
+            }
+          }
+        }
+
+        await loadPage(pageId);
+      }
+
+      function reloadPage() {
+        if (state.activePage) loadPage(state.activePage);
+      }
+
+      // ── Load page data ──
+      async function loadPage(pageId) {
+        const content = document.getElementById("pageContent");
+        content.innerHTML = `<div class="loading"><i class="fas fa-spinner"></i> Loading ${pageId}...</div>`;
+
+        // Show/hide sub-tab nav based on whether we're inside a group
+        const subTabNav = document.getElementById("subTabNav");
+        const isStandalone = state.groups.some(
+          (g) => g.standalone && g.id === pageId,
+        );
+        if (isStandalone) {
+          subTabNav.classList.remove("visible");
+          subTabNav.innerHTML = "";
+        }
+
+        // Destroy old charts
+        Object.values(state.charts).forEach((c) => c.destroy());
+        state.charts = {};
+
+        try {
+          const url = `/pbix/api/${pageId}?county=${encodeURIComponent(state.county)}&period=${state.period}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          state.data = data;
+
+          if (
+            data.errors &&
+            data.errors.length > 0 &&
+            (!data.trend || data.trend.length === 0)
+          ) {
+            content.innerHTML = `<div class="error-card"><i class="fas fa-exclamation-triangle"></i><br>Error loading data<br><small>${data.errors.join(", ")}</small></div>`;
+            return;
+          }
+
+          // Render page-specific content
+          const renderers = {
+            profile: renderProfile,
+            "key-indicators": renderKeyIndicators,
+            prep: renderPrep,
+            "hts-performance": renderHtsPerformance,
+            "hts-index": renderHtsIndex,
+            "sns-cascade": renderSnsCascade,
+            "care-treatment": renderCareTreatment,
+            "cd4-tpt": renderCd4Tpt,
+            "vl-cascade": renderVlCascade,
+            pmtct: renderPmtct,
+            tb: renderTb,
+            "post-rape": renderPostRape,
+            cacx: renderCacx,
+            "iit-quarterly": renderIitQuarterly,
+            "hts-summary": renderHtsSummary,
+            "testing-modality": renderTestingModality,
+            linkage: renderLinkage,
+          };
+
+          const renderer = renderers[pageId] || renderGeneric;
+          content.innerHTML = "";
+          renderer(content, data);
+        } catch (err) {
+          content.innerHTML = `<div class="error-card"><i class="fas fa-exclamation-triangle"></i><br>Failed to load: ${err.message}</div>`;
+        }
+      }
+
+      // ── Create chart helper ──
+      function createChart(canvasId, config) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        const chart = new Chart(ctx.getContext("2d"), config);
+        state.charts[canvasId] = chart;
+        return chart;
+      }
+
+      // ================================================================
+      // PAGE RENDERERS
+      // ================================================================
+
+      // ── Profile ──
+      function renderProfile(el, data) {
+        const trend = data.trend || [];
+        const latest = data.latest || {};
+
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-map"></i> Profile — ${data.county}</h2>
+                    <p>Key indicators overview with facility-level map data</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">TX_CURR (Latest)</div>
+                        <div class="kpi-value blue">${fmt(latest.tx_curr)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TX_NEW (Latest)</div>
+                        <div class="kpi-value green">${fmt(latest.tx_new)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">HTS Tested (Latest)</div>
+                        <div class="kpi-value purple">${fmt(latest.hts_tested)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">HTS Positive (Latest)</div>
+                        <div class="kpi-value pink">${fmt(latest.hts_positive)}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>Monthly Trend — Key Indicators</h3>
+                        <div class="chart-container"><canvas id="profileTrend"></canvas></div></div>
+                </div>
+                <div class="pyramid-row">
+                    <div class="chart-card"><h3>CALHIV by Age & Sex</h3>
+                        <div class="chart-container-med"><canvas id="profileCalhiv"></canvas></div></div>
+                    <div class="chart-card"><h3>OVC by Age & Sex</h3>
+                        <div class="chart-container-med"><canvas id="profileOvc"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  ["label", "tx_curr", "tx_new", "hts_tested", "hts_positive"],
+                  ["Month", "TX_CURR", "TX_NEW", "HTS Tested", "HTS Positive"],
+                )}
+            `;
+
+        createChart(
+          "profileTrend",
+          lineChart(trend, [
+            { key: "tx_curr", label: "TX_CURR", color: COLORS.blue },
+            { key: "tx_new", label: "TX_NEW", color: COLORS.green },
+            { key: "hts_tested", label: "HTS Tested", color: COLORS.purple },
+            { key: "hts_positive", label: "HTS Positive", color: COLORS.pink },
+          ]),
+        );
+        createChart(
+          "profileCalhiv",
+          populationPyramidChart(
+            CALHIV_MALE,
+            CALHIV_FEMALE,
+            "#0b0b45",
+            "#e64c8a",
+          ),
+        );
+        createChart(
+          "profileOvc",
+          populationPyramidChart(OVC_MALE, OVC_FEMALE, "#0b0b45", "#e64c8a"),
+        );
+      }
+
+      // ── Key Indicators ──
+      function renderKeyIndicators(el, data) {
+        const trend = data.trend || [];
+        const latest = trend[trend.length - 1] || {};
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-gauge-high"></i> Key Indicators Drill Down</h2>
+                    <p>Program performance at a glance: VL, CD4, TPT, HTS, Linkage</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">% VL Uptake</div>
+                        <div class="kpi-value green">${latest.vl_uptake_pct || 0}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">% VL Suppression</div>
+                        <div class="kpi-value teal">${latest.vl_suppression_pct || 0}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Positivity Rate</div>
+                        <div class="kpi-value orange">${latest.positivity_pct || 0}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Linkage Rate</div>
+                        <div class="kpi-value purple">${latest.linkage_pct || 0}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">CD4 &lt;200</div>
+                        <div class="kpi-value red">${fmt(latest.cd4_less200)}</div>
+                        <div class="kpi-sub">${latest.cd4_uptake_pct || 0}% CD4 Uptake</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TPT Uptake</div>
+                        <div class="kpi-value blue">${latest.tpt_uptake_pct || 0}%</div>
+                        <div class="kpi-sub">${fmt(latest.tpt)} clients</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TX_CURR</div>
+                        <div class="kpi-value blue">${fmt(latest.tx_curr)}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TX_NEW</div>
+                        <div class="kpi-value green">${fmt(latest.tx_new)}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>VL Cascade</h3>
+                        <div class="chart-container"><canvas id="kiVlCascade"></canvas></div></div>
+                    <div class="chart-card"><h3>HTS Cascade</h3>
+                        <div class="chart-container"><canvas id="kiHtsCascade"></canvas></div></div>
+                    <div class="chart-card full"><h3>Key Indicators Monthly Trend</h3>
+                        <div class="chart-container"><canvas id="kiTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tx_curr",
+                    "tx_new",
+                    "vl_uptake_pct",
+                    "vl_suppression_pct",
+                    "positivity_pct",
+                    "linkage_pct",
+                    "cd4_less200",
+                    "cd4_uptake_pct",
+                    "tpt",
+                    "tpt_uptake_pct",
+                  ],
+                  [
+                    "Month",
+                    "TX_CURR",
+                    "TX_NEW",
+                    "% VL Uptake",
+                    "% VL Supp.",
+                    "% Positive",
+                    "% Linked",
+                    "CD4<200",
+                    "CD4 Uptake",
+                    "TPT",
+                    "TPT Uptake",
+                  ],
+                )}
+            `;
+
+        createChart(
+          "kiVlCascade",
+          lineChart(trend, [
+            { key: "vl_uptake_pct", label: "% VL Uptake", color: COLORS.green },
+            {
+              key: "vl_suppression_pct",
+              label: "% VL Suppression",
+              color: COLORS.teal,
+            },
+          ]),
+        );
+        createChart(
+          "kiHtsCascade",
+          lineChart(trend, [
+            {
+              key: "positivity_pct",
+              label: "% Positive",
+              color: COLORS.orange,
+            },
+            { key: "linkage_pct", label: "% Linked", color: COLORS.purple },
+          ]),
+        );
+        createChart(
+          "kiTrend",
+          lineChart(trend, [
+            { key: "tx_curr", label: "TX_CURR", color: COLORS.blue },
+            { key: "tx_new", label: "TX_NEW", color: COLORS.green },
+            { key: "cd4_less200", label: "CD4<200", color: COLORS.red },
+          ]),
+        );
+      }
+
+      // ── PrEP ──
+      function renderPrep(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-shield"></i> PrEP Cascade</h2>
+                    <p>PrEP screening, new initiations, current users, and typology breakdown</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">PrEP New (Cumulative)</div>
+                        <div class="kpi-value green">${fmt(sum(trend, "prep_new"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">PrEP Current (Latest)</div>
+                        <div class="kpi-value blue">${fmt(last(trend, "prep_curr"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">PrEP Screened</div>
+                        <div class="kpi-value purple">${fmt(sum(trend, "prep_screened"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg % Uptake</div>
+                        <div class="kpi-value orange">${avg(trend, "prep_uptake_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>PrEP Trend</h3>
+                        <div class="chart-container"><canvas id="prepTrend"></canvas></div></div>
+                    <div class="chart-card"><h3>PrEP New by Typology</h3>
+                        <div class="chart-container"><canvas id="prepTypology"></canvas></div></div>
+                    <div class="chart-card full"><h3>Detailed Monthly Data</h3>
+                        <div class="chart-container"><canvas id="prepDetail"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "prep_new",
+                    "prep_curr",
+                    "prep_screened",
+                    "prep_uptake_pct",
+                  ],
+                  ["Month", "New", "Current", "Screened", "% Uptake"],
+                )}
+            `;
+        createChart(
+          "prepTrend",
+          lineChart(trend, [
+            { key: "prep_new", label: "PrEP New", color: COLORS.green },
+            { key: "prep_curr", label: "PrEP Current", color: COLORS.blue },
+          ]),
+        );
+        createChart(
+          "prepTypology",
+          barChart(trend, [
+            { key: "prep_new_pbfw", label: "PBFW", color: COLORS.pink },
+            { key: "prep_new_preg", label: "Pregnant", color: COLORS.purple },
+          ]),
+        );
+        createChart(
+          "prepDetail",
+          lineChart(trend, [
+            { key: "prep_screened", label: "Screened", color: COLORS.orange },
+            { key: "prep_new", label: "New", color: COLORS.green },
+            {
+              key: "prep_uptake_pct",
+              label: "% Uptake",
+              color: COLORS.teal,
+              yAxisID: "y1",
+            },
+          ]),
+        );
+      }
+
+      // ── HTS Performance ──
+      function renderHtsPerformance(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-vial"></i> HTS Performance</h2>
+                    <p>HIV Testing Services: tested, positive, linkage, and yield</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Total Tested</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tested"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Positivity Rate</div>
+                        <div class="kpi-value orange">${avg(trend, "positivity_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Linkage Rate</div>
+                        <div class="kpi-value green">${avg(trend, "linkage_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>Tested vs Positive</h3>
+                        <div class="chart-container"><canvas id="htsPerfTrend"></canvas></div></div>
+                    <div class="chart-card"><h3>Linkage Cascade</h3>
+                        <div class="chart-container"><canvas id="htsPerfLinkage"></canvas></div></div>
+                    <div class="chart-card full"><h3>HTS Performance Detail</h3>
+                        <div class="chart-container"><canvas id="htsPerfDetail"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tested",
+                    "positive",
+                    "positivity_pct",
+                    "linked_within",
+                    "linked_outside",
+                    "total_linked",
+                    "linkage_pct",
+                  ],
+                  [
+                    "Month",
+                    "Tested",
+                    "Positive",
+                    "% Positive",
+                    "Linked Within",
+                    "Linked Outside",
+                    "Total Linked",
+                    "% Linked",
+                  ],
+                )}
+            `;
+        createChart(
+          "htsPerfTrend",
+          lineChart(trend, [
+            { key: "tested", label: "Tested", color: COLORS.blue },
+            { key: "positive", label: "Positive", color: COLORS.pink },
+            {
+              key: "positivity_pct",
+              label: "% Positive",
+              color: COLORS.orange,
+              yAxisID: "y1",
+            },
+          ]),
+        );
+        createChart(
+          "htsPerfLinkage",
+          barChart(trend, [
+            {
+              key: "linked_within",
+              label: "Linked Within",
+              color: COLORS.green,
+            },
+            {
+              key: "linked_outside",
+              label: "Linked Outside",
+              color: COLORS.orange,
+            },
+          ]),
+        );
+        createChart(
+          "htsPerfDetail",
+          lineChart(trend, [
+            { key: "linkage_pct", label: "% Linked", color: COLORS.green },
+            {
+              key: "positivity_pct",
+              label: "% Positive",
+              color: COLORS.orange,
+            },
+          ]),
+        );
+      }
+
+      // ── HTS Index ──
+      function renderHtsIndex(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-users"></i> HTS Index Testing</h2>
+                    <p>Index testing cascade: tested, positive, linked</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Total Tested</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tested"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg Positivity</div>
+                        <div class="kpi-value orange">${avg(trend, "positivity_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg Linkage</div>
+                        <div class="kpi-value green">${avg(trend, "linkage_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>Index Testing Cascade</h3>
+                        <div class="chart-container"><canvas id="indexTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tested",
+                    "positive",
+                    "positivity_pct",
+                    "linked",
+                    "linkage_pct",
+                  ],
+                  [
+                    "Month",
+                    "Tested",
+                    "Positive",
+                    "% Positive",
+                    "Linked",
+                    "% Linked",
+                  ],
+                )}
+            `;
+        createChart(
+          "indexTrend",
+          lineChart(trend, [
+            { key: "tested", label: "Tested", color: COLORS.blue },
+            { key: "positive", label: "Positive", color: COLORS.pink },
+            { key: "linked", label: "Linked", color: COLORS.green },
+          ]),
+        );
+      }
+
+      // ── SNS Cascade ──
+      function renderSnsCascade(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-share-nodes"></i> SNS Cascade</h2>
+                    <p>Social Network Strategy: contacts elicited, tested, positive, linked</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">SNS Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "sns_pos"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Linked</div>
+                        <div class="kpi-value green">${fmt(sum(trend, "linked"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>SNS Cascade</h3>
+                        <div class="chart-container"><canvas id="snsTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "sns_pos",
+                    "linked",
+                    "sns_hrn_listed",
+                    "sns_hrn_eligible",
+                    "sns_hrn_tested",
+                    "sns_hrn_pos",
+                    "sns_hrn_linked",
+                  ],
+                  [
+                    "Month",
+                    "SNS Positive",
+                    "Linked",
+                    "HRN Listed",
+                    "HRN Eligible",
+                    "HRN Tested",
+                    "HRN+",
+                    "HRN Linked",
+                  ],
+                )}
+            `;
+        createChart(
+          "snsTrend",
+          lineChart(trend, [
+            { key: "sns_pos", label: "SNS Positive", color: COLORS.pink },
+            { key: "linked", label: "Linked", color: COLORS.green },
+          ]),
+        );
+      }
+
+      // ── Care & Treatment ──
+      function renderCareTreatment(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-heart-pulse"></i> Care & Treatment</h2>
+                    <p>ART treatment cascade: TX_CURR, TX_NEW, TX_ML (IIT), TX_RTT</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Latest TX_CURR</div>
+                        <div class="kpi-value blue">${fmt(last(trend, "tx_curr"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Latest TX_NEW</div>
+                        <div class="kpi-value green">${fmt(last(trend, "tx_new"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">IIT (Latest)</div>
+                        <div class="kpi-value red">${fmt(last(trend, "tx_ml"))}</div>
+                        <div class="kpi-sub">${last(trend, "iit_pct")}% of TX_CURR</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Return to Care</div>
+                        <div class="kpi-value purple">${fmt(last(trend, "tx_rtt"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>Treatment Cascade</h3>
+                        <div class="chart-container"><canvas id="ctCascade"></canvas></div></div>
+                    <div class="chart-card"><h3>IIT Rate (%)</h3>
+                        <div class="chart-container"><canvas id="ctIit"></canvas></div></div>
+                    <div class="chart-card full"><h3>Care & Treatment Trend</h3>
+                        <div class="chart-container"><canvas id="ctTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tx_curr",
+                    "tx_new",
+                    "tx_ml",
+                    "iit_pct",
+                    "tx_rtt",
+                    "rtt_cd4_lt200",
+                    "rtt_cd4_gt200",
+                  ],
+                  [
+                    "Month",
+                    "TX_CURR",
+                    "TX_NEW",
+                    "TX_ML",
+                    "% IIT",
+                    "TX_RTT",
+                    "RTT CD4<200",
+                    "RTT CD4≥200",
+                  ],
+                )}
+            `;
+        createChart(
+          "ctCascade",
+          lineChart(trend, [
+            { key: "tx_curr", label: "TX_CURR", color: COLORS.blue },
+            { key: "tx_new", label: "TX_NEW", color: COLORS.green },
+            { key: "tx_rtt", label: "TX_RTT", color: COLORS.purple },
+          ]),
+        );
+        createChart(
+          "ctIit",
+          barChart(trend, [
+            { key: "iit_pct", label: "% IIT", color: COLORS.red },
+          ]),
+        );
+        createChart(
+          "ctTrend",
+          lineChart(trend, [
+            { key: "tx_ml", label: "TX_ML (IIT)", color: COLORS.red },
+            { key: "tx_rtt", label: "TX_RTT", color: COLORS.purple },
+          ]),
+        );
+      }
+
+      // ── CD4/TPT ──
+      function renderCd4Tpt(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-flask"></i> CD4 & TPT Uptake</h2>
+                    <p>CD4 testing at ART initiation and TPT coverage</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">% CD4<200 at start</div>
+                        <div class="kpi-value red">${avg(trend, "pct_cd4_less200")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">CD4 Uptake</div>
+                        <div class="kpi-value blue">${avg(trend, "cd4_uptake_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TPT Uptake</div>
+                        <div class="kpi-value green">${avg(trend, "tpt_uptake_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">RTT with CD4<200</div>
+                        <div class="kpi-value orange">${fmt(last(trend, "rtt_cd4_lt200"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>CD4 Distribution</h3>
+                        <div class="chart-container"><canvas id="cd4Pie"></canvas></div></div>
+                    <div class="chart-card"><h3>CD4 & TPT Uptake %</h3>
+                        <div class="chart-container"><canvas id="cd4Uptake"></canvas></div></div>
+                    <div class="chart-card full"><h3>CD4 Trend</h3>
+                        <div class="chart-container"><canvas id="cd4Trend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "cd4_less200",
+                    "cd4_more200",
+                    "cd4_unknown",
+                    "cd4_uptake_pct",
+                    "pct_cd4_less200",
+                    "tpt",
+                    "tpt_uptake_pct",
+                    "rtt_cd4_less200",
+                  ],
+                  [
+                    "Month",
+                    "CD4<200",
+                    "CD4≥200",
+                    "Unknown",
+                    "CD4 Uptake%",
+                    "% <200",
+                    "TPT",
+                    "TPT Uptake%",
+                    "RTT<200",
+                  ],
+                )}
+            `;
+        const latest = trend[trend.length - 1] || {};
+        createChart("cd4Pie", {
+          type: "doughnut",
+          data: {
+            labels: ["CD4 <200", "CD4 >=200", "CD4 Unknown"],
+            datasets: [
+              {
+                data: [
+                  latest.cd4_less200 || 0,
+                  latest.cd4_more200 || 0,
+                  latest.cd4_unknown || 0,
+                ],
+                backgroundColor: [COLORS.red, COLORS.green, COLORS.orange],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+          },
+        });
+        createChart(
+          "cd4Uptake",
+          lineChart(trend, [
+            {
+              key: "cd4_uptake_pct",
+              label: "CD4 Uptake %",
+              color: COLORS.blue,
+            },
+            {
+              key: "tpt_uptake_pct",
+              label: "TPT Uptake %",
+              color: COLORS.green,
+            },
+          ]),
+        );
+        createChart(
+          "cd4Trend",
+          lineChart(trend, [
+            { key: "cd4_less200", label: "CD4<200", color: COLORS.red },
+            {
+              key: "rtt_cd4_less200",
+              label: "RTT CD4<200",
+              color: COLORS.orange,
+            },
+          ]),
+        );
+      }
+
+      // ── VL Cascade ──
+      function renderVlCascade(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-chart-line"></i> Viral Load Cascade</h2>
+                    <p>VL monitoring: eligible, tested (D), suppressed (N), uptake & suppression rates</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">% VL Uptake</div>
+                        <div class="kpi-value green">${last(trend, "vl_uptake_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">% VL Suppression</div>
+                        <div class="kpi-value teal">${last(trend, "vl_suppression_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TX_CURR</div>
+                        <div class="kpi-value blue">${fmt(last(trend, "tx_curr"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">VL Eligible</div>
+                        <div class="kpi-value purple">${fmt(last(trend, "pvls_eligible"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">VL Done</div>
+                        <div class="kpi-value orange">${fmt(last(trend, "pvls_done"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">VL Suppressed</div>
+                        <div class="kpi-value green">${fmt(last(trend, "pvls_suppressed"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>VL Cascade (Bar)</h3>
+                        <div class="chart-container"><canvas id="vlBar"></canvas></div></div>
+                    <div class="chart-card"><h3>Uptake vs Suppression</h3>
+                        <div class="chart-container"><canvas id="vlPct"></canvas></div></div>
+                    <div class="chart-card full"><h3>VL Monthly Trend</h3>
+                        <div class="chart-container"><canvas id="vlTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tx_curr",
+                    "pvls_eligible",
+                    "pvls_done",
+                    "vl_uptake_pct",
+                    "pvls_suppressed",
+                    "vl_suppression_pct",
+                  ],
+                  [
+                    "Month",
+                    "TX_CURR",
+                    "Eligible",
+                    "Done",
+                    "Uptake%",
+                    "Suppressed",
+                    "Suppression%",
+                  ],
+                )}
+            `;
+        const latest = trend[trend.length - 1] || {};
+        createChart("vlBar", {
+          type: "bar",
+          data: {
+            labels: ["Eligible", "Done", "Suppressed"],
+            datasets: [
+              {
+                data: [
+                  latest.pvls_eligible || 0,
+                  latest.pvls_done || 0,
+                  latest.pvls_suppressed || 0,
+                ],
+                backgroundColor: [COLORS.purple, COLORS.orange, COLORS.green],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } },
+          },
+        });
+        createChart(
+          "vlPct",
+          lineChart(trend, [
+            { key: "vl_uptake_pct", label: "% VL Uptake", color: COLORS.green },
+            {
+              key: "vl_suppression_pct",
+              label: "% VL Suppression",
+              color: COLORS.teal,
+            },
+          ]),
+        );
+        createChart(
+          "vlTrend",
+          lineChart(trend, [
+            { key: "pvls_done", label: "VL Done", color: COLORS.orange },
+            {
+              key: "pvls_suppressed",
+              label: "VL Suppressed",
+              color: COLORS.green,
+            },
+            { key: "tx_curr", label: "TX_CURR (denom)", color: COLORS.blue },
+          ]),
+        );
+      }
+
+      // ── PMTCT ──
+      function renderPmtct(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-baby"></i> PMTCT</h2>
+                    <p>Prevention of Mother-to-Child Transmission: ANC cascade</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Known Pos at ANC1</div>
+                        <div class="kpi-value blue">${fmt(last(trend, "anc1_known_pos"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">New Pos at ANC1</div>
+                        <div class="kpi-value pink">${fmt(last(trend, "anc1_new_pos"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Started ART</div>
+                        <div class="kpi-value green">${fmt(last(trend, "started_art"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">PMTCT Uptake</div>
+                        <div class="kpi-value purple">${last(trend, "pmtct_uptake_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>PMTCT Cascade</h3>
+                        <div class="chart-container"><canvas id="pmtctCascade"></canvas></div></div>
+                    <div class="chart-card"><h3>PMTCT Trend</h3>
+                        <div class="chart-container"><canvas id="pmtctTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "total_pos",
+                    "anc1_known_pos",
+                    "anc1_new_pos",
+                    "started_art",
+                    "pmtct_uptake_pct",
+                  ],
+                  [
+                    "Month",
+                    "Total HIV+",
+                    "Known+ at ANC1",
+                    "New+ at ANC1",
+                    "Started ART",
+                    "% Uptake",
+                  ],
+                )}
+            `;
+        createChart(
+          "pmtctCascade",
+          lineChart(trend, [
+            {
+              key: "total_pos",
+              label: "Total HIV+ at ANC1",
+              color: COLORS.pink,
+            },
+            { key: "started_art", label: "Started ART", color: COLORS.green },
+          ]),
+        );
+        createChart(
+          "pmtctTrend",
+          barChart(trend, [
+            {
+              key: "pmtct_uptake_pct",
+              label: "% PMTCT Uptake",
+              color: COLORS.purple,
+            },
+          ]),
+        );
+      }
+
+      // ── TB ──
+      function renderTb(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-lungs"></i> TB/HIV</h2>
+                    <p>TB screening, diagnosis, and ART among TB patients</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">TB Screened</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tb_screened"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TB Positive</div>
+                        <div class="kpi-value red">${fmt(sum(trend, "tb_pos"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TB Positivity</div>
+                        <div class="kpi-value orange">${avg(trend, "tb_positivity_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">On ART Among TB</div>
+                        <div class="kpi-value green">${avg(trend, "tb_art_uptake_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>TB Cascade</h3>
+                        <div class="chart-container"><canvas id="tbCascade"></canvas></div></div>
+                    <div class="chart-card"><h3>TB on ART Uptake</h3>
+                        <div class="chart-container"><canvas id="tbArt"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tb_screened",
+                    "tb_presumptive",
+                    "tb_pos",
+                    "tb_positivity_pct",
+                    "tb_on_art",
+                    "tb_art_uptake_pct",
+                  ],
+                  [
+                    "Month",
+                    "Screened",
+                    "Presumptive",
+                    "TB+",
+                    "% TB+",
+                    "On ART",
+                    "% on ART",
+                  ],
+                )}
+            `;
+        createChart(
+          "tbCascade",
+          lineChart(trend, [
+            { key: "tb_screened", label: "Screened", color: COLORS.blue },
+            { key: "tb_pos", label: "TB+", color: COLORS.red },
+            { key: "tb_on_art", label: "On ART", color: COLORS.green },
+          ]),
+        );
+        createChart(
+          "tbArt",
+          lineChart(trend, [
+            {
+              key: "tb_art_uptake_pct",
+              label: "% on ART",
+              color: COLORS.green,
+            },
+            { key: "tb_positivity_pct", label: "% TB+", color: COLORS.orange },
+          ]),
+        );
+      }
+
+      // ── POST RAPE ──
+      function renderPostRape(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-hand"></i> POST RESP (Post-Rape Care)</h2>
+                    <p>Post-rape care services: physical/emotional, sexual violence</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Physical/Emotional</div>
+                        <div class="kpi-value orange">${fmt(sum(trend, "physical_emotional"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Sexual Violence</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "sexual_violence"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total</div>
+                        <div class="kpi-value purple">${fmt(sum(trend, "total"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>POST RESP Trend</h3>
+                        <div class="chart-container"><canvas id="postRapeTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  ["label", "physical_emotional", "sexual_violence", "total"],
+                  ["Month", "Physical/Emotional", "Sexual Violence", "Total"],
+                )}
+            `;
+        createChart(
+          "postRapeTrend",
+          lineChart(trend, [
+            {
+              key: "physical_emotional",
+              label: "Physical/Emotional",
+              color: COLORS.orange,
+            },
+            {
+              key: "sexual_violence",
+              label: "Sexual Violence",
+              color: COLORS.pink,
+            },
+            { key: "total", label: "Total", color: COLORS.purple },
+          ]),
+        );
+      }
+
+      // ── CACX ──
+      function renderCacx(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-ribbon"></i> CACX (Cervical Cancer Screening)</h2>
+                    <p>Cervical cancer screening, positivity, and treatment cascade</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Screened</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "screened"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Treated</div>
+                        <div class="kpi-value green">${fmt(sum(trend, "treated"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg Positivity</div>
+                        <div class="kpi-value orange">${avg(trend, "positivity_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg Treatment Rate</div>
+                        <div class="kpi-value purple">${avg(trend, "treatment_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>CACX Cascade</h3>
+                        <div class="chart-container"><canvas id="cacxCascade"></canvas></div></div>
+                    <div class="chart-card"><h3>% Positivity & Treatment</h3>
+                        <div class="chart-container"><canvas id="cacxPct"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "screened",
+                    "positive",
+                    "positivity_pct",
+                    "treated",
+                    "treatment_pct",
+                  ],
+                  [
+                    "Month",
+                    "Screened",
+                    "Positive",
+                    "% Positive",
+                    "Treated",
+                    "% Treated",
+                  ],
+                )}
+            `;
+        createChart(
+          "cacxCascade",
+          lineChart(trend, [
+            { key: "screened", label: "Screened", color: COLORS.blue },
+            { key: "positive", label: "Positive", color: COLORS.pink },
+            { key: "treated", label: "Treated", color: COLORS.green },
+          ]),
+        );
+        createChart(
+          "cacxPct",
+          lineChart(trend, [
+            {
+              key: "positivity_pct",
+              label: "% Positive",
+              color: COLORS.orange,
+            },
+            { key: "treatment_pct", label: "% Treated", color: COLORS.purple },
+          ]),
+        );
+      }
+
+      // ── IIT Quarterly ──
+      function renderIitQuarterly(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-triangle-exclamation"></i> IIT Quarterly</h2>
+                    <p>Interruption in Treatment: Patients lost to follow-up vs TX_CURR</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Avg IIT Rate</div>
+                        <div class="kpi-value red">${avg(trend, "iit_pct")}%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total IIT</div>
+                        <div class="kpi-value orange">${fmt(sum(trend, "tx_ml"))}</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>IIT vs TX_CURR</h3>
+                        <div class="chart-container"><canvas id="iitTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  ["label", "tx_curr", "tx_ml", "iit_pct"],
+                  ["Month", "TX_CURR", "TX_ML (IIT)", "% IIT"],
+                )}
+            `;
+        createChart(
+          "iitTrend",
+          lineChart(trend, [
+            { key: "tx_ml", label: "TX_ML (IIT)", color: COLORS.red },
+            {
+              key: "iit_pct",
+              label: "% IIT",
+              color: COLORS.orange,
+              yAxisID: "y1",
+            },
+          ]),
+        );
+      }
+
+      // ── HTS Summary ──
+      function renderHtsSummary(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-microscope"></i> HTS Summary</h2>
+                    <p>HIV Testing Services high-level summary</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Total Tested</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tested"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Positivity Rate</div>
+                        <div class="kpi-value orange">${avg(trend, "positivity_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>HTS Monthly</h3>
+                        <div class="chart-container"><canvas id="htsSummaryTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  ["label", "tested", "positive", "positivity_pct", "tx_new"],
+                  ["Month", "Tested", "Positive", "% Positive", "TX_NEW"],
+                )}
+            `;
+        createChart(
+          "htsSummaryTrend",
+          lineChart(trend, [
+            { key: "tested", label: "Tested", color: COLORS.blue },
+            { key: "positive", label: "Positive", color: COLORS.pink },
+          ]),
+        );
+      }
+
+      // ── Testing Modality ──
+      function renderTestingModality(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-layer-group"></i> Testing per Modality</h2>
+                    <p>Testing by entry point: tested, positive, and yield by modality</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Total Tested</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tested"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Avg Yield</div>
+                        <div class="kpi-value orange">${avg(trend, "yield_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>Testing by Modality</h3>
+                        <div class="chart-container"><canvas id="modalityTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  ["label", "tested", "positive", "yield_pct", "tx_new"],
+                  ["Month", "Tested", "Positive", "Yield %", "TX_NEW"],
+                )}
+            `;
+        createChart(
+          "modalityTrend",
+          lineChart(trend, [
+            { key: "tested", label: "Tested", color: COLORS.blue },
+            { key: "positive", label: "Positive", color: COLORS.pink },
+            {
+              key: "yield_pct",
+              label: "Yield %",
+              color: COLORS.orange,
+              yAxisID: "y1",
+            },
+          ]),
+        );
+      }
+
+      // ── Linkage ──
+      function renderLinkage(el, data) {
+        const trend = data.trend || [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2><i class="fas fa-link"></i> Linkage Summary</h2>
+                    <p>HIV positive linkage to care: within-facility, outside referrals, and overall linkage rates</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><div class="kpi-label">Total Tested</div>
+                        <div class="kpi-value blue">${fmt(sum(trend, "tested"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Positive</div>
+                        <div class="kpi-value pink">${fmt(sum(trend, "positive"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Total Linked</div>
+                        <div class="kpi-value green">${fmt(sum(trend, "total_linked"))}</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Linkage Rate</div>
+                        <div class="kpi-value purple">${avg(trend, "linkage_pct")}%</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card"><h3>Linkage Within vs Outside</h3>
+                        <div class="chart-container"><canvas id="linkageType"></canvas></div></div>
+                    <div class="chart-card"><h3>Linkage Rate Trend</h3>
+                        <div class="chart-container"><canvas id="linkageRate"></canvas></div></div>
+                    <div class="chart-card full"><h3>Linkage & TX_NEW Trend</h3>
+                        <div class="chart-container"><canvas id="linkageTrend"></canvas></div></div>
+                </div>
+                ${renderTable(
+                  trend,
+                  [
+                    "label",
+                    "tested",
+                    "positive",
+                    "positivity_pct",
+                    "total_linked",
+                    "linkage_pct",
+                    "linked_within",
+                    "linked_outside",
+                    "tx_new",
+                    "tx_new_pct",
+                  ],
+                  [
+                    "Month",
+                    "Tested",
+                    "Positive",
+                    "% Positive",
+                    "Total Linked",
+                    "% Linked",
+                    "Linked Within",
+                    "Linked Outside",
+                    "TX_NEW",
+                    "TX_NEW%",
+                  ],
+                )}
+            `;
+        createChart(
+          "linkageType",
+          barChart(trend, [
+            {
+              key: "linked_within",
+              label: "Linked Within",
+              color: COLORS.green,
+            },
+            {
+              key: "linked_outside",
+              label: "Linked Outside",
+              color: COLORS.orange,
+            },
+          ]),
+        );
+        createChart(
+          "linkageRate",
+          lineChart(trend, [
+            { key: "linkage_pct", label: "Linkage %", color: COLORS.purple },
+            { key: "tx_new_pct", label: "TX_NEW %", color: COLORS.green },
+          ]),
+        );
+        createChart(
+          "linkageTrend",
+          lineChart(trend, [
+            { key: "positive", label: "Positive", color: COLORS.pink },
+            { key: "total_linked", label: "Total Linked", color: COLORS.green },
+            { key: "tx_new", label: "TX_NEW", color: COLORS.blue },
+          ]),
+        );
+      }
+
+      // ── Generic fallback ──
+      function renderGeneric(el, data) {
+        const trend = data.trend || [];
+        const keys =
+          trend.length > 0
+            ? Object.keys(trend[0]).filter(
+                (k) => k !== "period" && k !== "label",
+              )
+            : [];
+        el.innerHTML = `
+                <div class="page-info">
+                    <h2>${data.page || "Dashboard"}</h2>
+                    <p>${data.county} — ${data.period_range}</p>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card full"><h3>Monthly Trend</h3>
+                        <div class="chart-container"><canvas id="genericTrend"></canvas></div></div>
+                </div>
+                ${keys.length > 0 ? renderTable(trend, ["label", ...keys]) : ""}
+            `;
+        if (keys.length > 0) {
+          createChart(
+            "genericTrend",
+            lineChart(
+              trend,
+              keys.map((k, i) => ({
+                key: k,
+                label: k,
+                color: color(i),
+              })),
+            ),
+          );
+        }
+      }
+
+      // ================================================================
+      // UTILITY: Chart config builders
+      // ================================================================
+
+      function lineChart(data, series) {
+        return {
+          type: "line",
+          data: {
+            labels: data.map((d) => d.label),
+            datasets: series.map((s) => ({
+              label: s.label,
+              data: data.map((d) => d[s.key]),
+              borderColor: s.color,
+              backgroundColor: s.color + "20",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              yAxisID: s.yAxisID || "y",
+            })),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { boxWidth: 12, padding: 12 },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y;
+                    const isPct = ctx.dataset.label.includes("%");
+                    return ` ${ctx.dataset.label}: ${isPct ? val.toFixed(1) + "%" : val.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxTicksLimit: 12, font: { size: 10 } },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f0f0f0" },
+                ticks: {
+                  callback: (v) =>
+                    v >= 1000 ? (v / 1000).toFixed(0) + "K" : v,
+                },
+              },
+              y1: {
+                position: "right",
+                beginAtZero: true,
+                grid: { display: false },
+                ticks: { callback: (v) => v + "%" },
+              },
+            },
+          },
+        };
+      }
+
+      function barChart(data, series) {
+        return {
+          type: "bar",
+          data: {
+            labels: data.map((d) => d.label),
+            datasets: series.map((s) => ({
+              label: s.label,
+              data: data.map((d) => d[s.key]),
+              backgroundColor: s.color,
+              borderRadius: 4,
+            })),
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { boxWidth: 12, padding: 12 },
+              },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true, grid: { color: "#f0f0f0" } },
+            },
+          },
+        };
+      }
+
+      // ================================================================
+      // UTILITY: Helpers
+      // ================================================================
+
+      function fmt(v) {
+        return v != null
+          ? Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })
+          : "0";
+      }
+      function sum(arr, key) {
+        return arr.reduce((a, d) => a + (Number(d[key]) || 0), 0);
+      }
+      function avg(arr, key) {
+        return arr.length > 0 ? (sum(arr, key) / arr.length).toFixed(1) : "0.0";
+      }
+      function last(arr, key) {
+        return arr.length > 0 ? Number(arr[arr.length - 1][key]) || 0 : 0;
+      }
+
+      function renderTable(data, keys, labels) {
+        if (!data || data.length === 0) return "";
+        const lbls = labels || keys;
+        return `
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>${lbls.map((l) => `<th>${l}</th>`).join("")}</tr></thead>
+                        <tbody>
+                            ${data
+                              .slice()
+                              .reverse()
+                              .map(
+                                (d) => `
+                                <tr>${keys
+                                  .map((k) => {
+                                    const v = d[k];
+                                    const isPct =
+                                      k.includes("pct") || k.includes("uptake");
+                                    const isLabel =
+                                      k === "label" || k === "period";
+                                    if (isLabel) return `<td>${v || ""}</td>`;
+                                    return `<td>${isPct ? (Number(v) || 0).toFixed(1) + "%" : fmt(v)}</td>`;
+                                  })
+                                  .join("")}</tr>
+                            `,
+                              )
+                              .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+      }
+
+      // ================================================================
+      // POPULATION PYRAMID (converted from run.py matplotlib)
+      // ================================================================
+      const PYRAMID_AGES = [
+        "Under 1",
+        "01 to 04",
+        "05 to 09",
+        "10 to 14",
+        "15 to 17",
+      ];
+      const CALHIV_MALE = [50, 1200, 3900, 8500, 7500];
+      const CALHIV_FEMALE = [50, 1300, 4000, 8800, 8200];
+      const OVC_MALE = [10, 300, 2200, 5200, 5000];
+      const OVC_FEMALE = [10, 400, 2400, 5800, 5400];
+
+      function populationPyramidChart(
+        maleData,
+        femaleData,
+        maleColor,
+        femaleColor,
+      ) {
+        const maxVal = Math.max(...maleData, ...femaleData);
+        const niceMax = Math.ceil(maxVal / 1000) * 1000;
+        const step = niceMax > 6000 ? 2000 : niceMax > 2000 ? 1000 : 500;
+        const ticks = [];
+        for (let t = -niceMax; t <= niceMax; t += step) {
+          ticks.push(t);
+        }
+        return {
+          type: "bar",
+          data: {
+            labels: PYRAMID_AGES,
+            datasets: [
+              {
+                label: "Male",
+                data: maleData.map((v) => -v),
+                backgroundColor: maleColor,
+                borderRadius: 2,
+              },
+              {
+                label: "Female",
+                data: femaleData,
+                backgroundColor: femaleColor,
+                borderRadius: 2,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "top",
+                labels: {
+                  boxWidth: 12,
+                  padding: 12,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = Math.abs(ctx.parsed.x);
+                    return ` ${ctx.dataset.label}: ${val.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                min: -niceMax,
+                max: niceMax,
+                ticks: {
+                  stepSize: step,
+                  callback: (v) => Math.abs(v).toLocaleString(),
+                },
+                grid: { color: "#e8e8e8" },
+              },
+              y: {
+                grid: { display: false },
+              },
+            },
+          },
+        };
+      }
+
+      // ── Boot ──
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "base_url": "http://100.120.117.89:8080",
+  "metadata_files": {},
+  "analytics_files": {},
+  "hiv_treatment_files": {
+    "hiv_newly_started_art": "C:\\Users\\ADMIN\\Documents\\train\\data\\dhis\\raw\\hiv_newly_started_art.csv"
+  },
+  "combined": "C:\\Users\\ADMIN\\Documents\\train\\data\\dhis\\processed\\dhis_combined.csv",
+  "hospitals": "C:\\Users\\ADMIN\\Documents\\train\\data\\dhis\\processed\\hospitals.csv"
+}

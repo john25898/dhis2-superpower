@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newly Started on ART – Per County</title>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; padding: 24px; }
+  .chart-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 20px; margin-bottom: 24px; position: relative; }
+  .chart-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+  .chart-container { width: 100%; height: 420px; }
+
+  /* Filter bar */
+  .filter-bar { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 16px 20px; margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .filter-label { font-size: 13px; font-weight: 600; color: #374151; }
+  .filter-select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; min-width: 140px; }
+  .filter-select:focus { outline: none; border-color: #2563eb; ring: 2px solid #93c5fd; }
+  .county-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .county-checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; cursor: pointer; padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; transition: all .15s; }
+  .county-checkbox-label:hover { border-color: #93c5fd; background: #eff6ff; }
+  .county-checkbox-label input { accent-color: #2563eb; }
+  .county-checkbox-label.active { border-color: #2563eb; background: #eff6ff; }
+
+  /* Hamburger */
+  .hamburger { position: absolute; top: 16px; right: 16px; z-index: 10; }
+  .hamburger-btn { background: none; border: none; cursor: pointer; padding: 6px 8px; border-radius: 6px; color: #6b7280; font-size: 20px; line-height: 1; }
+  .hamburger-btn:hover { background: #f3f4f6; color: #374151; }
+  .hamburger-menu { display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.15); min-width: 180px; z-index: 20; overflow: hidden; }
+  .hamburger-menu.open { display: block; }
+  .hamburger-item { display: block; width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 13px; color: #374151; }
+  .hamburger-item:hover { background: #f9fafb; }
+  .hamburger-item + .hamburger-item { border-top: 1px solid #f3f4f6; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1f2937; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div style="margin-bottom: 20px;">
+    <h1 style="font-size: 22px; font-weight: 700; color: #111827;">Newly Started on ART</h1>
+    <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">Disaggregated by county — CHAK network</p>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div>
+      <div class="filter-label" style="margin-bottom: 4px;">Month</div>
+      <select id="monthFilter" class="filter-select"></select>
+    </div>
+    <div>
+      <div class="filter-label" style="margin-bottom: 4px;">Counties</div>
+      <div id="countyCheckboxes" class="county-checkboxes"></div>
+    </div>
+    <div style="margin-left: auto;">
+      <button id="selectAllBtn" style="font-size: 12px; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; color: #374151;">Select All</button>
+      <button id="clearAllBtn" style="font-size: 12px; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; color: #374151; margin-left: 6px;">Clear</button>
+    </div>
+  </div>
+
+  <!-- Chart 1: By County Comparison (selected month) -->
+  <div class="chart-card">
+    <div class="chart-title">New Starts on ART by County</div>
+    <div class="chart-subtitle" id="monthSubtitle">Selected month</div>
+    <div class="hamburger">
+      <button class="hamburger-btn" onclick="toggleMenu('menu1')">&#8942;</button>
+      <div id="menu1" class="hamburger-menu">
+        <button class="hamburger-item" onclick="fullChart('countyComparisonChart')">View Full Chart</button>
+        <button class="hamburger-item" onclick="viewDataTable('countyComparisonChart')">See Data Table</button>
+        <button class="hamburger-item" onclick="exportChart('countyComparisonChart','png')">Download PNG</button>
+        <button class="hamburger-item" onclick="exportChart('countyComparisonChart','csv')">Export CSV</button>
+        <button class="hamburger-item" onclick="printChart('countyComparisonChart')">Print</button>
+      </div>
+    </div>
+    <div id="countyComparisonChart" class="chart-container"></div>
+  </div>
+
+  <!-- Chart 2: Monthly Trend per County -->
+  <div class="chart-card">
+    <div class="chart-title">Monthly Trend by County</div>
+    <div class="chart-subtitle">New starts on ART per month, disaggregated by county</div>
+    <div class="hamburger">
+      <button class="hamburger-btn" onclick="toggleMenu('menu2')">&#8942;</button>
+      <div id="menu2" class="hamburger-menu">
+        <button class="hamburger-item" onclick="fullChart('trendChart')">View Full Chart</button>
+        <button class="hamburger-item" onclick="viewDataTable('trendChart')">See Data Table</button>
+        <button class="hamburger-item" onclick="exportChart('trendChart','png')">Download PNG</button>
+        <button class="hamburger-item" onclick="exportChart('trendChart','csv')">Export CSV</button>
+        <button class="hamburger-item" onclick="printChart('trendChart')">Print</button>
+      </div>
+    </div>
+    <div id="trendChart" class="chart-container"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────
+let allData = [];
+let months = [];
+let counties = [];
+let defaultMonth = '';
+let selectedMonth = '';
+let selectedCounties = new Set();
+
+const COLORS = [
+  '#2563eb', '#dc2626', '#16a34a', '#d97706',
+  '#7c3aed', '#db2777', '#0891b2', '#65a30d',
+  '#ca8a04', '#9333ea', '#0d9488', '#4f46e5',
+  '#e11d48', '#0284c7', '#84cc16'
+];
+
+// ─── Data Fetch ───────────────────────────────────────────────────
+async function fetchData() {
+  const resp = await fetch('/api/hiv-treatment/newly-started-art/by-county');
+  const json = await resp.json();
+  if (json.error) { showToast('Error: ' + json.error); return; }
+
+  allData = json.rows || [];
+  months = json.months || [];
+  counties = json.counties || [];
+  defaultMonth = json.default_month || '';
+  selectedMonth = defaultMonth;
+
+  populateFilters();
+  renderCharts();
+}
+
+// ─── Filters ──────────────────────────────────────────────────────
+function populateFilters() {
+  // Month dropdown
+  const sel = document.getElementById('monthFilter');
+  sel.innerHTML = '';
+  for (const m of months) {
+    const opt = document.createElement('option');
+    opt.value = m.period;
+    opt.textContent = m.label;
+    sel.appendChild(opt);
+  }
+  sel.value = defaultMonth;
+  sel.onchange = () => { selectedMonth = sel.value; renderCharts(); };
+
+  // County checkboxes — default: ALL selected, sorted by total desc
+  const container = document.getElementById('countyCheckboxes');
+  container.innerHTML = '';
+  const sorted = [...counties].sort((a,b) => {
+    const va = allData.filter(r => r.county === a).reduce((s,r) => s + r.total, 0);
+    const vb = allData.filter(r => r.county === b).reduce((s,r) => s + r.total, 0);
+    return vb - va;
+  });
+  selectedCounties = new Set(sorted);
+  for (const c of sorted) {
+    const label = document.createElement('label');
+    label.className = 'county-checkbox-label active';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = true;
+    cb.value = c;
+    cb.onchange = () => {
+      if (cb.checked) selectedCounties.add(c);
+      else selectedCounties.delete(c);
+      label.classList.toggle('active', cb.checked);
+      renderCharts();
+    };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(c.replace(' County','')));
+    container.appendChild(label);
+  }
+}
+
+document.getElementById('selectAllBtn').onclick = () => {
+  document.querySelectorAll('#countyCheckboxes input').forEach(cb => {
+    cb.checked = true; selectedCounties.add(cb.value);
+    cb.parentElement.classList.add('active');
+  });
+  renderCharts();
+};
+document.getElementById('clearAllBtn').onclick = () => {
+  document.querySelectorAll('#countyCheckboxes input').forEach(cb => {
+    cb.checked = false; selectedCounties.delete(cb.value);
+    cb.parentElement.classList.remove('active');
+  });
+  renderCharts();
+};
+
+// ─── Chart Rendering ──────────────────────────────────────────────
+function renderCharts() {
+  renderCountyComparison();
+  renderTrendChart();
+}
+
+function renderCountyComparison() {
+  const filtered = allData.filter(r => r.period === selectedMonth && selectedCounties.has(r.county));
+  const sorted = [...filtered].sort((a,b) => b.total - a.total);
+
+  const monthLabel = months.find(m => m.period === selectedMonth)?.label || selectedMonth;
+  document.getElementById('monthSubtitle').textContent = `New ART starts for ${monthLabel}`;
+
+  Highcharts.chart('countyComparisonChart', {
+    chart: { type: 'column', zoomType: 'x' },
+    title: { text: null },
+    xAxis: {
+      categories: sorted.map(r => r.county.replace(' County','')),
+      labels: { style: { fontSize: '12px', fontWeight: '600' } }
+    },
+    yAxis: {
+      title: { text: 'Patients' },
+      allowDecimals: false
+    },
+    tooltip: {
+      pointFormat: '<b>{point.y}</b> patients'
+    },
+    plotOptions: {
+      column: {
+        borderRadius: 4,
+        dataLabels: { enabled: true, format: '{point.y}' }
+      }
+    },
+    series: [{
+      name: 'New Starts on ART',
+      data: sorted.map(r => r.total),
+      colorByPoint: true,
+      colors: COLORS
+    }],
+    credits: { enabled: false },
+    exporting: { enabled: false }
+  });
+}
+
+function renderTrendChart() {
+  const active = [...selectedCounties];
+  if (active.length === 0) {
+    Highcharts.chart('trendChart', {
+      title: { text: 'No counties selected' }, chart: { zoomType: 'x' },
+      credits: { enabled: false }, exporting: { enabled: false }
+    });
+    return;
+  }
+
+  const sortedMonths = [...months].sort((a,b) => a.period.localeCompare(b.period));
+
+  const series = active.map((county, i) => {
+    const data = sortedMonths.map(m => {
+      const row = allData.find(r => r.county === county && r.period === m.period);
+      return row ? row.total : 0;
+    });
+    return {
+      name: county.replace(' County',''),
+      data: data,
+      color: COLORS[i % COLORS.length]
+    };
+  });
+
+  Highcharts.chart('trendChart', {
+    chart: { zoomType: 'x' },
+    title: { text: null },
+    xAxis: {
+      categories: sortedMonths.map(m => m.label),
+      labels: { style: { fontSize: '11px' } }
+    },
+    yAxis: {
+      title: { text: 'Patients' },
+      allowDecimals: false
+    },
+    tooltip: {
+      shared: true,
+      valueSuffix: ' patients'
+    },
+    plotOptions: {
+      series: {
+        marker: { enabled: true, radius: 3 },
+        connectNulls: false
+      }
+    },
+    series: series,
+    credits: { enabled: false },
+    exporting: { enabled: false }
+  });
+}
+
+// ─── Hamburger Actions ────────────────────────────────────────────
+function toggleMenu(id) {
+  const menu = document.getElementById(id);
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.hamburger-menu').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.hamburger')) {
+    document.querySelectorAll('.hamburger-menu').forEach(m => m.classList.remove('open'));
+  }
+});
+
+function getChart(chartId) {
+  return Highcharts.charts.find(c => c && c.renderTo.id === chartId);
+}
+
+function fullChart(chartId) {
+  const chart = getChart(chartId);
+  if (chart) chart.fullscreen?.toggle();
+}
+
+function viewDataTable(chartId) {
+  const chart = getChart(chartId);
+  if (chart) chart.viewData();
+}
+
+function exportChart(chartId, format) {
+  const chart = getChart(chartId);
+  if (!chart) return;
+  if (format === 'png') chart.exportChart();
+  else if (format === 'csv') chart.downloadCSV();
+}
+
+function printChart(chartId) {
+  const chart = getChart(chartId);
+  if (chart) chart.print();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+fetchData();
+</script>
+</body>
+</html>
+        );
+        const peakVal = Math.max(...values);
+        const peakIdx = values.indexOf(peakVal);
+        const lowVal = Math.min(...values);
+        const lowIdx = values.indexOf(lowVal);
+
+        monthlyChart = Highcharts.chart("monthlyChart", {
+          chart: {
+            type: "column",
+            backgroundColor: "transparent",
+            style: { fontFamily: "Inter, sans-serif" },
+            animation: { duration: 700 },
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: labels,
+            crosshair: true,
+            title: {
+              text: "Month",
+              style: { fontWeight: "600", fontSize: "13px", color: "#475569" },
+            },
+            labels: { style: { fontSize: "11px", fontWeight: "500" } },
+          },
+          yAxis: {
+            min: 0,
+            title: {
+              text: "Number of Patients Newly Started on ART",
+              style: { fontWeight: "600", fontSize: "13px", color: "#475569" },
+            },
+            labels: { style: { fontSize: "11px" } },
+            gridLineColor: "#eef2f6",
+          },
+          tooltip: {
+            shared: true,
+            headerFormat:
+              '<div style="font-size:13px;font-weight:700;margin-bottom:4px;">{point.key}</div>',
+            pointFormat:
+              '<span style="color:{point.color}">●</span> {series.name}: <b>{point.y}</b> patients',
+          },
+          plotOptions: {
+            column: {
+              borderRadius: 4,
+              groupPadding: 0.08,
+              pointPadding: 0.05,
+              dataLabels: {
+                enabled: true,
+                format: "{point.y}",
+                style: {
+                  fontSize: "10px",
+                  fontWeight: "600",
+                  color: "#475569",
+                },
+                verticalAlign: "bottom",
+                y: -6,
+              },
+            },
+            series: { animation: { duration: 700 } },
+          },
+          series: [
+            {
+              name: "Newly Started on ART",
+              type: "column",
+              data: values.map((v, i) => ({
+                y: v,
+                color:
+                  i === peakIdx
+                    ? "#10b981"
+                    : i === lowIdx
+                      ? "#ef4444"
+                      : "#0a66c2",
+              })),
+              pointWidth: 36,
+            },
+            {
+              name: "Trend",
+              type: "spline",
+              data: [
+                null,
+                null,
+                null,
+                ...values.slice(3).map((_, j, a) => {
+                  const start = j;
+                  const end = Math.min(j + 6, values.length);
+                  const slice = values.slice(start, end);
+                  return Math.round(
+                    slice.reduce((s, v) => s + v, 0) / slice.length,
+                  );
+                }),
+              ],
+              color: "#f59e0b",
+              marker: { enabled: false },
+              dashStyle: "Dash",
+              lineWidth: 2.5,
+              dataLabels: { enabled: false },
+            },
+          ],
+          exporting: { enabled: false },
+          credits: { enabled: false },
+          legend: {
+            align: "center",
+            verticalAlign: "bottom",
+            layout: "horizontal",
+            itemStyle: { fontSize: "12px", fontWeight: "500" },
+          },
+        });
+      }
+
+      // ══════════════════════════════════════════════════
+      // 3. RENDER TOP FACILITIES CHART
+      // ══════════════════════════════════════════════════
+      function renderTopFacChart() {
+        const names = topFacData.map((r) => r.facility || "Unknown");
+        const vals = topFacData.map((r) => Number(r.total_new_starts_on_art));
+
+        topFacChart = Highcharts.chart("topFacChart", {
+          chart: {
+            type: "bar",
+            backgroundColor: "transparent",
+            style: { fontFamily: "Inter, sans-serif" },
+            animation: { duration: 600 },
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: names,
+            title: {
+              text: "Ward / Facility",
+              style: { fontWeight: "600", fontSize: "12px", color: "#475569" },
+            },
+            labels: { style: { fontSize: "10px", fontWeight: "500" } },
+          },
+          yAxis: {
+            min: 0,
+            title: {
+              text: "Total New Starts on ART",
+              style: { fontWeight: "600", fontSize: "12px", color: "#475569" },
+            },
+            labels: { style: { fontSize: "10px" } },
+            gridLineColor: "#eef2f6",
+          },
+          tooltip: { pointFormat: "<b>{point.y}</b> patients" },
+          plotOptions: {
+            bar: {
+              borderRadius: 3,
+              dataLabels: {
+                enabled: true,
+                format: "{point.y}",
+                style: {
+                  fontSize: "10px",
+                  fontWeight: "600",
+                  color: "#475569",
+                },
+              },
+            },
+          },
+          colors: ["#6366f1"],
+          series: [{ name: "New Starts", data: vals, pointWidth: 16 }],
+          exporting: { enabled: false },
+          credits: { enabled: false },
+          legend: { enabled: false },
+        });
+      }
+
+      // ══════════════════════════════════════════════════
+      // 4. HAMBURGER MENU LOGIC
+      // ══════════════════════════════════════════════════
+      document.querySelectorAll(".chart-hamburger").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const chart = btn.dataset.chart;
+          const menu = document.querySelector(`[data-chart-menu="${chart}"]`);
+          const overlay = document.querySelector(`[data-overlay="${chart}"]`);
+          const isOpen = menu.classList.contains("open");
+
+          document
+            .querySelectorAll(".chart-menu")
+            .forEach((m) => m.classList.remove("open"));
+          document
+            .querySelectorAll(".menu-overlay")
+            .forEach((o) => o.classList.remove("open"));
+
+          if (!isOpen) {
+            menu.classList.add("open");
+            overlay.classList.add("open");
+          }
+        });
+      });
+
+      document.querySelectorAll(".menu-overlay").forEach((overlay) => {
+        overlay.addEventListener("click", () => {
+          document
+            .querySelectorAll(".chart-menu")
+            .forEach((m) => m.classList.remove("open"));
+          document
+            .querySelectorAll(".menu-overlay")
+            .forEach((o) => o.classList.remove("open"));
+        });
+      });
+
+      // ══════════════════════════════════════════════════
+      // 5. MENU ACTIONS
+      // ══════════════════════════════════════════════════
+      function closeMenus() {
+        document
+          .querySelectorAll(".chart-menu")
+          .forEach((m) => m.classList.remove("open"));
+        document
+          .querySelectorAll(".menu-overlay")
+          .forEach((o) => o.classList.remove("open"));
+      }
+
+      function getChart(name) {
+        return name === "monthly" ? monthlyChart : topFacChart;
+      }
+      function getLabels(name) {
+        return name === "monthly"
+          ? monthlyData.map((r) => r.period_label || r.period_dhis)
+          : topFacData.map((r) => r.facility || "");
+      }
+      function getValues(name) {
+        return (name === "monthly" ? monthlyData : topFacData).map((r) =>
+          Number(r.total_new_starts_on_art),
+        );
+      }
+      function getTitle(name) {
+        return name === "monthly"
+          ? "Monthly Trend – New Starts on ART"
+          : "Top Facilities – New Starts on ART";
+      }
+      function getFullName(name) {
+        return name === "monthly" ? "monthly_trend" : "top_facilities";
+      }
+
+      // Fullscreen
+      document
+        .querySelectorAll('[data-action^="fullscreen-"]')
+        .forEach((el) => {
+          el.addEventListener("click", () => {
+            closeMenus();
+            const type = el.dataset.action.replace("fullscreen-", "");
+            const labels = getLabels(type);
+            const values = getValues(type);
+            const isMonthly = type === "monthly";
+            document.getElementById("modalTitle").textContent = getTitle(type);
+
+            Highcharts.chart("fullscreenChart", {
+              chart: {
+                type: isMonthly ? "column" : "bar",
+                backgroundColor: "transparent",
+                style: { fontFamily: "Inter, sans-serif" },
+              },
+              title: {
+                text: getTitle(type),
+                style: { fontSize: "18px", fontWeight: "700" },
+              },
+              xAxis: {
+                categories: labels,
+                crosshair: true,
+                title: {
+                  text: isMonthly ? "Month" : "Ward / Facility",
+                  style: { fontWeight: "600" },
+                },
+              },
+              yAxis: {
+                min: 0,
+                title: {
+                  text: isMonthly ? "Number of Patients" : "Total New Starts",
+                  style: { fontWeight: "600" },
+                },
+                gridLineColor: "#eef2f6",
+              },
+              tooltip: { pointFormat: "<b>{point.y}</b> patients" },
+              plotOptions: {
+                column: {
+                  borderRadius: 4,
+                  dataLabels: {
+                    enabled: true,
+                    format: "{point.y}",
+                    style: { fontSize: "11px", fontWeight: "600" },
+                  },
+                },
+                bar: {
+                  borderRadius: 3,
+                  dataLabels: {
+                    enabled: true,
+                    format: "{point.y}",
+                    style: { fontSize: "11px", fontWeight: "600" },
+                  },
+                },
+              },
+              colors: [isMonthly ? "#0a66c2" : "#6366f1"],
+              series: [{ name: "New Starts", data: values }],
+              exporting: { enabled: true },
+              credits: { enabled: false },
+            });
+            document.getElementById("fullscreenModal").classList.add("open");
+          });
+        });
+
+      // Data Table
+      document.querySelectorAll('[data-action^="datatable-"]').forEach((el) => {
+        el.addEventListener("click", () => {
+          closeMenus();
+          const type = el.dataset.action.replace("datatable-", "");
+          const labels = getLabels(type);
+          const values = getValues(type);
+          const isMonthly = type === "monthly";
+
+          document.getElementById("dataTableTitle").textContent =
+            getTitle(type) + " – Data Table";
+          const thead = document.getElementById("dtHead");
+          const tbody = document.getElementById("dtBody");
+
+          if (isMonthly) {
+            thead.innerHTML =
+              "<tr><th>Month</th><th>New Starts on ART</th></tr>";
+            tbody.innerHTML = labels
+              .map(
+                (l, i) =>
+                  `<tr><td>${l}</td><td><strong>${values[i]}</strong></td></tr>`,
+              )
+              .join("");
+          } else {
+            thead.innerHTML =
+              "<tr><th>Ward / Facility</th><th>Total New Starts</th></tr>";
+            tbody.innerHTML = labels
+              .map(
+                (l, i) =>
+                  `<tr><td>${l}</td><td><strong>${values[i]}</strong></td></tr>`,
+              )
+              .join("");
+          }
+          document.getElementById("dataTableModal").classList.add("open");
+        });
+      });
+
+      // Download PNG
+      document.querySelectorAll('[data-action^="png-"]').forEach((el) => {
+        el.addEventListener("click", () => {
+          closeMenus();
+          const chart = getChart(el.dataset.action.replace("png-", ""));
+          if (chart)
+            chart.exportChart({
+              type: "image/png",
+              filename: getFullName(el.dataset.action.replace("png-", "")),
+            });
+        });
+      });
+
+      // Export CSV
+      document.querySelectorAll('[data-action^="csv-"]').forEach((el) => {
+        el.addEventListener("click", () => {
+          closeMenus();
+          const type = el.dataset.action.replace("csv-", "");
+          const labels = getLabels(type);
+          const values = getValues(type);
+          const isMonthly = type === "monthly";
+          const header = isMonthly
+            ? "Month,New_Starts_on_ART"
+            : "Facility_Ward,Total_New_Starts";
+          const rows = labels.map((l, i) => `${l},${values[i]}`).join("\n");
+          const csv = header + "\n" + rows;
+
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = getFullName(type) + ".csv";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      });
+
+      // Print
+      document.querySelectorAll('[data-action^="print-"]').forEach((el) => {
+        el.addEventListener("click", () => {
+          closeMenus();
+          window.print();
+        });
+      });
+
+      // ══════════════════════════════════════════════════
+      // 6. MODAL CONTROLS
+      // ══════════════════════════════════════════════════
+      function closeModals() {
+        document
+          .querySelectorAll(".modal")
+          .forEach((m) => m.classList.remove("open"));
+      }
+      document
+        .getElementById("modalClose")
+        .addEventListener("click", closeModals);
+      document
+        .getElementById("dataTableClose")
+        .addEventListener("click", closeModals);
+      document
+        .querySelectorAll(".modal .modal-bg")
+        .forEach((b) => b.addEventListener("click", closeModals));
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModals();
+      });
+
+      // ══════════════════════════════════════════════════
+      // 7. START
+      // ══════════════════════════════════════════════════
+      loadData();
+    </script>
+  </body>
+</html>
