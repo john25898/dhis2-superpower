@@ -19,3 +19,31 @@ services:
         sync: false
       - key: GEMINI_API_KEY2
         sync: false
+
+  - type: web
+    name: dhis2-superpower-train
+    env: python
+    rootDir: train
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: DHIS_BASE_URL
+        sync: false
+      - key: DHIS_USERNAME
+        sync: false
+      - key: DHIS_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_BACKUP
+        sync: false
+      - key: GEMINI_API_KEY1
+        sync: false
+      - key: GEMINI_API_KEY2
+        sync: false
+      - key: GEMINI_API_KEY3
+        sync: false
+      - key: GEMINI_API_KEY4
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
