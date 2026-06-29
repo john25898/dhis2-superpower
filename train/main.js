@@ -8,6 +8,7 @@ const state = {
   locationHierarchy: null,
   countyFilter: "all",
   subCountyFilter: "all",
+  projectFilter: "all",
   periodFilter: "all",
   activeSubtabs: {},
   jtCounties: [],
@@ -187,6 +188,7 @@ function bindElements() {
   elements.countyFilter = document.getElementById("countyFilter");
   elements.subCountyFilter = document.getElementById("subCountyFilter");
   elements.facilityFilter = document.getElementById("facilityFilter");
+  elements.projectFilter = document.getElementById("projectFilter");
   elements.periodFilter = document.getElementById("periodFilter");
   elements.periodSelector = document.getElementById("periodSelector");
   elements.resetFilters = document.getElementById("resetFilters");
@@ -528,15 +530,22 @@ function bindFilterControls() {
     renderCurrentView();
   });
 
+  elements.projectFilter?.addEventListener("change", () => {
+    state.projectFilter = elements.projectFilter.value;
+    renderCurrentView();
+  });
+
   elements.resetFilters?.addEventListener("click", () => {
     state.facilityFilter = "all";
     state.countyFilter = "all";
     state.subCountyFilter = "all";
     state.facilityFilter = "all";
+    state.projectFilter = "all";
     state.periodFilter = "all";
     if (elements.facilityFilter) elements.facilityFilter.value = "all";
     if (elements.countyFilter) elements.countyFilter.value = "all";
     if (elements.subCountyFilter) elements.subCountyFilter.value = "all";
+    if (elements.projectFilter) elements.projectFilter.value = "all";
     if (periodFilterInput) periodFilterInput.value = "";
     periodLabel.textContent = "Period";
     periodLabel.style.color = "#64748b";
@@ -644,6 +653,19 @@ function populateFilterOptions() {
       );
       if (stillExists) elements.subCountyFilter.value = prevVal;
     }
+  }
+
+  // Populate project filter with placeholder projects
+  if (elements.projectFilter && !elements.projectFilter.dataset.populated) {
+    const projects = [
+      { value: "all", label: "All Projects" },
+      { value: "jamii_tekelezi", label: "Jamii Tekelezi" },
+      { value: "chap_stawisha", label: "Chap Stawisha" },
+      { value: "gates_foundation", label: "Gates Foundation" },
+      { value: "chak_global", label: "CHAK Global" },
+    ];
+    renderSelectOptions(elements.projectFilter, "", projects);
+    elements.projectFilter.dataset.populated = "true";
   }
 }
 
@@ -1153,9 +1175,13 @@ async function renderNartTrendChart(container) {
     state.facilityFilter !== "all"
       ? `&facility=${encodeURIComponent(state.facilityFilter)}`
       : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
   try {
     const resp = await fetch(
-      `/api/hiv-treatment/nart-trend?county=${encodeURIComponent(county)}${scParam}${facParam}`,
+      `/api/hiv-treatment/nart-trend?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}`,
     );
     const json = await resp.json();
     if (json.error) {
@@ -1393,9 +1419,13 @@ async function renderNartDhisLiveChart(container) {
     state.facilityFilter !== "all"
       ? `&facility=${encodeURIComponent(state.facilityFilter)}`
       : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
   try {
     const resp = await fetch(
-      `/api/hiv-treatment/nart-dhis-live?county=${encodeURIComponent(county)}${scParam}${facParam}`,
+      `/api/hiv-treatment/nart-dhis-live?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}`,
     );
     const json = await resp.json();
     if (json.error) {
@@ -1704,10 +1734,14 @@ async function renderHomepageDashboard() {
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
       : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
 
   try {
     const resp = await fetch(
-      `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}&period=LAST_12_MONTHS`,
+      `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${projParam}&period=LAST_12_MONTHS`,
     );
     const d = await resp.json();
     if (d.error) {
@@ -1994,8 +2028,12 @@ async function renderDhisLiveChart(container, pageId, slug) {
       state.periodFilter && state.periodFilter !== "all"
         ? state.periodFilter
         : "LAST_12_MONTHS";
+    const projParam =
+      state.projectFilter !== "all"
+        ? `&project=${encodeURIComponent(state.projectFilter)}`
+        : "";
     const resp = await fetch(
-      `/api/hiv-treatment/dhis-live?type=${encodeURIComponent(config.type)}&county=${encodeURIComponent(county)}${scParam}${facParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      `/api/hiv-treatment/dhis-live?type=${encodeURIComponent(config.type)}&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
     );
     const json = await resp.json();
     if (json.error) {
@@ -2037,13 +2075,17 @@ async function renderHtsLiveChart(container, pageId, slug) {
     state.facilityFilter !== "all"
       ? `&facility=${encodeURIComponent(state.facilityFilter)}`
       : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
   try {
     const selectedPeriod =
       state.periodFilter && state.periodFilter !== "all"
         ? state.periodFilter
         : "LAST_12_MONTHS";
     const resp = await fetch(
-      `/api/hiv-testing/dhis-live?type=${encodeURIComponent(config.type)}&county=${encodeURIComponent(county)}${scParam}${facParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      `/api/hiv-testing/dhis-live?type=${encodeURIComponent(config.type)}&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
     );
     const json = await resp.json();
     if (json.error) {
@@ -3772,6 +3814,7 @@ function loadTxCurrAnalytics(data) {
   locationParams.set("county", data.county || "Meru County");
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
+  if (state.projectFilter && state.projectFilter !== "all") locationParams.set("project", state.projectFilter);
   const params = locationParams.toString();
   const cfg = {}; // dummy config, not used by renderers
 
@@ -3800,6 +3843,7 @@ function loadTxNewAnalytics(data) {
   locationParams.set("county", data.county || "Meru County");
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
+  if (state.projectFilter && state.projectFilter !== "all") locationParams.set("project", state.projectFilter);
   const params = locationParams.toString();
 
   const views = [
@@ -7020,7 +7064,11 @@ function renderChakPage(container, slug, apiPageId) {
 
   const county =
     state.countyFilter !== "all" ? state.countyFilter : "Meru County";
-  let url = `/pbix/api/${encodeURIComponent(apiPageId)}?county=${encodeURIComponent(county)}`;
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  let url = `/pbix/api/${encodeURIComponent(apiPageId)}?county=${encodeURIComponent(county)}${projParam}`;
   // Pass subcounty filter if set
   if (state.subCountyFilter && state.subCountyFilter !== "all") {
     url += `&subcounty=${encodeURIComponent(state.subCountyFilter)}`;
