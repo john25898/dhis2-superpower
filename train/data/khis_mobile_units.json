@@ -1,0 +1,549 @@
+{
+  "mobile_units": [
+    {
+      "id": "gQeEbhqx7i0",
+      "name": "Amuma Mobile Dispensary",
+      "level": 5,
+      "parent": "Fafi Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "hoKWiidY2Ao",
+      "name": "Arbajahan Nomadic Mobile Clinic",
+      "level": 5,
+      "parent": "Ademasajide Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "aurD7roGl9n",
+      "name": "BEYOND ZERO MOBILE CLINIC",
+      "level": 5,
+      "parent": "Takaba Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "no3Q20FkJYs",
+      "name": "Baringo County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kabarnet Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "BMKk3j2RBb7",
+      "name": "Beyond Zero Mobile Clinic (Kitui KCA 423F)",
+      "level": 5,
+      "parent": "Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "zs9g0JiJDru",
+      "name": "Beyond Zero Mobile Clinic (Meru)",
+      "level": 5,
+      "parent": "Municipality Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "volHF9E4mLd",
+      "name": "Beyond Zero Mobile Clinic (Mombasa)",
+      "level": 5,
+      "parent": "Majengo Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "lVLswpJFajQ",
+      "name": "Beyond Zero Mobile Clinic Endebess",
+      "level": 5,
+      "parent": "Endebess Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "NgM7jy1Awag",
+      "name": "Beyond Zero Mobile Clinic Machakos",
+      "level": 5,
+      "parent": "Machakos Central Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "N5QSgyRRB5q",
+      "name": "Beyond Zero Mobile Clinic(Busia)",
+      "level": 5,
+      "parent": "Burumba Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "xqlJRApdss3",
+      "name": "Beyond Zero Mobile Clinic(Kajiado County)",
+      "level": 5,
+      "parent": "Ildamat Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "o6PAzmMdPPt",
+      "name": "Beyond Zero Mobile Clinic(Kwale)",
+      "level": 5,
+      "parent": "Tsimba Golini Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "bZRnwCcVLTi",
+      "name": "Beyond Zero Mobile Clinic(Trans Nzoia)",
+      "level": 5,
+      "parent": "Hospital Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "tPkEZpOQ4e4",
+      "name": "Beyond Zero Mobile Medical Clinic  (Taita Taveta)",
+      "level": 5,
+      "parent": "Wundanyi/Mbale Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "EeUgXAsqcri",
+      "name": "Beyond Zero Mobile Medical Clinic (Butere)",
+      "level": 5,
+      "parent": "Marama Central Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "pRrUN3Qd23t",
+      "name": "Beyond Zero Mobile Medical Clinic (Kerugoya)",
+      "level": 5,
+      "parent": "Kerugoya Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "mW5hAXqSo2i",
+      "name": "Beyond Zero Mobile Medical Clinic (Kilifi)",
+      "level": 5,
+      "parent": "Sokoni Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "t6KmeSN6fWi",
+      "name": "Beyond Zero Mobile Medical Clinic (Kisii)",
+      "level": 5,
+      "parent": "Kitutu Central Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "iIQItxot79B",
+      "name": "Beyond Zero Mobile Medical Clinic (Kisumu)",
+      "level": 5,
+      "parent": "Kondele Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "apzWN9C3UzC",
+      "name": "Beyond Zero Mobile Medical Clinic (Lamu)",
+      "level": 5,
+      "parent": "Mkomani Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "sSpDotVamEv",
+      "name": "Beyond Zero Mobile Medical Clinic (Makueni)",
+      "level": 5,
+      "parent": "Wote Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "Nudakf4aro2",
+      "name": "Beyond Zero Mobile Medical Clinic (Mandera)",
+      "level": 5,
+      "parent": "Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "Yymqg0xdlGA",
+      "name": "Beyond Zero Mobile Medical Clinic (Mombasa County)",
+      "level": 5,
+      "parent": "Mji Wa Kale/Makadara Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "cshRJlninFB",
+      "name": "Beyond Zero Mobile Medical Clinic(Isiolo County)",
+      "level": 5,
+      "parent": "Wabera Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "YKVWbMGtETy",
+      "name": "Bomet county Beyond Zero mobile clinic",
+      "level": 5,
+      "parent": "Longisa Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "a9xTLztQg09",
+      "name": "Bungoma Beyond Zero Mobile Unit",
+      "level": 5,
+      "parent": "Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "jpV6zHFntj5",
+      "name": "CHAT Mobile Clinic",
+      "level": 5,
+      "parent": "Nanyuki Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "iIlLyDnUFLQ",
+      "name": "CLOSED Daka Mobile",
+      "level": 5,
+      "parent": "Mtopanga Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "Wxrrl9WwgNJ",
+      "name": "Community Health Trust (CHAT) Mobile Clinic",
+      "level": 5,
+      "parent": "Maralal Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "PGpN8Rp6Fng",
+      "name": "Elgeyo Marakwet County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kapchemutwa Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "jQSE1sHVtRp",
+      "name": "Garissa Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Bura Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "oBXRZWKhR3q",
+      "name": "Gilgil Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Gilgil Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "Zrjxc9BdvM1",
+      "name": "Homabay County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Homa Bay Central Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "huSoRN1KZVa",
+      "name": "Huruma Mobile Clinic",
+      "level": 5,
+      "parent": "Njoro Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "TwF7MaWe0bA",
+      "name": "Jionee Mobile Medical-Kware",
+      "level": 5,
+      "parent": "Kware Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "UcV3RN4ya0M",
+      "name": "Kakamega County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Shirere Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "Al2pZWEoQwR",
+      "name": "Kericho County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kipchebor Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "vMwvwtLTb21",
+      "name": "Khwisero Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kisa North Ward",
+      "ownership": "UNCLASSIFIED",
+      "facility_type": ""
+    },
+    {
+      "id": "WQuPnZhGnjh",
+      "name": "Kiambu County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "CoarYrpHfgr",
+      "name": "Kipkegenda (Mobile)",
+      "level": 6,
+      "parent": "Kaptumo Sub-County Hospital",
+      "ownership": "UNCLASSIFIED",
+      "facility_type": ""
+    },
+    {
+      "id": "DIAhMo9Ag08",
+      "name": "Kitale Mobile Clinic",
+      "level": 5,
+      "parent": "Matisi Ward",
+      "ownership": "Revised Faith Based Organisation (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "HEguhCKMOjs",
+      "name": "Kitui Beyond Zero Mobile Clinic KCA 422 F",
+      "level": 5,
+      "parent": "Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "sArArEZb9IG",
+      "name": "Kuresoi North Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kiptororo Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "F5hM88SYGOJ",
+      "name": "Laikipia county Beyond Zero mobile clinic",
+      "level": 5,
+      "parent": "Nanyuki Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "lxvrGrCMlIy",
+      "name": "Life Water Ndege Mobile Clinic",
+      "level": 5,
+      "parent": "Nakuru East Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "kKmrk2Vvnbx",
+      "name": "MOBILE CLINIC",
+      "level": 6,
+      "parent": "Elwak Health Centre",
+      "ownership": "UNCLASSIFIED",
+      "facility_type": ""
+    },
+    {
+      "id": "wjv7qXMocW4",
+      "name": "Maasai Community Health Mobile",
+      "level": 5,
+      "parent": "Ilmotiook Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "FiGB5Re7nrw",
+      "name": "Marsabit County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "North Horr Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "SFEXK5lGYf0",
+      "name": "Mercy Mobile Clinic (Kipkelion)",
+      "level": 5,
+      "parent": "Kipkelion Ward",
+      "ownership": "Revised Faith Based Organisation (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "oBr8cmnAali",
+      "name": "Mercy Mobile Clinic (Molo)",
+      "level": 5,
+      "parent": "Kiptororo Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "WFLgIzfzUCx",
+      "name": "Mobile Clinics",
+      "level": 6,
+      "parent": "Kaptumo Sub-County Hospital",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "lHkiP9bKhsi",
+      "name": "Mogotio Mobile",
+      "level": 6,
+      "parent": "Soin Sub County Hospital",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "rP7uOAYq9Qr",
+      "name": "Mombasa Bionear Mobile Laboratory",
+      "level": 5,
+      "parent": "Majengo Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "DKkMUpgI1At",
+      "name": "Mpalla Mobile Clinic",
+      "level": 5,
+      "parent": "Tigithi Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "q6tqKRXy0aZ",
+      "name": "Naivasha Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Hellsgate Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "omKNAmvy2b3",
+      "name": "Nakuru beyond zero mobile clinic",
+      "level": 5,
+      "parent": "London Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "djNUsEOtIPD",
+      "name": "Nandi County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kapsabet Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "JlUu0EOQedE",
+      "name": "Njoro beyond zero mobile clinic",
+      "level": 5,
+      "parent": "Njoro Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "cDEHKD4PLzY",
+      "name": "Samburu Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Maralal Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "JdG77mrMlNl",
+      "name": "Siaya County Referral Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Siaya Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "n1pgPAttniF",
+      "name": "St Martin De Porres (Mobile)",
+      "level": 5,
+      "parent": "Kamara Ward",
+      "ownership": "Revised Private(2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "U8CEFUuQcQa",
+      "name": "Takaba Nomadic Mobile",
+      "level": 5,
+      "parent": "Takaba Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "udKvEWFmSt4",
+      "name": "Tenwek Mobile",
+      "level": 5,
+      "parent": "Tinet Ward",
+      "ownership": "Revised Faith Based Organisation (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "JGPGxPv72VS",
+      "name": "Tharaka Nithi County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Igambang'ombe Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "zNJhF2MHFAR",
+      "name": "Turkana County Beyond Zero Campaign Mobile Clinic",
+      "level": 5,
+      "parent": "Lodwar Township Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "BZp57TjWY90",
+      "name": "Uasingishu County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Kimumu Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "fimw1hY0jqD",
+      "name": "Wajir Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Wagberi Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    },
+    {
+      "id": "lTq7NBa87mK",
+      "name": "West Pokot County Beyond Zero Mobile Clinic",
+      "level": 5,
+      "parent": "Wei Wei Ward",
+      "ownership": "Revised Ministry of Health (2018)",
+      "facility_type": ""
+    }
+  ],
+  "total": 68
+}

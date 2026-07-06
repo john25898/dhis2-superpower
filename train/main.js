@@ -4,6 +4,7 @@ const state = {
   catalog: null,
   facilityPage: null,
   activePage: "overview",
+  activeProject: "",
   facilityFilter: "all",
   locationHierarchy: null,
   countyFilter: "all",
@@ -11,6 +12,10 @@ const state = {
   projectFilter: "all",
   periodFilter: "all",
   activeSubtabs: {},
+  activeMhuSubtab: "WORKLOAD",
+  playgroundMode: "finance",
+  playgroundChart: null,
+  playgroundFinanceData: null,
   jtCounties: [],
   jtSubcounties: [],
   jtSubcountyMap: {},
@@ -60,10 +65,28 @@ function applyHashRoute() {
   const parts = hash.split("/").filter(Boolean);
   if (!parts.length) return;
 
-  const pageId = parts[0];
-  const subtabSlug = parts[1] || "";
+  // Check for project context: #/p/{projectCode}/{page}/{subtab}
+  // projectCode: jm = jamii_tekelezi
+  const projectMap = { jm: "jamii_tekelezi" };
+  let pageId, subtabSlug;
+
+  if (parts[0] === "p" && parts.length >= 2 && projectMap[parts[1]]) {
+    const projectCode = parts[1];
+    state.activeProject = projectMap[projectCode];
+    pageId = parts[2] || "overview";
+    subtabSlug = parts[3] || "";
+  } else {
+    state.activeProject = "";
+    pageId = parts[0];
+    subtabSlug = parts[1] || "";
+  }
+
   const validPages = new Set([
     "overview",
+    "playground",
+    "health_programmes",
+    "human_resource",
+    "cbsl",
     "reporting_rates",
     "hiv_testing",
     "hiv_treatment",
@@ -78,13 +101,18 @@ function applyHashRoute() {
     "case_surveillance",
     "facilities",
     "indicators",
+    "jamii",
     "all",
   ]);
   if (!validPages.has(pageId)) return;
 
   state.activePage = pageId;
+  const meta = getPageMeta(pageId);
   if (subtabSlug) {
     state.activeSubtabs[pageId] = subtabSlug;
+  } else if (meta.subtabs && meta.subtabs.length) {
+    state.activeSubtabs[pageId] =
+      state.activeSubtabs[pageId] || toSlug(meta.subtabs[0]);
   }
 }
 
@@ -98,7 +126,9 @@ function toSlug(value) {
 
 function setPageHash(pageId, subtabLabel = "") {
   const sub = subtabLabel ? `/${toSlug(subtabLabel)}` : "";
-  const next = `#/${pageId}${sub}`;
+  // Include project context in hash if active
+  const projectPrefix = state.activeProject === "jamii_tekelezi" ? "p/jm/" : "";
+  const next = `#/${projectPrefix}${pageId}${sub}`;
   if (window.location.hash !== next) {
     window.location.hash = next;
   }
@@ -203,9 +233,16 @@ function bindElements() {
 
 function getPageMeta(pageId) {
   const pages = {
+    health_programmes: {
+      title: "Health Programmes",
+      subtabs: ["MHU", "Projects"],
+    },
+    human_resource: { title: "Human Resource", subtabs: ["Overview"] },
+    cbsl: { title: "CBSL", subtabs: ["Overview"] },
     hiv_testing: {
       title: "HIV Testing & Prevention",
       subtabs: [
+        "Overview",
         "HIV TESTING SERVICES UPTAKE",
         "HIV TESTING SERVICES LINKAGE",
         "PARTNER NOTIFICATION SERVICES",
@@ -221,6 +258,7 @@ function getPageMeta(pageId) {
     hiv_treatment: {
       title: "HIV Treatment",
       subtabs: [
+        "Overview",
         "Newly Started on ART",
         "Current on ART",
         "ART Optimization",
@@ -286,9 +324,15 @@ function getPageMeta(pageId) {
         "Narratives",
       ],
     },
+    playground: { title: "Playground", subtabs: [] },
     jamii: {
       title: "Jamii Tekelezi",
-      subtabs: ["Overview", "TX_CURR Analytics"],
+      subtabs: [
+        "Overview",
+        "TX_CURR Analytics",
+        "Programme Highlights",
+        "Workload & MHU",
+      ],
     },
     overview: { title: "Home", subtabs: [] },
   };
@@ -312,6 +356,65 @@ function renderPageContext(pageId) {
     return;
 
   const subtabs = Array.isArray(meta.subtabs) ? meta.subtabs : [];
+  if (subtabs.length && !state.activeSubtabs[pageId]) {
+    state.activeSubtabs[pageId] = toSlug(subtabs[0]);
+  }
+
+  // ── Project context mode (e.g., inside Jamii Tekelezi) ──
+  if (state.activeProject === "jamii_tekelezi") {
+    elements.pageContextBar.classList.remove("hidden");
+    const activeSlug = state.activeSubtabs[pageId] || toSlug(subtabs[0] || "");
+    const activeLabel =
+      subtabs.find((s) => toSlug(s) === activeSlug) || subtabs[0] || "";
+    elements.pageBreadcrumb.innerHTML = `
+      <div class="flex items-center gap-2 text-[12px] text-slate-500">
+        <button id="exitProjectBtn" class="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-[12px] font-medium text-sky-700 hover:bg-sky-100 transition">
+          ← Back to Projects
+        </button>
+        <span class="text-slate-300">|</span>
+        <span class="font-semibold text-sky-700">🏥 Jamii Tekelezi</span>
+        <span class="text-slate-400">/</span>
+        <span>${escapeHtml(meta.title)}${activeLabel ? " / " + escapeHtml(activeLabel) : ""}</span>
+      </div>
+    `;
+    const exitBtn = document.getElementById("exitProjectBtn");
+    if (exitBtn) {
+      exitBtn.addEventListener("click", () => {
+        state.activeProject = "";
+        state.activePage = "health_programmes";
+        state.activeSubtabs["health_programmes"] = "projects";
+        if (elements.projectFilter) elements.projectFilter.value = "all";
+        setPageHash("health_programmes", "projects");
+        renderCurrentView();
+      });
+    }
+    // Still render subtabs
+    if (subtabs.length) {
+      elements.pageSublinks.className =
+        "mt-2 flex gap-1 overflow-x-auto whitespace-nowrap pb-0.5";
+      elements.pageSublinks.innerHTML = subtabs
+        .map((label) => {
+          const slug = toSlug(label);
+          const active = slug === activeSlug;
+          return `<button data-subtab="${escapeHtml(slug)}" class="inline-flex shrink-0 items-center px-3 py-1.5 text-[13px] font-medium tracking-tight rounded-md transition ${active ? "bg-sky-100 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}">${escapeHtml(label)}</button>`;
+        })
+        .join("");
+      elements.pageSublinks.querySelectorAll("[data-subtab]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const slug = btn.getAttribute("data-subtab") || "";
+          state.activeSubtabs[pageId] = slug;
+          setPageHash(pageId, slug);
+          scrollToPageTop();
+          renderCurrentView();
+        });
+      });
+    } else {
+      elements.pageSublinks.innerHTML = "";
+    }
+    return;
+  }
+
+  // ── Regular page context ──
   if (!subtabs.length) {
     hidePageContext();
     return;
@@ -584,21 +687,35 @@ function bindChatControls() {
 
 function renderPageTabs() {
   if (!elements.pageTabs) return;
-  const tabs = [
-    { id: "overview", label: "Home" },
-    { id: "financial_analysis", label: "Financial Analysis" },
-    { id: "reporting_rates", label: "Reporting Rates" },
-    { id: "hiv_testing", label: "HIV Testing" },
-    { id: "hiv_treatment", label: "HIV Treatment" },
-    { id: "profile", label: "Profile" },
-    { id: "prep_page", label: "PrEP" },
-    { id: "pmtct", label: "PMTCT" },
-    { id: "tb", label: "TB" },
-    { id: "post_rape", label: "Post Rape" },
-    { id: "cacx", label: "CACX" },
-    { id: "linkage", label: "Linkage" },
-    { id: "jamii", label: "Jamii Tekelezi" },
-  ];
+
+  let tabs;
+  if (state.activeProject === "jamii_tekelezi") {
+    // Within Jamii Tekelezi project — show program navigation
+    tabs = [
+      { id: "overview", label: "Home" },
+      { id: "financial_analysis", label: "Finance Analysis" },
+      { id: "reporting_rates", label: "Reporting Rates" },
+      { id: "hiv_testing", label: "HIV Testing" },
+      { id: "hiv_treatment", label: "HIV Treatment" },
+      { id: "profile", label: "Profile" },
+      { id: "prep_page", label: "PrEP" },
+      { id: "pmtct", label: "PMTCT" },
+      { id: "tb", label: "TB" },
+      { id: "post_rape", label: "Post Rape" },
+      { id: "cacx", label: "CACX" },
+      { id: "linkage", label: "Linkage" },
+    ];
+  } else {
+    // Global navigation
+    tabs = [
+      { id: "overview", label: "Home" },
+      { id: "playground", label: "Playground" },
+      { id: "health_programmes", label: "Health Programmes" },
+      { id: "financial_analysis", label: "Finance Analysis" },
+      { id: "human_resource", label: "Human Resource" },
+      { id: "cbsl", label: "CBSL" },
+    ];
+  }
 
   elements.pageTabs.innerHTML = tabs
     .map((tab) => {
@@ -684,6 +801,1429 @@ function populateFilterOptions() {
   }
 }
 
+// ── Health Programmes Page ──
+function renderHealthProgrammes() {
+  const activeSlug = state.activeSubtabs["health_programmes"] || "mhu";
+
+  if (activeSlug === "mhu") {
+    renderMhuPage();
+  } else if (activeSlug === "projects") {
+    renderProjectSelection();
+  }
+}
+
+// ── MHU Cached config ────────────────────────────────────────────────
+let _mhuConfig = null;
+let _mhuConfigPromise = null;
+
+async function loadMhuConfig() {
+  if (_mhuConfig) return _mhuConfig;
+  if (_mhuConfigPromise) return _mhuConfigPromise;
+  _mhuConfigPromise = fetch("/api/mhu/config")
+    .then((r) => r.json())
+    .then((cfg) => {
+      _mhuConfig = cfg;
+      return cfg;
+    })
+    .catch(() => null);
+  return _mhuConfigPromise;
+}
+
+// ── Load CSV data from PBIX export for filters ──
+let _mhuCsvData = null;
+let _mhuCsvDataPromise = null;
+
+async function loadMhuCsvData() {
+  if (_mhuCsvData) return _mhuCsvData;
+  if (_mhuCsvDataPromise) return _mhuCsvDataPromise;
+  _mhuCsvDataPromise = fetch("/api/mhu/csv-data")
+    .then((r) => r.json())
+    .then((data) => {
+      _mhuCsvData = data;
+      return data;
+    })
+    .catch(() => null);
+  return _mhuCsvDataPromise;
+}
+
+// ── Render MHU page (4-level cascade: County → Owner type → Owner → Name) ──
+async function renderMhuPage() {
+  // Hide the general top filter bar (county, subcounty, facility, period)
+  const topFilters = document.getElementById("topFilters");
+  if (topFilters) topFilters.classList.add("hidden");
+
+  const csvData = await loadMhuCsvData();
+  const config = await loadMhuConfig();
+
+  if (!csvData || !csvData.facilities) {
+    elements.chartRoot.innerHTML = `<div class="p-10 text-center text-slate-400">Failed to load MHU data.</div>`;
+    return;
+  }
+
+  // Get selected filters from state (keys: county, ownerType, owner, facilityName)
+  let selectedCounty = state.mhuCounty || "all";
+  let selectedOwnerType = state.mhuOwnerType || "all";
+  let selectedOwner = state.mhuOwner || "all";
+  let selectedFacility = state.mhuFacility || ""; // facility name
+
+  const allFacilities = csvData.facilities;
+  const counties = csvData.counties;
+  const countyNames = Object.keys(counties).sort();
+
+  // ── Cascade filtering ──
+  // 1. Filter by county
+  let filteredByCounty = allFacilities;
+  if (selectedCounty !== "all") {
+    filteredByCounty = allFacilities.filter((f) => f.county === selectedCounty);
+  }
+
+  // 2. Available owner types from county-filtered results (respecting CSV hierarchy)
+  let availableOwnerTypes = [];
+  if (selectedCounty !== "all") {
+    // Use pre-computed county -> owner_types from the CSV data
+    const countyInfo = counties[selectedCounty];
+    if (countyInfo) {
+      availableOwnerTypes = countyInfo.owner_types || [];
+    }
+  } else {
+    // All counties: collect all unique owner types
+    const seen = new Set();
+    for (const f of filteredByCounty) {
+      if (!seen.has(f.owner_type)) {
+        seen.add(f.owner_type);
+        availableOwnerTypes.push({ type: f.owner_type, owners: [] });
+      }
+    }
+    // Get owners for each type
+    for (const ot of availableOwnerTypes) {
+      const ownerSet = new Set();
+      for (const f of allFacilities) {
+        if (f.owner_type === ot.type) ownerSet.add(f.owner);
+      }
+      ot.owners = [...ownerSet].sort();
+    }
+  }
+
+  // 3. Filter by owner type
+  let filteredByOwnerType = filteredByCounty;
+  if (selectedOwnerType !== "all") {
+    filteredByOwnerType = filteredByCounty.filter(
+      (f) => f.owner_type === selectedOwnerType,
+    );
+  }
+
+  // 4. Available owners — always compute from the already-filtered data for accuracy
+  const availableOwners = (() => {
+    const seen = new Set();
+    const result = [];
+    for (const f of filteredByOwnerType) {
+      if (!seen.has(f.owner)) {
+        seen.add(f.owner);
+        result.push(f.owner);
+      }
+    }
+    return result.sort();
+  })();
+
+  // 5. Filter by owner
+  let filteredByOwner = filteredByOwnerType;
+  if (selectedOwner !== "all") {
+    filteredByOwner = filteredByOwnerType.filter(
+      (f) => f.owner === selectedOwner,
+    );
+  }
+
+  // 6. Sort remaining facilities by name
+  filteredByOwner.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Reset selections if they no longer match
+  const ownerTypesForDisplay = availableOwnerTypes.map((o) => o.type);
+  if (
+    selectedOwnerType !== "all" &&
+    !ownerTypesForDisplay.includes(selectedOwnerType)
+  ) {
+    selectedOwnerType = "all";
+    state.mhuOwnerType = "all";
+  }
+  if (selectedOwner !== "all" && !availableOwners.includes(selectedOwner)) {
+    selectedOwner = "all";
+    state.mhuOwner = "all";
+  }
+  if (
+    selectedFacility &&
+    !filteredByOwner.find((f) => f.name === selectedFacility)
+  ) {
+    selectedFacility = "";
+    state.mhuFacility = "";
+  }
+
+  // ── Build HTML ──
+  const tabKeys = config?.tabs ? Object.keys(config.tabs) : [];
+  const activeSubtab = state.mhuMhuSubtab || "WORKLOAD";
+
+  elements.chartRoot.innerHTML = `
+    <div class="space-y-5">
+      <!-- Filters Row (4 cascading filters) -->
+      <div class="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="min-w-[160px] flex-1">
+            <label class="mb-1 block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">County</label>
+            <select id="mhuCountyFilter" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
+              <option value="all">All Counties (${countyNames.length})</option>
+              ${countyNames
+                .map((c) => {
+                  const cnt = counties[c]?.facility_count || 0;
+                  return `<option value="${escapeHtml(c)}" ${selectedCounty === c ? "selected" : ""}>${escapeHtml(c)} (${cnt})</option>`;
+                })
+                .join("")}
+            </select>
+          </div>
+          <div class="min-w-[200px] flex-1">
+            <label class="mb-1 block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Owner Type</label>
+            <select id="mhuOwnerTypeFilter" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
+              <option value="all">All Types (${ownerTypesForDisplay.length})</option>
+              ${ownerTypesForDisplay
+                .map((ot) => {
+                  const cnt = filteredByCounty.filter(
+                    (f) => f.owner_type === ot,
+                  ).length;
+                  return `<option value="${escapeHtml(ot)}" ${selectedOwnerType === ot ? "selected" : ""}>${escapeHtml(ot)} (${cnt})</option>`;
+                })
+                .join("")}
+            </select>
+          </div>
+          <div class="min-w-[220px] flex-1">
+            <label class="mb-1 block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Owner</label>
+            <select id="mhuOwnerFilter" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
+              <option value="all">All Owners (${availableOwners.length})</option>
+              ${availableOwners
+                .map((o) => {
+                  const cnt = filteredByOwnerType.filter(
+                    (f) => f.owner === o,
+                  ).length;
+                  return `<option value="${escapeHtml(o)}" ${selectedOwner === o ? "selected" : ""}>${escapeHtml(o)} (${cnt})</option>`;
+                })
+                .join("")}
+            </select>
+          </div>
+          <div class="min-w-[250px] flex-1">
+            <label class="mb-1 block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Member Health Unit</label>
+            <select id="mhuFacilityFilter" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200">
+              <option value="">— Select a member health unit —</option>
+              ${filteredByOwner
+                .map(
+                  (f) =>
+                    `<option value="${escapeHtml(f.name)}" ${selectedFacility === f.name ? "selected" : ""}>${escapeHtml(f.name)}</option>`,
+                )
+                .join("")}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Area: KHIS MOH 717 subtabs (always visible) -->
+      <div id="mhuRoot" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm min-h-[200px]">
+        ${renderMhuSubtabNavAlways(selectedFacility, null, activeSubtab, tabKeys)}
+      </div>
+    </div>
+  `;
+
+  // ── Bind county filter ──
+  const countyEl = document.getElementById("mhuCountyFilter");
+  if (countyEl) {
+    countyEl.addEventListener("change", () => {
+      state.mhuCounty = countyEl.value;
+      state.mhuOwnerType = "all";
+      state.mhuOwner = "all";
+      state.mhuFacility = "";
+      state.mhuMhuSubtab = "WORKLOAD";
+      renderMhuPage();
+    });
+  }
+
+  // ── Bind owner type filter ──
+  const ownerTypeEl = document.getElementById("mhuOwnerTypeFilter");
+  if (ownerTypeEl) {
+    ownerTypeEl.addEventListener("change", () => {
+      state.mhuOwnerType = ownerTypeEl.value;
+      state.mhuOwner = "all";
+      state.mhuFacility = "";
+      state.mhuMhuSubtab = "WORKLOAD";
+      renderMhuPage();
+    });
+  }
+
+  // ── Bind owner filter ──
+  const ownerEl = document.getElementById("mhuOwnerFilter");
+  if (ownerEl) {
+    ownerEl.addEventListener("change", () => {
+      state.mhuOwner = ownerEl.value;
+      state.mhuFacility = "";
+      state.mhuMhuSubtab = "WORKLOAD";
+      renderMhuPage();
+    });
+  }
+
+  // ── Bind facility filter ──
+  const facilityEl = document.getElementById("mhuFacilityFilter");
+  if (facilityEl) {
+    facilityEl.addEventListener("change", () => {
+      state.mhuFacility = facilityEl.value;
+      state.mhuMhuSubtab = "WORKLOAD";
+      renderMhuPage();
+    });
+  }
+
+  // ── If a facility is selected, try loading KHIS MOH 717 subtab data ──
+  if (selectedFacility && config?.tabs) {
+    // Find matching facility in KHIS mapping by name (flexible match)
+    let khisFacilityId = null;
+    if (config.facilities) {
+      const sel = selectedFacility.toLowerCase().trim();
+      for (const [uid, f] of Object.entries(config.facilities)) {
+        const fn = f.name.toLowerCase().trim();
+        if (sel === fn || sel.includes(fn) || fn.includes(sel)) {
+          khisFacilityId = uid;
+          break;
+        }
+      }
+    }
+
+    // Re-render subtab nav with facility name and load data
+    renderKhisSubtabNav(
+      selectedFacility,
+      khisFacilityId,
+      activeSubtab,
+      tabKeys,
+    );
+
+    if (khisFacilityId) {
+      loadAndRenderMhuTab(config, khisFacilityId, activeSubtab);
+    } else {
+      const contentEl = document.getElementById("mhuTabContent");
+      if (contentEl) {
+        contentEl.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+            <div class="font-semibold text-slate-500">No KHIS MOH 717 data</div>
+            <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS MOH 717 dataset. Only the 68 CHAK member facilities have MOH 717 records.</div>
+          </div>`;
+      }
+    }
+  }
+}
+
+function renderMhuDetail(facilityId) {
+  if (!facilityId) {
+    return `
+      <div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400">
+        <svg class="mb-3 h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+        <div class="font-semibold text-slate-500">Select a Member Health Unit</div>
+        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS MOH 717 workload data</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="flex flex-col items-center justify-center py-8 text-sm text-slate-400">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+      <div class="mt-3 font-semibold text-slate-500">Loading data…</div>
+    </div>
+  `;
+}
+
+// ── Always-rendered subtab nav bar (even without a selected facility) ──
+function renderMhuSubtabNavAlways(
+  facilityName,
+  khisFacilityId,
+  activeSubtab,
+  tabKeys,
+) {
+  if (!tabKeys || tabKeys.length === 0) {
+    return `<div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400">
+      <div class="font-semibold text-slate-500">No KHIS MOH 717 tabs configured</div>
+    </div>`;
+  }
+
+  const tabLabels = {
+    WORKLOAD: "Workload",
+    HYPERTENSION_DIABETES: "Hypertension & Diabetes",
+    MNCH: "MNCH",
+    HIV_DASHBOARD: "HIV Dashboard",
+    OTHER: "Other",
+  };
+
+  if (facilityName) {
+    // Facility selected — show name + badge + tabs
+    return `
+      <div class="mb-4">
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+          <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? "KHIS MOH 717" : "PBIX — no KHIS data"}</span>
+        </div>
+        <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+          ${tabKeys
+            .map(
+              (slug) => `
+            <button class="mhu-tab-btn px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+              ${
+                activeSubtab === slug
+                  ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              }"
+              data-tab-slug="${slug}">${tabLabels[slug] || slug.replace(/_/g, " ")}</button>
+          `,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div id="mhuTabContent" class="min-h-[200px]">
+        <div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400">
+          <svg class="mb-3 h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+          <div class="font-semibold text-slate-500">${escapeHtml(facilityName)}</div>
+          <div class="mt-1 text-xs text-center max-w-md">Loading KHIS MOH 717 data…</div>
+        </div>
+      </div>`;
+  }
+
+  // No facility selected — show tabs with placeholder
+  return `
+    <div class="mb-4">
+      <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+        ${tabKeys
+          .map(
+            (slug) => `
+          <button class="mhu-tab-btn px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+            ${
+              activeSubtab === slug
+                ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }"
+            data-tab-slug="${slug}">${tabLabels[slug] || slug.replace(/_/g, " ")}</button>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div id="mhuTabContent" class="min-h-[200px]">
+      <div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400">
+        <svg class="mb-3 h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+        <div class="font-semibold text-slate-500">Select a Member Health Unit</div>
+        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS MOH 717 workload data</div>
+      </div>
+    </div>`;
+}
+
+// ── Render KHIS subtab navigation ────────────────────────────────────
+function renderKhisSubtabNav(
+  facilityName,
+  khisFacilityId,
+  activeSubtab,
+  tabKeys,
+) {
+  const root = document.getElementById("mhuRoot");
+  if (!root) return;
+
+  // Tab labels for display
+  const tabLabels = {
+    WORKLOAD: "Workload",
+    HYPERTENSION_DIABETES: "Hypertension & Diabetes",
+    MNCH: "MNCH",
+    HIV_DASHBOARD: "HIV Dashboard",
+    OTHER: "Other",
+  };
+
+  root.innerHTML = `
+    <div class="mb-4">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+        <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? "KHIS MOH 717" : "PBIX — no KHIS data"}</span>
+      </div>
+      <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+        ${tabKeys
+          .map(
+            (slug) => `
+          <button class="mhu-tab-btn px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+            ${
+              activeSubtab === slug
+                ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }"
+            data-tab-slug="${slug}">${tabLabels[slug] || slug.replace(/_/g, " ")}</button>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div id="mhuTabContent" class="min-h-[200px]">
+      <div class="flex items-center justify-center py-12">
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+        <div class="ml-3 text-sm text-slate-500">Loading MOH 717 data…</div>
+      </div>
+    </div>
+  `;
+
+  // Bind subtab click handlers
+  document.querySelectorAll(".mhu-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const slug = btn.getAttribute("data-tab-slug");
+      state.mhuMhuSubtab = slug;
+      renderKhisSubtabNav(facilityName, khisFacilityId, slug, tabKeys);
+      if (khisFacilityId) {
+        // Re-fetch config and load tab
+        loadMhuConfig().then((cfg) => {
+          if (cfg) loadAndRenderMhuTab(cfg, khisFacilityId, slug);
+        });
+      } else {
+        // No KHIS mapping — show empty state
+        const contentEl = document.getElementById("mhuTabContent");
+        if (contentEl) {
+          contentEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+              <div class="font-semibold text-slate-500">No KHIS MOH 717 data</div>
+              <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS MOH 717 dataset.</div>
+            </div>`;
+        }
+      }
+    });
+  });
+}
+
+// ── Load & render MHU tab data ────────────────────────────────────────
+async function loadAndRenderMhuTab(config, facilityId, tabSlug) {
+  const tabElements = config.tabs?.[tabSlug];
+  const contentEl = document.getElementById("mhuTabContent");
+  if (!contentEl) return; // nav not rendered yet
+
+  if (!tabElements || tabElements.length === 0) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+        <div class="font-semibold text-slate-500">No data elements defined for this tab</div>
+      </div>`;
+    return;
+  }
+
+  // Build dx param
+  const dxIds = tabElements.map((e) => e.id).join(";");
+  const facility = config.facilities?.[facilityId];
+  const facilityName = facility?.name || facilityId;
+
+  // Show loading
+  contentEl.innerHTML = `
+    <div class="flex items-center justify-center py-12">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+      <div class="ml-3 text-sm text-slate-500">Loading MOH 717 data…</div>
+    </div>
+  `;
+
+  try {
+    const resp = await fetch(
+      `/api/mhu/khis-data?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(facilityId)}&pe=LAST_12_MONTHS`,
+    );
+    if (!resp.ok) {
+      throw new Error(`API returned ${resp.status}`);
+    }
+    const result = await resp.json();
+    const data = result.data || {};
+
+    // If data is empty, show a message
+    if (Object.keys(data).length === 0) {
+      contentEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+          <div class="font-semibold text-slate-500">No data available</div>
+          <div class="mt-1 text-xs">KHIS returned no records for ${escapeHtml(facilityName)} in the last 12 months</div>
+        </div>`;
+      return;
+    }
+
+    // Render based on tab
+    const tabLabel = tabSlug.replace(/_/g, " ");
+
+    if (tabSlug === "WORKLOAD") {
+      renderMhuWorkload(contentEl, data, tabElements, facilityName);
+    } else if (tabSlug === "HYPERTENSION_DIABETES") {
+      renderMhuRehab(contentEl, data, tabElements, facilityName);
+    } else if (tabSlug === "MNCH") {
+      renderMhuMnch(contentEl, data, tabElements, facilityName);
+    } else if (tabSlug === "HIV_DASHBOARD") {
+      renderMhuOther(contentEl, data, tabElements, facilityName);
+    } else {
+      renderMhuGenericTable(
+        contentEl,
+        data,
+        tabElements,
+        facilityName,
+        tabLabel,
+      );
+    }
+  } catch (err) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-red-400">
+        <div class="font-semibold text-red-500">Error loading data</div>
+        <div class="mt-1 text-xs">${escapeHtml(err.message)}</div>
+      </div>`;
+  }
+}
+
+// ── Parse KHIS response data into per-element time series ────────────
+function parseMhuTimeSeries(data, tabElements) {
+  // data is { dx_id: { "period_label": value, ... }, ... }
+  // Collect all periods (months) across all DEs
+  const periodSet = new Set();
+  for (const dxData of Object.values(data)) {
+    for (const period of Object.keys(dxData)) {
+      periodSet.add(period);
+    }
+  }
+  const periods = Array.from(periodSet).sort();
+
+  // For each element, extract monthly values by looking up its DX ID
+  return tabElements.map((el) => {
+    const dxData = data[el.id] || {};
+    const values = periods.map((p) => dxData[p] || 0);
+    const total = values.reduce((a, b) => a + b, 0);
+    return { ...el, periods, values, total };
+  });
+}
+
+// ── Render a line chart using Highcharts ──────────────────────────────
+function renderHighchartLine(
+  containerId,
+  title,
+  seriesData,
+  categories,
+  yLabel,
+) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (typeof Highcharts === "undefined") {
+    el.innerHTML =
+      '<div class="text-sm text-red-400 py-4">Highcharts not loaded</div>';
+    return;
+  }
+  try {
+    Highcharts.chart(containerId, {
+      chart: { type: "line", height: 280, style: { fontFamily: "inherit" } },
+      title: { text: title, style: { fontSize: "13px", fontWeight: "600" } },
+      xAxis: {
+        categories,
+        labels: { rotation: -45, style: { fontSize: "10px" } },
+      },
+      yAxis: { title: { text: yLabel || "Count" }, allowDecimals: false },
+      tooltip: { shared: true, valueDecimals: 0 },
+      legend: {
+        enabled: seriesData.length > 1,
+        layout: "horizontal",
+        align: "center",
+        verticalAlign: "bottom",
+        itemStyle: { fontSize: "10px" },
+      },
+      plotOptions: { line: { marker: { radius: 3 } } },
+      series: seriesData,
+      credits: { enabled: false },
+    });
+  } catch (e) {
+    el.innerHTML = `<div class="text-sm text-red-400 py-4">Chart error: ${e.message}</div>`;
+  }
+}
+
+// ── WORKLOAD tab ──────────────────────────────────────────────────────
+function renderMhuWorkload(container, data, tabElements, facilityName) {
+  const parsed = parseMhuTimeSeries(data, tabElements);
+  const periods = parsed.length > 0 ? parsed[0].periods : [];
+
+  // Group into categories for display
+  const inpatientNames = [
+    "Admission",
+    "Cots",
+    "Discharge",
+    "Bed",
+    "Inpatient",
+    "Delivery",
+    "Maternity",
+  ];
+  const outpatientNames = [
+    "Outpatient",
+    "OPD",
+    "Dressing",
+    "Injection",
+    "Card",
+    "CWC",
+    "Immuniz",
+  ];
+
+  const inpatientItems = parsed.filter((p) =>
+    inpatientNames.some((kw) => p.name.includes(kw)),
+  );
+  const outpatientItems = parsed.filter((p) =>
+    outpatientNames.some((kw) => p.name.includes(kw)),
+  );
+  const otherItems = parsed.filter(
+    (p) =>
+      !inpatientNames.some((kw) => p.name.includes(kw)) &&
+      !outpatientNames.some((kw) => p.name.includes(kw)),
+  );
+
+  // Sort by total descending
+  const sortByTotal = (arr) => arr.sort((a, b) => b.total - a.total);
+  sortByTotal(inpatientItems);
+  sortByTotal(outpatientItems);
+  sortByTotal(otherItems);
+
+  // Build HTML
+  let html = `
+    <div class="mb-4">
+      <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+      <div class="text-[11px] text-slate-400">MOH 717 — Workload · Last 12 months</div>
+    </div>
+  `;
+
+  // ── Summary KPI cards ──
+  const topInpatient = inpatientItems.slice(0, 6);
+  const topOutpatient = outpatientItems.slice(0, 6);
+  const kpiItems = [...topInpatient, ...topOutpatient].slice(0, 8);
+  if (kpiItems.length > 0) {
+    html += `<div class="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-2">`;
+    for (const item of kpiItems) {
+      html += `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div class="text-[18px] font-bold text-slate-800">${item.total.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-500 leading-tight mt-0.5">${escapeHtml(item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""))}</div>
+        </div>
+      `;
+    }
+    html += `</div>`;
+  }
+
+  // ── Inpatient chart ──
+  if (inpatientItems.length > 0) {
+    const top5 = inpatientItems.slice(0, 8);
+    html += `<div class="mb-5"><div id="mhuChartInpatient" class="rounded-xl border border-slate-200 p-3"></div></div>`;
+    html += `<div class="mb-5"><div id="mhuChartInpatientBar" class="rounded-xl border border-slate-200 p-3"></div></div>`;
+    container.innerHTML = html;
+
+    renderHighchartLine(
+      "mhuChartInpatient",
+      "Inpatient Services (Monthly Trend)",
+      top5.map((item) => ({
+        name: item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""),
+        data: item.values,
+      })),
+      periods,
+      "Patients",
+    );
+
+    // Also render a bar chart for total comparison
+    const barEl = document.getElementById("mhuChartInpatientBar");
+    if (barEl && typeof Highcharts !== "undefined") {
+      Highcharts.chart("mhuChartInpatientBar", {
+        chart: {
+          type: "column",
+          height: 260,
+          style: { fontFamily: "inherit" },
+        },
+        title: {
+          text: "Inpatient — 12-Month Total",
+          style: { fontSize: "13px", fontWeight: "600" },
+        },
+        xAxis: {
+          type: "category",
+          labels: { style: { fontSize: "10px" }, rotation: -35 },
+        },
+        yAxis: { title: { text: "Total" }, allowDecimals: false },
+        tooltip: { valueDecimals: 0 },
+        legend: { enabled: false },
+        series: [
+          {
+            name: "Total",
+            data: top5.map((item) => ({
+              name: item.name
+                .replace(/^MOH 717[^_]*_/, "")
+                .replace(/Rev2020_/, ""),
+              y: item.total,
+            })),
+          },
+        ],
+        credits: { enabled: false },
+      });
+    }
+  } else {
+    // Fallback: show all elements as a table
+    container.innerHTML = html;
+    renderMhuGenericTable(
+      container,
+      data,
+      tabElements,
+      facilityName,
+      "WORKLOAD",
+    );
+  }
+
+  // Append outpatient if we have items
+  if (outpatientItems.length > 0) {
+    const top5 = outpatientItems.slice(0, 8);
+    const outpatientHtml = `<div class="mb-5"><div id="mhuChartOutpatient" class="rounded-xl border border-slate-200 p-3"></div></div>`;
+    container.insertAdjacentHTML("beforeend", outpatientHtml);
+    renderHighchartLine(
+      "mhuChartOutpatient",
+      "Outpatient & Clinic Services (Monthly Trend)",
+      top5.map((item) => ({
+        name: item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""),
+        data: item.values,
+      })),
+      periods,
+      "Patients",
+    );
+  }
+
+  // ── Other workload items table ──
+  if (otherItems.length > 0) {
+    let tableHtml = `
+      <div class="mt-4">
+        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Other Workload Indicators</div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left text-[12px]">
+            <thead><tr class="bg-slate-100 text-slate-600">`;
+    const months = periods.slice(-6); // last 6 months
+    tableHtml += `<th class="px-3 py-2 font-semibold">Indicator</th>`;
+    for (const m of months)
+      tableHtml += `<th class="px-3 py-2 font-semibold text-right">${escapeHtml(m)}</th>`;
+    tableHtml += `<th class="px-3 py-2 font-semibold text-right">Total</th></tr></thead><tbody>`;
+    for (const item of otherItems.slice(0, 15)) {
+      tableHtml += `<tr class="border-t border-slate-100 hover:bg-slate-50">`;
+      tableHtml += `<td class="px-3 py-1.5 font-medium text-slate-700">${escapeHtml(item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""))}</td>`;
+      const lastVals = item.values.slice(-6);
+      for (const v of lastVals)
+        tableHtml += `<td class="px-3 py-1.5 text-right text-slate-600">${v.toLocaleString()}</td>`;
+      tableHtml += `<td class="px-3 py-1.5 text-right font-semibold text-slate-800">${item.total.toLocaleString()}</td>`;
+      tableHtml += `</tr>`;
+    }
+    tableHtml += `</tbody></table></div></div>`;
+    container.insertAdjacentHTML("beforeend", tableHtml);
+  }
+}
+
+// ── REHABILITATION tab (currently orthopaedic/physio elements) ────────
+function renderMhuRehab(container, data, tabElements, facilityName) {
+  renderMhuGenericTab(
+    container,
+    data,
+    tabElements,
+    facilityName,
+    "Rehabilitation / Physiotherapy",
+  );
+}
+
+// ── MNCH tab ──────────────────────────────────────────────────────────
+function renderMhuMnch(container, data, tabElements, facilityName) {
+  renderMhuGenericTab(
+    container,
+    data,
+    tabElements,
+    facilityName,
+    "Maternal & Newborn Child Health",
+  );
+}
+
+// ── OTHER tab (HIV dashboard fallback) ────────────────────────────────
+function renderMhuOther(container, data, tabElements, facilityName) {
+  renderMhuGenericTab(
+    container,
+    data,
+    tabElements,
+    facilityName,
+    "HIV & Other Indicators",
+  );
+}
+
+// ── Generic tab renderer: summary KPIs + trend line chart + table ────
+function renderMhuGenericTab(
+  container,
+  data,
+  tabElements,
+  facilityName,
+  tabTitle,
+) {
+  const parsed = parseMhuTimeSeries(data, tabElements);
+  const periods = parsed.length > 0 ? parsed[0].periods : [];
+  const sortByTotal = (arr) => arr.sort((a, b) => b.total - a.total);
+  sortByTotal(parsed);
+
+  let html = `
+    <div class="mb-4">
+      <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+      <div class="text-[11px] text-slate-400">${escapeHtml(tabTitle)} · MOH 717 · Last 12 months</div>
+    </div>
+  `;
+
+  // KPI cards for top 6
+  if (parsed.length > 0) {
+    const top = parsed.slice(0, 6);
+    html += `<div class="mb-5 grid grid-cols-2 sm:grid-cols-3 gap-2">`;
+    for (const item of top) {
+      html += `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div class="text-[18px] font-bold text-slate-800">${item.total.toLocaleString()}</div>
+          <div class="text-[10px] text-slate-500 leading-tight mt-0.5">${escapeHtml(item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""))}</div>
+        </div>
+      `;
+    }
+    html += `</div>`;
+
+    // Trend chart for top 8
+    if (parsed.length >= 2 && periods.length > 0) {
+      const top8 = parsed.slice(0, 8);
+      html += `<div class="mb-5"><div id="mhuGenericChart" class="rounded-xl border border-slate-200 p-3"></div></div>`;
+    }
+
+    // Full table
+    html += `<div class="overflow-x-auto rounded-xl border border-slate-200 mt-4">
+      <table class="w-full text-left text-[12px]">
+        <thead><tr class="bg-slate-100 text-slate-600">`;
+    html += `<th class="px-3 py-2 font-semibold">Indicator</th>`;
+    const months = periods.slice(-6);
+    for (const m of months)
+      html += `<th class="px-3 py-2 font-semibold text-right">${escapeHtml(m)}</th>`;
+    html += `<th class="px-3 py-2 font-semibold text-right">Total</th></tr></thead><tbody>`;
+    for (const item of parsed) {
+      html += `<tr class="border-t border-slate-100 hover:bg-slate-50">`;
+      html += `<td class="px-3 py-1.5 font-medium text-slate-700">${escapeHtml(item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""))}</td>`;
+      const lastVals = item.values.slice(-6);
+      for (const v of lastVals)
+        html += `<td class="px-3 py-1.5 text-right text-slate-600">${v.toLocaleString()}</td>`;
+      html += `<td class="px-3 py-1.5 text-right font-semibold text-slate-800">${item.total.toLocaleString()}</td>`;
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Render trend chart
+  if (parsed.length >= 2 && periods.length > 0) {
+    const top8 = parsed.slice(0, 8);
+    renderHighchartLine(
+      "mhuGenericChart",
+      tabTitle + " (Monthly Trend)",
+      top8.map((item) => ({
+        name: item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""),
+        data: item.values,
+      })),
+      periods,
+      "Count",
+    );
+  }
+}
+
+// ── Generic table fallback ────────────────────────────────────────────
+function renderMhuGenericTable(
+  container,
+  data,
+  tabElements,
+  facilityName,
+  tabLabel,
+) {
+  const parsed = parseMhuTimeSeries(data, tabElements);
+  const periods = parsed.length > 0 ? parsed[0].periods : [];
+  const sortByTotal = (arr) => arr.sort((a, b) => b.total - a.total);
+  sortByTotal(parsed);
+
+  let html = `
+    <div class="mb-4">
+      <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+      <div class="text-[11px] text-slate-400">${escapeHtml(tabLabel)} · Last 12 months</div>
+    </div>
+  `;
+
+  if (parsed.length === 0) {
+    html += `<div class="py-8 text-center text-sm text-slate-400">No data available</div>`;
+  } else {
+    html += `<div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full text-left text-[12px]">
+        <thead><tr class="bg-slate-100 text-slate-600">`;
+    html += `<th class="px-3 py-2 font-semibold">Indicator</th>`;
+    const months = periods.slice(-6);
+    for (const m of months)
+      html += `<th class="px-3 py-2 font-semibold text-right">${escapeHtml(m)}</th>`;
+    html += `<th class="px-3 py-2 font-semibold text-right">Total</th></tr></thead><tbody>`;
+    for (const item of parsed) {
+      html += `<tr class="border-t border-slate-100 hover:bg-slate-50">`;
+      html += `<td class="px-3 py-1.5 font-medium text-slate-700">${escapeHtml(item.name.replace(/^MOH 717[^_]*_/, "").replace(/Rev2020_/, ""))}</td>`;
+      const lastVals = item.values.slice(-6);
+      for (const v of lastVals)
+        html += `<td class="px-3 py-1.5 text-right text-slate-600">${v.toLocaleString()}</td>`;
+      html += `<td class="px-3 py-1.5 text-right font-semibold text-slate-800">${item.total.toLocaleString()}</td>`;
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderProjectSelection() {
+  const projects = [
+    {
+      id: "jamii_tekelezi",
+      name: "Jamii Tekelezi",
+      desc: "Comprehensive HIV/AIDS program dashboard — Testing, Treatment, PrEP, PMTCT, TB, and more.",
+      icon: "📊",
+      color: "bg-sky-50 border-sky-200 hover:bg-sky-100",
+    },
+    {
+      id: "chap_stawisha",
+      name: "CHAP Stawisha",
+      desc: "Community Health and Adolescent Program — Stawisha initiative.",
+      icon: "🌱",
+      color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
+    },
+    {
+      id: "eye_health",
+      name: "Eye Health — ACSP & GitLab",
+      desc: "Eye Health program — ACSP and GitLab partnership.",
+      icon: "👁️",
+      color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
+    },
+    {
+      id: "eis",
+      name: "EIS",
+      desc: "Enhanced Infection Surveillance program.",
+      icon: "🔬",
+      color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
+    },
+    {
+      id: "bftw_hss",
+      name: "BFTW HSS",
+      desc: "Bread for the World — Health Systems Strengthening.",
+      icon: "🏗️",
+      color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
+    },
+    {
+      id: "bftw_rmncah",
+      name: "BFTW RMNCAH",
+      desc: "Bread for the World — Reproductive, Maternal, Newborn, Child and Adolescent Health.",
+      icon: "👶",
+      color: "bg-rose-50 border-rose-200 hover:bg-rose-100",
+    },
+    {
+      id: "pep",
+      name: "PEP",
+      desc: "Post-Exposure Prophylaxis program tracking.",
+      icon: "💊",
+      color: "bg-cyan-50 border-cyan-200 hover:bg-cyan-100",
+    },
+    {
+      id: "gf_mnch",
+      name: "GF-MNCH",
+      desc: "Global Fund — Maternal, Newborn and Child Health.",
+      icon: "🤱",
+      color: "bg-pink-50 border-pink-200 hover:bg-pink-100",
+    },
+    {
+      id: "impact",
+      name: "IMPACT",
+      desc: "Integrated Monitoring and Program Analysis for Comprehensive Tracking.",
+      icon: "🎯",
+      color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
+    },
+    {
+      id: "cdic_icare",
+      name: "CDIC-iCARE",
+      desc: "Comprehensive Data Integration for Community AIDS Response Enhancement.",
+      icon: "💻",
+      color: "bg-teal-50 border-teal-200 hover:bg-teal-100",
+    },
+  ];
+
+  elements.chartRoot.innerHTML = `
+    <div class="space-y-6">
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="text-2xl">📋</div>
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">Select a Project</h2>
+            <p class="text-xs text-slate-500">Choose a project to view its dashboards and reports.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${projects
+            .map(
+              (p) => `
+            <button data-project="${escapeHtml(p.id)}" class="flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition ${p.color}">
+              <div class="text-3xl shrink-0">${p.icon}</div>
+              <div class="min-w-0">
+                <div class="text-[14px] font-bold text-slate-800">${escapeHtml(p.name)}</div>
+                <div class="text-[12px] text-slate-500 mt-0.5 leading-snug">${escapeHtml(p.desc)}</div>
+              </div>
+            </button>
+          `,
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+  `;
+
+  elements.chartRoot.querySelectorAll("[data-project]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const projectId = btn.getAttribute("data-project") || "";
+      if (projectId === "jamii_tekelezi") {
+        state.activeProject = "jamii_tekelezi";
+        if (elements.projectFilter)
+          elements.projectFilter.value = "jamii-tekelezi";
+        state.activePage = "overview";
+        setPageHash("overview");
+        renderCurrentView();
+      }
+    });
+  });
+}
+
+function renderPlaygroundPage() {
+  const existingPrompt =
+    document.getElementById("playgroundPrompt")?.value || "";
+
+  if (state.playgroundChart) {
+    state.playgroundChart.destroy();
+    state.playgroundChart = null;
+  }
+
+  elements.chartRoot.innerHTML = `
+    <div class="space-y-6">
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div class="text-2xl font-bold text-slate-800">Playground</div>
+            <div class="mt-1 max-w-2xl text-sm text-slate-500">Get any report or visual with just a prompt.</div>
+          </div>
+          <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold text-sky-700">
+            <span class="h-2 w-2 rounded-full bg-sky-500"></span> Groq-powered AI query interface
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-sky-50 p-5 shadow-sm">
+        <div class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="text-sm font-semibold text-slate-700">Ask a question</div>
+            <p class="mt-1 text-xs text-slate-500">Finance mode reuses the project-performance dataset; DHIS2 mode sends the prompt through the main Groq SQL route.</p>
+            <textarea id="playgroundPrompt" class="mt-4 min-h-[130px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white" placeholder="Example: Show me the actual vs target for Jamii Tekelezi or visualize TX CURR for May">${escapeHtml(existingPrompt)}</textarea>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button type="button" data-playground-mode="finance" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "finance" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">Finance reports</button>
+              <button type="button" data-playground-mode="dhis2" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "dhis2" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">DHIS2 reports</button>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button type="button" data-playground-example="Show me the actual vs target for Jamii Tekelezi" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">Finance example</button>
+              <button type="button" data-playground-example="Visualize TX CURR for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TX_CURR example</button>
+              <button type="button" data-playground-example="Give me TB for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TB example</button>
+            </div>
+            <div class="mt-4 flex items-center gap-3">
+              <button id="playgroundSubmit" class="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Generate report</button>
+              <span id="playgroundStatus" class="text-xs text-slate-500">Ready.</span>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="text-sm font-semibold text-slate-700">How it works</div>
+            <ul class="mt-3 space-y-2 text-sm text-slate-600">
+              <li>• Finance mode reuses the same project-performance data the finance analysis tab uses.</li>
+              <li>• DHIS2 mode uses the existing Groq-backed SQL chat route.</li>
+              <li>• Results render as cards, charts, and a table when data is returned.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div id="playgroundSummaryCards" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"></div>
+        <div id="playgroundChartWrap" class="hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-sm font-semibold text-slate-700 mb-3">Visual</div>
+          <div class="h-[320px]"><canvas id="playgroundChartCanvas"></canvas></div>
+        </div>
+        <div id="playgroundAnswer" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm text-sm text-slate-700">
+          Ask a prompt to generate a report or visual.
+        </div>
+      </section>
+    </div>
+  `;
+
+  const promptInput = document.getElementById("playgroundPrompt");
+  const submitButton = document.getElementById("playgroundSubmit");
+  const status = document.getElementById("playgroundStatus");
+
+  document.querySelectorAll("[data-playground-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.playgroundMode =
+        button.getAttribute("data-playground-mode") || "finance";
+      renderPlaygroundPage();
+      const nextInput = document.getElementById("playgroundPrompt");
+      if (nextInput && promptInput) nextInput.value = promptInput.value;
+    });
+  });
+
+  document.querySelectorAll("[data-playground-example]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (promptInput)
+        promptInput.value =
+          button.getAttribute("data-playground-example") || "";
+    });
+  });
+
+  const submitPlaygroundPrompt = async () => {
+    const question = (promptInput && promptInput.value.trim()) || "";
+    if (!question) {
+      if (status) status.textContent = "Enter a prompt first.";
+      return;
+    }
+
+    if (status) status.textContent = "Generating…";
+    if (submitButton) submitButton.disabled = true;
+
+    try {
+      const requestBody = {
+        question,
+        chart_id:
+          state.playgroundMode === "finance"
+            ? "playground-finance"
+            : "playground-dhis2",
+        active_page:
+          state.playgroundMode === "finance"
+            ? "financial_analysis"
+            : "overview",
+        active_tab: state.playgroundMode === "finance" ? "overview" : "",
+      };
+
+      if (state.playgroundMode === "finance") {
+        const chartData = await loadPlaygroundFinanceChartData();
+        if (chartData) {
+          requestBody.chart_data = chartData;
+        }
+      }
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "The assistant could not process that request.",
+        );
+      }
+
+      renderPlaygroundResponse(result);
+      if (status) status.textContent = result.summary || "Completed.";
+    } catch (error) {
+      renderPlaygroundError(
+        error.message || "Network error while contacting the AI assistant.",
+      );
+      if (status) status.textContent = "Failed.";
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  };
+
+  if (submitButton) {
+    submitButton.addEventListener("click", submitPlaygroundPrompt);
+  }
+  if (promptInput) {
+    promptInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && event.ctrlKey) {
+        submitPlaygroundPrompt();
+      }
+    });
+  }
+}
+
+async function loadPlaygroundFinanceChartData() {
+  if (state.playgroundFinanceData) return state.playgroundFinanceData;
+
+  const response = await fetch("/api/project-portfolio");
+  const data = await response.json();
+  if (!data.ok) throw new Error(data.error || "Failed to load finance data");
+
+  const projects = (data.portfolio && data.portfolio.projects) || [];
+  const labels = projects.map((project) => project.project || "Project");
+  const budget = projects.map((project) =>
+    Number(project.total_annual_budget || 0),
+  );
+  const expenditure = projects.map((project) =>
+    Number(project.cumulative_expenditure || 0),
+  );
+  const onTrack = projects.map((project) =>
+    project.overall_rag === "On Track" ? 1 : 0,
+  );
+
+  state.playgroundFinanceData = {
+    labels,
+    datasets: [
+      { label: "Annual Budget", data: budget },
+      { label: "Cumulative Expenditure", data: expenditure },
+      { label: "On Track Projects", data: onTrack },
+    ],
+  };
+
+  return state.playgroundFinanceData;
+}
+
+function renderPlaygroundResponse(payload) {
+  const summaryCards = document.getElementById("playgroundSummaryCards");
+  const answer = document.getElementById("playgroundAnswer");
+  const chartWrap = document.getElementById("playgroundChartWrap");
+  const chartCanvas = document.getElementById("playgroundChartCanvas");
+
+  if (!summaryCards || !answer) return;
+
+  summaryCards.innerHTML = `
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Rows returned</div>
+      <div class="mt-2 text-2xl font-bold text-slate-800">${Number(payload.row_count || 0).toLocaleString()}</div>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Source</div>
+      <div class="mt-2 text-2xl font-bold text-slate-800">${escapeHtml(payload.source || "ai")}</div>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2 xl:col-span-2">
+      <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">SQL</div>
+      <div class="mt-2 break-words text-xs text-slate-600">${escapeHtml(payload.sql || "")}</div>
+    </div>
+  `;
+
+  answer.innerHTML =
+    payload.answer_html ||
+    `<p>${escapeHtml(payload.summary || "No answer returned.")}</p>`;
+
+  if (chartWrap && chartCanvas) {
+    const chartSpec = buildPlaygroundChartSpec(
+      payload.rows || [],
+      payload.columns || [],
+    );
+    if (chartSpec) {
+      chartWrap.classList.remove("hidden");
+      if (state.playgroundChart) {
+        state.playgroundChart.destroy();
+      }
+      state.playgroundChart = new Chart(chartCanvas, chartSpec);
+    } else {
+      chartWrap.classList.add("hidden");
+      if (state.playgroundChart) {
+        state.playgroundChart.destroy();
+        state.playgroundChart = null;
+      }
+    }
+  }
+}
+
+function renderPlaygroundError(message) {
+  const summaryCards = document.getElementById("playgroundSummaryCards");
+  const answer = document.getElementById("playgroundAnswer");
+  const chartWrap = document.getElementById("playgroundChartWrap");
+
+  if (summaryCards) summaryCards.innerHTML = "";
+  if (chartWrap) chartWrap.classList.add("hidden");
+  if (state.playgroundChart) {
+    state.playgroundChart.destroy();
+    state.playgroundChart = null;
+  }
+  if (answer) {
+    answer.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">${escapeHtml(message)}</div>`;
+  }
+}
+
+function buildPlaygroundChartSpec(rows, columns) {
+  if (
+    !Array.isArray(rows) ||
+    !rows.length ||
+    !Array.isArray(columns) ||
+    !columns.length
+  ) {
+    return null;
+  }
+
+  const firstRow = rows[0] || {};
+  const numericColumns = columns.filter(
+    (column) => typeof firstRow[column] === "number",
+  );
+  const textColumns = columns.filter(
+    (column) => typeof firstRow[column] === "string",
+  );
+  const labelColumn = textColumns[0] || columns[0];
+
+  if (!numericColumns.length) {
+    return null;
+  }
+
+  const labels = rows.slice(0, 12).map((row) => String(row[labelColumn] ?? ""));
+  const datasets = numericColumns.slice(0, 3).map((column, index) => ({
+    label: column,
+    data: rows.slice(0, 12).map((row) => Number(row[column]) || 0),
+    backgroundColor: ["#0ea5e9", "#10b981", "#8b5cf6"][index] || "#64748b",
+    borderRadius: 6,
+  }));
+
+  if (!labels.length || !datasets.length) {
+    return null;
+  }
+
+  return {
+    type: datasets.length > 1 ? "bar" : "line",
+    data: {
+      labels,
+      datasets: datasets.map((dataset) => ({
+        ...dataset,
+        fill: datasets.length === 1,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+      },
+      scales: {
+        x: { ticks: { maxRotation: 0, font: { size: 10 } } },
+        y: { beginAtZero: true },
+      },
+    },
+  };
+}
+
+// ── Human Resource Page ──
+function renderHumanResourcePage() {
+  elements.chartRoot.innerHTML = `
+    <div class="space-y-6">
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <div class="text-5xl mb-4">👥</div>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">Human Resource</h2>
+          <p class="text-sm text-slate-500 max-w-md">Staff management, payroll, and human resource analytics.</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── CBSL Page ──
+function renderCbslPage() {
+  elements.chartRoot.innerHTML = `
+    <div class="space-y-6">
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <div class="text-5xl mb-4">🏛️</div>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">CBSL — Community Based Social & Livelihood</h2>
+          <p class="text-sm text-slate-500 max-w-md">Community-based social programs and livelihood initiatives.</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderCurrentView() {
   if (!state.rawData.length) {
     return;
@@ -692,19 +2232,66 @@ function renderCurrentView() {
   renderPageTabs();
   populateFilterOptions();
 
+  // Show the general top filter bar when NOT on MHU page
+  const topFilters = document.getElementById("topFilters");
+  if (topFilters) {
+    const isMhuPage =
+      state.activePage === "health_programmes" &&
+      state.activeSubtabs["health_programmes"] === "mhu";
+    if (!isMhuPage) {
+      topFilters.classList.remove("hidden");
+    }
+  }
+
   const pageId = state.activePage || "overview";
 
   if (pageId === "overview") {
-    hidePageContext();
-    elements.chartRoot.innerHTML = `
-      <div id="homepageRoot" class="space-y-5">
-        <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
-          <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
-          Loading dashboard summary…
+    if (state.activeProject !== "jamii_tekelezi") {
+      hidePageContext();
+      elements.chartRoot.innerHTML = `
+        <div id="homepageRoot" class="space-y-5">
+          <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
+            <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
+            Loading dashboard summary…
+          </div>
         </div>
-      </div>
-    `;
-    renderHomepageDashboard();
+      `;
+      renderHomepageDashboard();
+      return;
+    }
+
+    // Jamii Tekelezi project home should show the consolidated Jamii overview
+    renderPageContext(pageId);
+    elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6"><div id="jamiiContent" class="space-y-6"></div></div>`;
+    const jamiiContainer = document.getElementById("jamiiContent");
+    renderJamiiOverview(jamiiContainer);
+    return;
+  }
+
+  if (pageId === "playground") {
+    hidePageContext();
+    renderPlaygroundPage();
+    return;
+  }
+
+  // ── Health Programmes (MHU / Projects) ──
+  if (pageId === "health_programmes") {
+    renderPageContext(pageId);
+    renderHealthProgrammes();
+    return;
+  }
+
+  // ── Human Resource ──
+  if (pageId === "human_resource") {
+    renderPageContext(pageId);
+    renderHumanResourcePage();
+    return;
+  }
+
+  // ── CBSL ──
+  if (pageId === "cbsl") {
+    renderPageContext(pageId);
+    renderCbslPage();
     return;
   }
 
@@ -712,11 +2299,28 @@ function renderCurrentView() {
   renderPageContext(pageId);
 
   // Check if we have a specific subtab to render content for
-  const activeSlug = state.activeSubtabs[pageId] || "";
   const meta = getPageMeta(pageId);
+  const defaultActiveSlug = toSlug((meta.subtabs && meta.subtabs[0]) || "");
+  const activeSlug = state.activeSubtabs[pageId] || defaultActiveSlug;
+  if (!state.activeSubtabs[pageId] && defaultActiveSlug) {
+    state.activeSubtabs[pageId] = activeSlug;
+  }
   const activeLabel = meta.subtabs
     ? meta.subtabs.find((s) => toSlug(s) === activeSlug) || ""
     : "";
+
+  if (activeSlug === "overview") {
+    elements.chartRoot.innerHTML = `<div id="categoryContent" class="space-y-6"></div>`;
+    const container = document.getElementById("categoryContent");
+    if (pageId === "hiv_treatment") {
+      renderHivTreatmentOverview(container);
+      return;
+    }
+    if (pageId === "hiv_testing") {
+      renderHivTestingOverview(container);
+      return;
+    }
+  }
 
   // ── HIV Treatment → Unified DHIS2 Live Charts ──
   if (pageId === "hiv_treatment" && SUBTAB_TYPE_MAP[activeSlug]) {
@@ -1038,13 +2642,11 @@ function renderSelectOptions(selectElement, label, values) {
   selectElement.innerHTML =
     `<option value="all">All ${escapeHtml(label)}</option>` +
     values
-      .map(
-        (item) => {
-          const val = typeof item === "object" ? item.value : item;
-          const display = typeof item === "object" ? item.label : item;
-          return `<option value="${escapeHtml(val)}">${escapeHtml(display)}</option>`;
-        },
-      )
+      .map((item) => {
+        const val = typeof item === "object" ? item.value : item;
+        const display = typeof item === "object" ? item.label : item;
+        return `<option value="${escapeHtml(val)}">${escapeHtml(display)}</option>`;
+      })
       .join("");
 }
 
@@ -1052,6 +2654,50 @@ function openChat() {
   elements.chatOverlay.classList.remove("hidden");
   elements.chatModal.classList.remove("hidden");
   elements.chatInput.focus();
+
+  // ── Update welcome message based on current page (no AI needed) ──
+  updateChatWelcome();
+
+  // ── Highlight the active page's nav button ──
+  document.querySelectorAll(".chat-nav-btn").forEach(function (btn) {
+    btn.classList.toggle(
+      "active",
+      btn.getAttribute("data-nav") === state.activePage,
+    );
+  });
+}
+
+function updateChatWelcome() {
+  var welcome = document.getElementById("chatWelcome");
+  if (!welcome) return;
+  var meta = getPageMeta(state.activePage);
+  var pageTitle = meta.title || "Home";
+  var subtabs = (meta.subtabs || []).length;
+
+  var hints = {
+    overview: "📊 Browse the main dashboard KPIs and trends.",
+    financial_analysis:
+      "💰 Explore budgets, indicator performance, and health summaries by county.",
+    health_programmes:
+      "🏥 Access program dashboards — select MHU or Projects to drill in.",
+    human_resource: "👥 Staff management and human resource analytics.",
+    cbsl: "🏛️ Community Based Social & Livelihood programs.",
+    hiv_testing: "🔬 Review HIV testing uptake, linkage, and PrEP indicators.",
+    hiv_treatment:
+      "💊 Track ART initiation, VL suppression, and treatment outcomes.",
+    reporting_rates: "📋 Check facility reporting completeness and rates.",
+    profile: "🏥 View facility profiles and location hierarchy.",
+  };
+  var hint =
+    hints[state.activePage] || "📈 Ask questions or navigate to a page above.";
+
+  welcome.innerHTML =
+    '<div class="text-xs text-sky-600 font-semibold uppercase tracking-wider mb-1">📍 ' +
+    escapeHtml(pageTitle) +
+    "</div>" +
+    '<div class="text-slate-700">' +
+    hint +
+    ' <span class="text-slate-400">· Use the buttons above to navigate, or type a question below for AI-powered data insights.</span></div>';
 }
 
 function closeChat() {
@@ -1069,13 +2715,270 @@ async function handleChatSubmit(event) {
   appendMessage("user", question);
   elements.chatInput.value = "";
 
+  // ── Local keyword → page navigation (works without AI/Gemini) ──
+  const navKeywords = [
+    // HIV Treatment page
+    {
+      words: ["vl", "viral load", "viral suppression"],
+      page: "hiv_treatment",
+      subtab: "vl-monitoring",
+      label: "VL Monitoring",
+    },
+    {
+      words: ["art", "treatment", "newly started", "new on art"],
+      page: "hiv_treatment",
+      subtab: "newly-started-on-art",
+      label: "Newly Started on ART",
+    },
+    {
+      words: ["tx_curr", "current on art", "currently on art"],
+      page: "hiv_treatment",
+      subtab: "current-on-art",
+      label: "Current on ART",
+    },
+    {
+      words: ["iit", "interruption", "default"],
+      page: "hiv_treatment",
+      subtab: "iit-quarterly",
+      label: "IIT Quarterly",
+    },
+    {
+      words: ["dsd", "differentiated"],
+      page: "hiv_treatment",
+      subtab: "dsd",
+      label: "DSD",
+    },
+    {
+      words: ["adverse", "ae", "side effect"],
+      page: "hiv_treatment",
+      subtab: "adverse-events-ae",
+      label: "Adverse Events",
+    },
+    { words: ["otz"], page: "hiv_treatment", subtab: "otz", label: "OTZ" },
+    { words: ["ovc"], page: "hiv_treatment", subtab: "ovc", label: "OVC" },
+    {
+      words: ["cd4", "tpt"],
+      page: "hiv_treatment",
+      subtab: "cd4-tpt-uptake",
+      label: "CD4/TPT Uptake",
+    },
+    {
+      words: ["viral load cascade"],
+      page: "hiv_treatment",
+      subtab: "viral-load-cascade",
+      label: "Viral Load Cascade",
+    },
+    {
+      words: ["optimization"],
+      page: "hiv_treatment",
+      subtab: "art-optimization",
+      label: "ART Optimization",
+    },
+    // HIV Testing page
+    {
+      words: ["testing", "hts", "hiv test"],
+      page: "hiv_testing",
+      subtab: "hiv-testing-services-uptake",
+      label: "HIV Testing Uptake",
+    },
+    {
+      words: ["linkage", "link"],
+      page: "hiv_testing",
+      subtab: "hiv-testing-services-linkage",
+      label: "HIV Testing Linkage",
+    },
+    {
+      words: ["pns", "partner notification"],
+      page: "hiv_testing",
+      subtab: "partner-notification-services",
+      label: "Partner Notification",
+    },
+    {
+      words: ["prep", "pre-exposure"],
+      page: "prep_page",
+      subtab: "",
+      label: "PrEP",
+    },
+    {
+      words: ["index testing"],
+      page: "hiv_testing",
+      subtab: "hts-index-testing",
+      label: "HTS Index Testing",
+    },
+    {
+      words: ["sns"],
+      page: "hiv_testing",
+      subtab: "sns-cascade",
+      label: "SNS Cascade",
+    },
+    // Financial page
+    {
+      words: ["finance", "budget", "financial", "spend", "expenditure"],
+      page: "financial_analysis",
+      subtab: "overview",
+      label: "Financial Analysis",
+    },
+    {
+      words: ["indicator performance"],
+      page: "financial_analysis",
+      subtab: "indicator-performance",
+      label: "Indicator Performance",
+    },
+    // Reporting page
+    {
+      words: ["reporting", "completeness"],
+      page: "reporting_rates",
+      subtab: "overview",
+      label: "Reporting Rates",
+    },
+    // Jamii page — now enters Jamii Tekelezi project context
+    {
+      words: ["jamii", "tekelezi", "jamii tekelezi"],
+      page: "overview",
+      subtab: "",
+      label: "Jamii Tekelezi Project",
+      callback: function () {
+        state.activeProject = "jamii_tekelezi";
+        if (elements.projectFilter)
+          elements.projectFilter.value = "jamii-tekelezi";
+      },
+    },
+    {
+      words: ["tx_curr analytics"],
+      page: "overview",
+      subtab: "",
+      label: "TX_CURR Analytics",
+      callback: function () {
+        state.activeProject = "jamii_tekelezi";
+        if (elements.projectFilter)
+          elements.projectFilter.value = "jamii-tekelezi";
+      },
+    },
+    // Other pages
+    {
+      words: ["home", "dashboard", "overview"],
+      page: "overview",
+      subtab: "",
+      label: "Home",
+    },
+    { words: ["profile"], page: "profile", subtab: "", label: "Profile" },
+    {
+      words: ["pmtct", "mother to child"],
+      page: "pmtct",
+      subtab: "",
+      label: "PMTCT",
+    },
+    { words: ["tb", "tuberculosis"], page: "tb", subtab: "", label: "TB" },
+    {
+      words: ["cacx", "cervical cancer", "cancer"],
+      page: "cacx",
+      subtab: "",
+      label: "CACX",
+    },
+    {
+      words: ["post rape", "rape"],
+      page: "post_rape",
+      subtab: "",
+      label: "Post Rape",
+    },
+    {
+      words: ["facilities", "facility"],
+      page: "facilities",
+      subtab: "",
+      label: "Facilities",
+    },
+    {
+      words: ["indicators"],
+      page: "indicators",
+      subtab: "",
+      label: "Indicators",
+    },
+    { words: ["resources"], page: "resources", subtab: "", label: "Resources" },
+    {
+      words: ["service desk"],
+      page: "service_desk",
+      subtab: "",
+      label: "Service Desk",
+    },
+    {
+      words: ["case surveillance", "surveillance"],
+      page: "case_surveillance",
+      subtab: "",
+      label: "Case Surveillance",
+    },
+  ];
+
+  const normalized = question.toLowerCase().trim();
+  let matchedNav = null;
+  for (const entry of navKeywords) {
+    if (
+      entry.words.some(function (w) {
+        return normalized === w || normalized.startsWith(w + " ");
+      })
+    ) {
+      matchedNav = entry;
+      break;
+    }
+  }
+
+  if (matchedNav) {
+    // Navigate locally — no AI call needed
+    state.activePage = matchedNav.page;
+    var meta = getPageMeta(matchedNav.page);
+    if (matchedNav.subtab) {
+      state.activeSubtabs[matchedNav.page] = matchedNav.subtab;
+      setPageHash(matchedNav.page, matchedNav.subtab);
+    } else if (meta.subtabs && meta.subtabs.length) {
+      if (!state.activeSubtabs[matchedNav.page])
+        state.activeSubtabs[matchedNav.page] = toSlug(meta.subtabs[0]);
+      setPageHash(matchedNav.page, state.activeSubtabs[matchedNav.page]);
+    } else {
+      setPageHash(matchedNav.page);
+    }
+    // Execute callback before rendering (e.g., for setting project context)
+    if (typeof matchedNav.callback === "function") {
+      matchedNav.callback();
+    }
+
+    scrollToPageTop();
+    renderCurrentView();
+
+    // Show a navigation message in chat
+    var navMsg =
+      "📌 Navigated to <strong>" +
+      escapeHtml(meta.title || matchedNav.page) +
+      "</strong>" +
+      (matchedNav.label && matchedNav.label !== meta.title
+        ? " → <strong>" + escapeHtml(matchedNav.label) + "</strong>"
+        : "") +
+      ". You can now explore the data there, or ask me a detailed question about what you see!";
+
+    // Remove typing indicator and show nav message
+    var tempId = appendTypingIndicator();
+    setTimeout(function () {
+      removeTypingIndicator(tempId);
+      appendMessage("assistant", navMsg, true);
+    }, 300);
+    return;
+  }
+
+  // ── Not a navigation keyword — proceed with AI data insights ──
   const typingId = appendTypingIndicator();
+
+  // Gather current page/chart context for better AI insights
+  var chatContext = {
+    question: question,
+    active_page: state.activePage || "",
+    active_tab: state.activeSubtabs
+      ? state.activeSubtabs[state.activePage] || ""
+      : "",
+  };
 
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify(chatContext),
     });
 
     const payload = await response.json();
@@ -2033,6 +3936,971 @@ async function renderHomepageDashboard() {
     }
   } catch (e) {
     root.innerHTML = `<div class="text-red-500 text-sm py-8 text-center">Dashboard unavailable: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function renderHivTreatmentOverview(container) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "space-y-5";
+  wrapper.innerHTML = `
+    <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
+      <div class="w-5 h-5 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+      Preparing HIV treatment overview…
+    </div>
+  `;
+  container.appendChild(wrapper);
+
+  const county =
+    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const scParam =
+    state.subCountyFilter !== "all"
+      ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
+      : "";
+  const facParam =
+    state.facilityFilter !== "all"
+      ? `&facility=${encodeURIComponent(state.facilityFilter)}`
+      : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  const selectedPeriod =
+    state.periodFilter && state.periodFilter !== "all"
+      ? state.periodFilter
+      : "LAST_12_MONTHS";
+
+  try {
+    const [newResp, currResp, vlResp] = await Promise.all([
+      fetch(
+        `/api/hiv-treatment/dhis-live?type=tx_new&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-treatment/dhis-live?type=tx_curr&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-treatment/dhis-live?type=vl&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+    ]);
+
+    const [newJson, currJson, vlJson] = await Promise.all([
+      newResp.json(),
+      currResp.json(),
+      vlResp.json(),
+    ]);
+
+    if (newJson.error || currJson.error || vlJson.error) {
+      throw new Error(newJson.error || currJson.error || vlJson.error);
+    }
+
+    const categories = (newJson.trend || []).map((p) => p.label);
+    const latestNew = (newJson.trend || []).slice(-1)[0] || {};
+    const latestCurr = (currJson.trend || []).slice(-1)[0] || {};
+    const latestVl = (vlJson.trend || []).slice(-1)[0] || {};
+
+    const cards = [
+      {
+        label: "New on ART",
+        value: latestNew.total || 0,
+        hint: "Latest month starts",
+        color: "border-sky-200 bg-sky-50 text-sky-700",
+      },
+      {
+        label: "Current on ART",
+        value: latestCurr.total || 0,
+        hint: "Latest caseload",
+        color: "border-violet-200 bg-violet-50 text-violet-700",
+      },
+      {
+        label: "VL uptake",
+        value: `${latestVl.vl_uptake || 0}%`,
+        hint: "Latest coverage",
+        color: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      },
+      {
+        label: "Trend months",
+        value: categories.length,
+        hint: "Reporting periods",
+        color: "border-amber-200 bg-amber-50 text-amber-700",
+      },
+    ];
+
+    const quickLinks = [
+      { label: "Newly Started on ART", slug: "newly-started-on-art" },
+      { label: "Current on ART", slug: "current-on-art" },
+      { label: "VL Monitoring", slug: "vl-monitoring" },
+      { label: "CD4/TPT Uptake", slug: "cd4-tpt-uptake" },
+      { label: "Care & Treatment", slug: "care-treatment" },
+      { label: "Treatment Outcomes", slug: "treatment-outcomes" },
+    ];
+
+    const currentMalePct = latestCurr.total
+      ? Math.round((latestCurr.males / latestCurr.total) * 100)
+      : 0;
+    const currentFemalePct = latestCurr.total
+      ? Math.round((latestCurr.females / latestCurr.total) * 100)
+      : 0;
+    const newMalePct = latestNew.total
+      ? Math.round((latestNew.males / latestNew.total) * 100)
+      : 0;
+    const newFemalePct = latestNew.total
+      ? Math.round((latestNew.females / latestNew.total) * 100)
+      : 0;
+
+    wrapper.innerHTML = `
+      <div class="space-y-6">
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div class="text-lg font-bold text-slate-800">HIV Treatment overview</div>
+              <div class="text-sm text-slate-500">A long-form landing page that summarizes the key treatment subtab areas with sectioned highlights for each main view.</div>
+            </div>
+            <div class="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-700">
+              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Jamii Tekelezi overview
+            </div>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            ${cards
+              .map(
+                (card) => `
+                <div class="rounded-2xl border ${card.color} p-4">
+                  <div class="text-[11px] font-semibold uppercase tracking-[0.2em]">${escapeHtml(card.label)}</div>
+                  <div class="mt-2 text-2xl font-bold">${escapeHtml(String(card.value))}</div>
+                  <div class="mt-1 text-[11px] opacity-80">${escapeHtml(card.hint)}</div>
+                </div>
+              `,
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Current on ART</div>
+              <div class="text-sm text-slate-500">A snapshot of active caseload with trend, sex share, and continuity signal.</div>
+            </div>
+            <button data-subtab-link="current-on-art" class="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition hover:bg-purple-100">View Current on ART</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div class="text-sm font-semibold text-slate-700">Latest caseload</div>
+                <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestCurr.total || 0))}</div>
+                <div class="text-xs text-slate-500">Current ART clients in the latest period.</div>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Monthly caseload trend</div>
+                <canvas id="ht-overview-current-line"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Sex distribution</div>
+                <canvas id="ht-overview-current-donut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Growth comparison</div>
+                <canvas id="ht-overview-current-bar"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Continuity gauge</div>
+                <canvas id="ht-overview-current-gauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Newly Started on ART</div>
+              <div class="text-sm text-slate-500">A quick look at the latest treatment uptake, sex share, and momentum.</div>
+            </div>
+            <button data-subtab-link="newly-started-on-art" class="rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">View New Starts</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div class="text-sm font-semibold text-slate-700">Latest new ART clients</div>
+                <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestNew.total || 0))}</div>
+                <div class="text-xs text-slate-500">New treatment starts in the latest reporting period.</div>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">New starts trend</div>
+                <canvas id="ht-overview-new-line"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Sex share</div>
+                <canvas id="ht-overview-new-donut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Month-over-month change</div>
+                <canvas id="ht-overview-new-bar"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Uptake gauge</div>
+                <canvas id="ht-overview-new-gauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">VL Monitoring</div>
+              <div class="text-sm text-slate-500">A concise view of viral load uptake, coverage, and the latest cascade signal.</div>
+            </div>
+            <button data-subtab-link="vl-monitoring" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">View VL Monitoring</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div class="text-sm font-semibold text-slate-700">Latest VL uptake</div>
+                <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestVl.vl_uptake || 0))}%</div>
+                <div class="text-xs text-slate-500">Viral load coverage in the latest month.</div>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">VL uptake trend</div>
+                <canvas id="ht-overview-vl-line"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Uptake vs remaining</div>
+                <canvas id="ht-overview-vl-bar"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">VL coverage split</div>
+                <canvas id="ht-overview-vl-donut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Coverage gauge</div>
+                <canvas id="ht-overview-vl-gauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div class="text-sm font-semibold text-slate-700">Quick navigation</div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            ${quickLinks
+              .map(
+                (item) => `
+                <button data-subtab-link="${escapeHtml(item.slug)}" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100">
+                  ${escapeHtml(item.label)}
+                </button>
+              `,
+              )
+              .join("")}
+          </div>
+        </section>
+      </div>
+    `;
+
+    wrapper.querySelectorAll("[data-subtab-link]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.activeSubtabs.hiv_treatment =
+          button.getAttribute("data-subtab-link");
+        renderCurrentView();
+      });
+    });
+
+    if (window.Chart) {
+      const currentTrend = (currJson.trend || []).map(
+        (p) => Number(p.total) || 0,
+      );
+      const currentMale = (currJson.trend || []).map(
+        (p) => Number(p.males) || 0,
+      );
+      const currentFemale = (currJson.trend || []).map(
+        (p) => Number(p.females) || 0,
+      );
+      const currentChange = currentTrend.map((value, index) =>
+        index === 0 ? 0 : value - currentTrend[index - 1],
+      );
+      const currentGaugeValue = latestCurr.total
+        ? Math.min(100, Math.round((latestNew.total / latestCurr.total) * 100))
+        : 0;
+
+      const newTrend = (newJson.trend || []).map((p) => Number(p.total) || 0);
+      const newMale = (newJson.trend || []).map((p) => Number(p.males) || 0);
+      const newFemale = (newJson.trend || []).map(
+        (p) => Number(p.females) || 0,
+      );
+      const newChange = newTrend.map((value, index) =>
+        index === 0 ? 0 : value - newTrend[index - 1],
+      );
+      const newGaugeValue = latestCurr.total
+        ? Math.min(100, Math.round((latestNew.total / latestCurr.total) * 100))
+        : 0;
+
+      const vlTrend = (vlJson.trend || []).map((p) => Number(p.vl_uptake) || 0);
+      const vlRemainingTrend = vlTrend.map((value) => Math.max(0, 100 - value));
+      const vlGaugeValue = Number(latestVl.vl_uptake) || 0;
+
+      const drawGauge = (canvasId, value, color) => {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["Value", "Remaining"],
+            datasets: [
+              {
+                data: [value, Math.max(0, 100 - value)],
+                backgroundColor: [color, "#e2e8f0"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "75%",
+            circumference: Math.PI,
+            rotation: -Math.PI,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
+                },
+              },
+            },
+          },
+        });
+      };
+
+      const currentLineCtx = document.getElementById(
+        "ht-overview-current-line",
+      );
+      if (currentLineCtx) {
+        new Chart(currentLineCtx, {
+          type: "line",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "Current on ART",
+                data: currentTrend,
+                borderColor: "#7c3aed",
+                backgroundColor: "rgba(124,58,237,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#7c3aed",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const currentDonutCtx = document.getElementById(
+        "ht-overview-current-donut",
+      );
+      if (currentDonutCtx) {
+        new Chart(currentDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Male", "Female"],
+            datasets: [
+              {
+                data: [
+                  currentMale[currentMale.length - 1] || 0,
+                  currentFemale[currentFemale.length - 1] || 0,
+                ],
+                backgroundColor: ["#2563eb", "#ec4899"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      const currentBarCtx = document.getElementById("ht-overview-current-bar");
+      if (currentBarCtx) {
+        new Chart(currentBarCtx, {
+          type: "bar",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "Monthly change",
+                data: currentChange,
+                backgroundColor: currentChange.map((value) =>
+                  value >= 0 ? "#4f46e5" : "#dc2626",
+                ),
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      drawGauge("ht-overview-current-gauge", currentGaugeValue, "#7c3aed");
+
+      const newLineCtx = document.getElementById("ht-overview-new-line");
+      if (newLineCtx) {
+        new Chart(newLineCtx, {
+          type: "line",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "New on ART",
+                data: newTrend,
+                borderColor: "#0f766e",
+                backgroundColor: "rgba(6,182,212,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#0f766e",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const newDonutCtx = document.getElementById("ht-overview-new-donut");
+      if (newDonutCtx) {
+        new Chart(newDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Male", "Female"],
+            datasets: [
+              {
+                data: [
+                  newMale[newMale.length - 1] || 0,
+                  newFemale[newFemale.length - 1] || 0,
+                ],
+                backgroundColor: ["#0f766e", "#7c3aed"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      const newBarCtx = document.getElementById("ht-overview-new-bar");
+      if (newBarCtx) {
+        new Chart(newBarCtx, {
+          type: "bar",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "New ART volume",
+                data: newTrend,
+                backgroundColor: "#2563eb",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      drawGauge("ht-overview-new-gauge", newGaugeValue, "#0f766e");
+
+      const vlLineCtx = document.getElementById("ht-overview-vl-line");
+      if (vlLineCtx) {
+        new Chart(vlLineCtx, {
+          type: "line",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "VL uptake",
+                data: vlTrend,
+                borderColor: "#16a34a",
+                backgroundColor: "rgba(16,185,129,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#16a34a",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (value) => `${value}%` },
+              },
+            },
+          },
+        });
+      }
+
+      const vlBarCtx = document.getElementById("ht-overview-vl-bar");
+      if (vlBarCtx) {
+        new Chart(vlBarCtx, {
+          type: "bar",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                label: "VL uptake",
+                data: vlTrend,
+                backgroundColor: "#16a34a",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (value) => `${value}%` },
+              },
+            },
+          },
+        });
+      }
+
+      const vlDonutCtx = document.getElementById("ht-overview-vl-donut");
+      if (vlDonutCtx) {
+        new Chart(vlDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Uptake", "Remaining"],
+            datasets: [
+              {
+                data: [vlGaugeValue, Math.max(0, 100 - vlGaugeValue)],
+                backgroundColor: ["#16a34a", "#d1fae5"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("ht-overview-vl-gauge", vlGaugeValue, "#16a34a");
+    }
+  } catch (error) {
+    wrapper.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Unable to load the HIV treatment landing page: ${escapeHtml(error.message || "Unknown error")}</div>`;
+  }
+}
+
+async function renderHivTestingOverview(container) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "space-y-5";
+  wrapper.innerHTML = `
+    <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
+      <div class="w-5 h-5 border-2 border-cyan-200 border-t-cyan-600 rounded-full animate-spin"></div>
+      Preparing HIV testing overview…
+    </div>
+  `;
+  container.appendChild(wrapper);
+
+  const county =
+    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const scParam =
+    state.subCountyFilter !== "all"
+      ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
+      : "";
+  const facParam =
+    state.facilityFilter !== "all"
+      ? `&facility=${encodeURIComponent(state.facilityFilter)}`
+      : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  const selectedPeriod =
+    state.periodFilter && state.periodFilter !== "all"
+      ? state.periodFilter
+      : "LAST_12_MONTHS";
+
+  try {
+    const [uptakeResp, linkageResp, partnerResp, prepResp] = await Promise.all([
+      fetch(
+        `/api/hiv-testing/dhis-live?type=hts_uptake&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-testing/dhis-live?type=hts_linkage&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-testing/dhis-live?type=partner_notification&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-testing/dhis-live?type=prep&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+    ]);
+
+    const [uptakeJson, linkageJson, partnerJson, prepJson] = await Promise.all([
+      uptakeResp.json(),
+      linkageResp.json(),
+      partnerResp.json(),
+      prepResp.json(),
+    ]);
+
+    if (
+      uptakeJson.error ||
+      linkageJson.error ||
+      partnerJson.error ||
+      prepJson.error
+    ) {
+      throw new Error(
+        uptakeJson.error ||
+          linkageJson.error ||
+          partnerJson.error ||
+          prepJson.error,
+      );
+    }
+
+    const categories = (uptakeJson.trend || []).map((p) => p.label);
+    const latestUptake = (uptakeJson.trend || []).slice(-1)[0] || {};
+    const latestLinkage = (linkageJson.trend || []).slice(-1)[0] || {};
+    const latestPartner = (partnerJson.trend || []).slice(-1)[0] || {};
+    const latestPrep = (prepJson.trend || []).slice(-1)[0] || {};
+
+    const cards = [
+      {
+        label: "Tested",
+        value: latestUptake.hts_tested || 0,
+        hint: "Latest HTS tested",
+        color: "border-sky-200 bg-sky-50 text-sky-700",
+      },
+      {
+        label: "Positive",
+        value: latestUptake.hts_positive || 0,
+        hint: "Latest positives",
+        color: "border-rose-200 bg-rose-50 text-rose-700",
+      },
+      {
+        label: "Linkage",
+        value: latestLinkage.index_accepted || 0,
+        hint: "Accepted linkage",
+        color: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      },
+      {
+        label: "PrEP current",
+        value: latestPrep.prep_curr || 0,
+        hint: "Current PrEP clients",
+        color: "border-violet-200 bg-violet-50 text-violet-700",
+      },
+    ];
+
+    const quickLinks = [
+      { label: "HTS Uptake", slug: "hiv-testing-services-uptake" },
+      { label: "HTS Linkage", slug: "hiv-testing-services-linkage" },
+      { label: "Partner Notification", slug: "partner-notification-services" },
+      { label: "PrEP", slug: "prep" },
+    ];
+
+    const positivityTrend = (uptakeJson.trend || []).map(
+      (p) => p.positivity_rate || 0,
+    );
+    const testedTrend = (uptakeJson.trend || []).map((p) => p.hts_tested || 0);
+    const linkageTrend = (linkageJson.trend || []).map(
+      (p) => p.index_accepted || 0,
+    );
+    const prepTrend = (prepJson.trend || []).map((p) => p.prep_curr || 0);
+
+    wrapper.innerHTML = `
+      <div class="space-y-6">
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div class="text-lg font-bold text-slate-800">HIV Testing overview</div>
+              <div class="text-sm text-slate-500">A long-form overview that mirrors the HTS subtab areas with sectioned summaries for uptake, linkage, and PrEP.</div>
+            </div>
+            <div class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
+              <span class="h-2 w-2 rounded-full bg-cyan-500"></span> Jamii Tekelezi overview
+            </div>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            ${cards
+              .map(
+                (card) => `
+                <div class="rounded-2xl border ${card.color} p-4">
+                  <div class="text-[11px] font-semibold uppercase tracking-[0.2em]">${escapeHtml(card.label)}</div>
+                  <div class="mt-2 text-2xl font-bold">${escapeHtml(String(card.value))}</div>
+                  <div class="mt-1 text-[11px] opacity-80">${escapeHtml(card.hint)}</div>
+                </div>
+              `,
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">HTS Uptake</div>
+              <div class="text-sm text-slate-500">A summary of testing volume, positivity and the major uptake trend for this subtab.</div>
+            </div>
+            <button data-subtab-link="hiv-testing-services-uptake" class="rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">Enter HTS Uptake</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div id="hts-overview-uptake-chart" style="height:260px"></div>
+            <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div class="text-sm font-semibold text-slate-700">Latest metrics</div>
+              <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestUptake.hts_tested || 0))}</div>
+              <div class="text-sm text-slate-600">Tested this period • ${escapeHtml(String(latestUptake.hts_positive || 0))} positive</div>
+              <div class="text-xs text-slate-500">Positivity is ${escapeHtml(String(latestUptake.positivity_rate || 0))}% and drives the HTS performance narrative.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Linkage & partner notification</div>
+              <div class="text-sm text-slate-500">A section previewing the linkage cascade and partner notification performance.</div>
+            </div>
+            <button data-subtab-link="hiv-testing-services-linkage" class="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100">Open Linkage</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div id="hts-overview-linkage-chart" style="height:260px"></div>
+            <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div class="text-sm font-semibold text-slate-700">Latest linkage</div>
+              <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestLinkage.index_accepted || 0))}</div>
+              <div class="text-sm text-slate-600">Accepted index clients</div>
+              <div class="text-xs text-slate-500">This section previews the partner notification cascade and referral follow-up.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">PrEP</div>
+              <div class="text-sm text-slate-500">Highlights current PrEP client volume and protective coverage.</div>
+            </div>
+            <button data-subtab-link="prep" class="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100">Open PrEP</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div id="hts-overview-prep-chart" style="height:260px"></div>
+            <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div class="text-sm font-semibold text-slate-700">Current PrEP clients</div>
+              <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestPrep.prep_curr || 0))}</div>
+              <div class="text-sm text-slate-600">Active PrEP coverage</div>
+              <div class="text-xs text-slate-500">This section previews broader prevention services and readiness.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+          <div class="text-sm font-semibold text-slate-700">Quick navigation</div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            ${quickLinks
+              .map(
+                (item) => `
+                <button data-subtab-link="${escapeHtml(item.slug)}" class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:border-slate-300 hover:bg-slate-100">
+                  ${escapeHtml(item.label)}
+                </button>
+              `,
+              )
+              .join("")}
+          </div>
+        </section>
+      </div>
+    `;
+
+    wrapper.querySelectorAll("[data-subtab-link]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const slug = button.getAttribute("data-subtab-link") || "";
+        state.activeSubtabs.hiv_treatment = slug;
+        setPageHash("hiv_treatment", slug);
+        renderCurrentView();
+      });
+    });
+
+    if (window.Highcharts) {
+      Highcharts.chart("hts-overview-uptake-chart", {
+        chart: { type: "line", zoomType: "x" },
+        title: { text: null },
+        xAxis: {
+          categories,
+          labels: { rotation: -25, style: { fontSize: "9px" } },
+        },
+        yAxis: [
+          { title: { text: "Clients" }, allowDecimals: false },
+          {
+            title: { text: "% Positive" },
+            opposite: true,
+            labels: { format: "{value}%" },
+          },
+        ],
+        tooltip: { shared: true },
+        series: [
+          {
+            name: "Tested",
+            data: (uptakeJson.trend || []).map((p) => p.hts_tested),
+            color: "#0891b2",
+          },
+          {
+            name: "Positive",
+            data: (uptakeJson.trend || []).map((p) => p.hts_positive),
+            color: "#dc2626",
+          },
+          {
+            name: "% Positive",
+            data: (uptakeJson.trend || []).map((p) => p.positivity_rate),
+            color: "#7c3aed",
+            yAxis: 1,
+          },
+        ],
+        legend: { enabled: true },
+        credits: { enabled: false },
+      });
+
+      Highcharts.chart("hts-overview-linkage-chart", {
+        chart: { type: "column", zoomType: "x" },
+        title: { text: null },
+        xAxis: {
+          categories,
+          labels: { rotation: -25, style: { fontSize: "9px" } },
+        },
+        yAxis: { title: { text: "Clients" }, allowDecimals: false },
+        tooltip: { valueSuffix: " clients" },
+        series: [
+          {
+            name: "Offered",
+            data: (linkageJson.trend || []).map((p) => p.index_offered),
+            color: "#0f766e",
+          },
+          {
+            name: "Accepted",
+            data: (linkageJson.trend || []).map((p) => p.index_accepted),
+            color: "#2563eb",
+          },
+          {
+            name: "Contacts tested",
+            data: (partnerJson.trend || []).map((p) => p.contacts_tested),
+            color: "#f59e0b",
+          },
+        ],
+        legend: { enabled: true },
+        credits: { enabled: false },
+      });
+
+      Highcharts.chart("hts-overview-prep-chart", {
+        chart: { type: "line", zoomType: "x" },
+        title: { text: null },
+        xAxis: {
+          categories,
+          labels: { rotation: -25, style: { fontSize: "9px" } },
+        },
+        yAxis: { title: { text: "Clients" }, allowDecimals: false },
+        tooltip: { valueSuffix: " clients" },
+        series: [
+          {
+            name: "PrEP new",
+            data: (prepJson.trend || []).map((p) => p.prep_new),
+            color: "#16a34a",
+          },
+          {
+            name: "PrEP current",
+            data: (prepJson.trend || []).map((p) => p.prep_curr),
+            color: "#7c3aed",
+          },
+        ],
+        legend: { enabled: true },
+        credits: { enabled: false },
+      });
+    }
+  } catch (error) {
+    wrapper.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Unable to load the HIV testing landing page: ${escapeHtml(error.message || "Unknown error")}</div>`;
   }
 }
 
@@ -4399,8 +7267,157 @@ async function renderJamiiPage(container, activeSlug) {
     renderJamiiOverview(container);
   } else if (activeSlug === "tx-curr-analytics") {
     renderJamiiTxCurrAnalytics(container);
+  } else if (activeSlug === "programme-highlights") {
+    renderJamiiProgrammeHighlights(container);
+  } else if (activeSlug === "workload-mhu") {
+    renderJamiiWorkloadPage(container);
   } else {
     container.innerHTML = `<div class="text-center py-12 text-sm text-slate-500">Select a view above.</div>`;
+  }
+}
+
+async function renderJamiiProgrammeHighlights(container) {
+  container.innerHTML = `
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights</div>
+      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiHighlightsLoading">Loading snapshot…</div>
+    </div>
+  `;
+
+  const county =
+    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const scParam =
+    state.subCountyFilter !== "all"
+      ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
+      : "";
+  const facParam =
+    state.facilityFilter !== "all"
+      ? `&facility=${encodeURIComponent(state.facilityFilter)}`
+      : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=LAST_12_MONTHS`;
+
+  try {
+    const resp = await fetch(url);
+    const d = await resp.json();
+    if (d.error) throw new Error(d.error);
+    const latest = d.latest || {};
+    const txCurr = Number(latest.tx_curr || 0);
+    const txNew = Number(latest.tx_new || 0);
+    const tested = Number(latest.hts_tested || 0);
+    const positivity = Number(latest.positivity_rate || 0);
+    const serviceContinuity =
+      txCurr > 0 && txNew > 0 ? Math.round((txNew / txCurr) * 100) : 0;
+    const htsMomentum =
+      tested > 0 ? Math.round((tested / Math.max(1, txCurr)) * 100) : 0;
+
+    document.getElementById("jamiiHighlightsLoading").outerHTML = `
+      <div class="space-y-4">
+        <div class="grid gap-3 md:grid-cols-2">
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Care continuity</div>
+            <div class="mt-2 text-2xl font-bold text-slate-800">${serviceContinuity}%</div>
+            <div class="mt-1 text-[11px] text-slate-500">New initiations relative to the active caseload.</div>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">HTS momentum</div>
+            <div class="mt-2 text-2xl font-bold text-slate-800">${htsMomentum}%</div>
+            <div class="mt-1 text-[11px] text-slate-500">Recent testing volume against the current treatment pool.</div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-50 to-emerald-50 p-4">
+          <div class="text-xs font-semibold text-slate-700">🧭 PBIX-aligned focus areas</div>
+          <div class="mt-3 grid gap-3 md:grid-cols-3 text-sm text-slate-600">
+            <div class="rounded-xl border border-white/70 bg-white/70 p-3"><div class="font-semibold text-slate-700">TX_CURR</div><div class="mt-1 text-xl font-bold text-slate-800">${txCurr.toLocaleString()}</div></div>
+            <div class="rounded-xl border border-white/70 bg-white/70 p-3"><div class="font-semibold text-slate-700">TX_NEW</div><div class="mt-1 text-xl font-bold text-slate-800">${txNew.toLocaleString()}</div></div>
+            <div class="rounded-xl border border-white/70 bg-white/70 p-3"><div class="font-semibold text-slate-700">Positivity</div><div class="mt-1 text-xl font-bold text-slate-800">${positivity.toFixed(1)}%</div></div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">Programme highlights could not be loaded: ${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function renderJamiiWorkloadPage(container) {
+  container.innerHTML = `
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus</div>
+      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiWorkloadLoading">Loading workload view…</div>
+    </div>
+  `;
+
+  const county =
+    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const scParam =
+    state.subCountyFilter !== "all"
+      ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
+      : "";
+  const facParam =
+    state.facilityFilter !== "all"
+      ? `&facility=${encodeURIComponent(state.facilityFilter)}`
+      : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=LAST_12_MONTHS`;
+
+  try {
+    const resp = await fetch(url);
+    const d = await resp.json();
+    if (d.error) throw new Error(d.error);
+    const latest = d.latest || {};
+    const txCurr = Number(latest.tx_curr || 0);
+    const txNew = Number(latest.tx_new || 0);
+    const tested = Number(latest.hts_tested || 0);
+    const positivity = Number(latest.positivity_rate || 0);
+    const workloadIndex = Math.max(
+      0,
+      Math.min(100, Math.round((txCurr / Math.max(1, tested)) * 100)),
+    );
+    const servicePressure = Math.max(
+      0,
+      Math.min(100, Math.round((txNew / Math.max(1, txCurr)) * 100)),
+    );
+
+    document.getElementById("jamiiWorkloadLoading").outerHTML = `
+      <div class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div class="text-sm font-semibold text-slate-700">Service workload summary</div>
+          <div class="mt-3 grid gap-3 md:grid-cols-3">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Caseload pressure</div>
+              <div class="mt-2 text-2xl font-bold text-slate-800">${workloadIndex}%</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">New starts</div>
+              <div class="mt-2 text-2xl font-bold text-slate-800">${txNew.toLocaleString()}</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Yield</div>
+              <div class="mt-2 text-2xl font-bold text-slate-800">${positivity.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4">
+          <div class="text-xs font-semibold text-slate-700">🧪 MHU-style workload notes</div>
+          <div class="mt-3 space-y-3 text-sm text-slate-600">
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div class="flex items-center justify-between text-[12px] font-semibold text-slate-700"><span>Service pressure</span><span>${servicePressure}%</span></div>
+              <div class="mt-2 h-2 w-full rounded-full bg-slate-200"><div class="h-2 rounded-full bg-orange-500" style="width:${servicePressure}%"></div></div>
+            </div>
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">The workload view now surfaces the same operational signals as the MHU board: active caseload, initiation pace, and routine testing yield.</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">Workload view could not be loaded: ${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -4411,157 +7428,1161 @@ async function renderJamiiOverview(container) {
       Loading Jamii Tekelezi overview…
     </div>
   `;
+
+  const county =
+    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const scParam =
+    state.subCountyFilter !== "all"
+      ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
+      : "";
+  const facParam =
+    state.facilityFilter !== "all"
+      ? `&facility=${encodeURIComponent(state.facilityFilter)}`
+      : "";
+  const projParam =
+    state.projectFilter !== "all"
+      ? `&project=${encodeURIComponent(state.projectFilter)}`
+      : "";
+  const selectedPeriod =
+    state.periodFilter && state.periodFilter !== "all"
+      ? state.periodFilter
+      : "LAST_12_MONTHS";
+
   try {
-    const county =
-      state.countyFilter !== "all" ? state.countyFilter : "Meru County";
-    const resp = await fetch(
-      `/api/homepage/summary?county=${encodeURIComponent(county)}&period=LAST_12_MONTHS`,
-    );
-    const d = await resp.json();
-    if (d.error) throw new Error(d.error);
+    const [summaryResp, vlResp, linkageResp, prepResp] = await Promise.all([
+      fetch(
+        `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-treatment/dhis-live?type=vl&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-testing/dhis-live?type=hts_linkage&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-testing/dhis-live?type=prep&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+    ]);
 
-    const txCurrData = d.tx_curr || {};
-    const txNewData = d.tx_new || {};
-    const entries = Object.entries(txCurrData).sort(
-      (a, b) => parsePeriodLabel(a[0]) - parsePeriodLabel(b[0]),
-    );
-    const txNewEntries = Object.entries(txNewData).sort(
-      (a, b) => parsePeriodLabel(a[0]) - parsePeriodLabel(b[0]),
-    );
+    const [summaryJson, vlJson, linkageJson, prepJson] = await Promise.all([
+      summaryResp.json(),
+      vlResp.json(),
+      linkageResp.json(),
+      prepResp.json(),
+    ]);
 
-    const latestVal = entries.length ? entries[entries.length - 1][1] : 0;
-    const prevVal =
-      entries.length > 1 ? entries[entries.length - 2][1] : latestVal;
-    const txNewLatest = txNewEntries.length
-      ? txNewEntries[txNewEntries.length - 1][1]
-      : 0;
-    const txNewPrev =
-      txNewEntries.length > 1
-        ? txNewEntries[txNewEntries.length - 2][1]
-        : txNewLatest;
+    if (
+      summaryJson.error ||
+      vlJson.error ||
+      linkageJson.error ||
+      prepJson.error
+    ) {
+      throw new Error(
+        summaryJson.error ||
+          vlJson.error ||
+          linkageJson.error ||
+          prepJson.error,
+      );
+    }
+
+    const txCurrTrend = summaryJson.tx_curr_trend || [];
+    const txNewTrend = summaryJson.tx_new_trend || [];
+    const htsTrend = summaryJson.hts_trend || [];
+    const latest = summaryJson.latest || {};
+    const latestVl = (vlJson.trend || []).slice(-1)[0] || {};
+    const latestLinkage = (linkageJson.trend || []).slice(-1)[0] || {};
+    const latestPrep = (prepJson.trend || []).slice(-1)[0] || {};
+
+    const txCurrCategories = txCurrTrend.map((p) => p.label);
+    const txNewCategories = txNewTrend.map((p) => p.label);
+    const htsCategories = htsTrend.map((p) => p.label);
+
+    const txCurrValues = txCurrTrend.map((p) => p.value);
+    const txNewValues = txNewTrend.map((p) => p.value);
+    const htsTestedValues = htsTrend.map((p) => p.tested);
+    const htsPositiveValues = htsTrend.map((p) => p.positive);
+    const htsPositivityValues = htsTrend.map((p) => p.positivity_rate);
+
+    const latestTxCurr = Number(latest.tx_curr || 0);
+    const latestTxNew = Number(latest.tx_new || 0);
+    const latestTested = Number(latest.hts_tested || 0);
+    const latestPositive = Number(latest.hts_positive || 0);
+    const latestPositivity = Number(latest.positivity_rate || 0);
+    const vlUptake = Number(latestVl.vl_uptake || 0);
+    const linkageAccepted = Number(latestLinkage.index_accepted || 0);
+    const linkageOffered = Number(latestLinkage.index_offered || 0);
+    const linkageDeclined = Math.max(0, linkageOffered - linkageAccepted);
+    const prepCurr = Number(latestPrep.prep_curr || 0);
+    const serviceContinuity =
+      latestTxCurr > 0 ? Math.round((latestTxNew / latestTxCurr) * 100) : 0;
+    const htsMomentum =
+      latestTxCurr > 0 ? Math.round((latestTested / latestTxCurr) * 100) : 0;
+    const workloadIndex =
+      latestTested > 0
+        ? Math.min(100, Math.round((latestTxCurr / latestTested) * 100))
+        : 0;
+    const servicePressure =
+      latestTxCurr > 0
+        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
+        : 0;
+    const vlRemaining = Math.max(0, 100 - vlUptake);
 
     container.innerHTML = `
-      <!-- Header -->
-      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl">🏥</span>
-          <div>
-            <div class="text-sm font-bold text-slate-800">Jamii Tekelezi Project Dashboard</div>
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider">HIV Programme Monitoring · CHAK</div>
+      <div class="space-y-6">
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div class="text-2xl font-bold text-slate-800">Jamii Tekelezi overview</div>
+              <div class="text-sm text-slate-500">A consolidated landing page that brings HIV Treatment and HIV Testing overview sections together with programme highlights and MHU workload signals.</div>
+            </div>
+            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
+              <span class="h-2 w-2 rounded-full bg-sky-500"></span> Master overview
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
-          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">TX_CURR Latest</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">${latestVal.toLocaleString()}</div>
-          <div class="text-xs ${latestVal >= prevVal ? "text-emerald-600" : "text-red-600"} mt-0.5">
-            ${latestVal >= prevVal ? "▲" : "▼"} ${Math.abs(latestVal - prevVal).toLocaleString()} vs prev
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">TX_CURR</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${latestTxCurr.toLocaleString()}</div>
+              <div class="mt-1 text-sm text-slate-600">Active clients on treatment</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">TX_NEW</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${latestTxNew.toLocaleString()}</div>
+              <div class="mt-1 text-sm text-slate-600">New treatment starts</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">HTS tested</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${latestTested.toLocaleString()}</div>
+              <div class="mt-1 text-sm text-slate-600">Testing volume</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Positivity</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${latestPositivity.toFixed(1)}%</div>
+              <div class="mt-1 text-sm text-slate-600">Testing yield</div>
+            </div>
           </div>
-        </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
-          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">TX_NEW Latest</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">${txNewLatest.toLocaleString()}</div>
-          <div class="text-xs ${txNewLatest >= txNewPrev ? "text-emerald-600" : "text-red-600"} mt-0.5">
-            ${txNewLatest >= txNewPrev ? "▲" : "▼"} ${Math.abs(txNewLatest - txNewPrev).toLocaleString()} vs prev
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Current on ART</div>
+              <div class="text-sm text-slate-500">A treatment section with active caseload trend, gender split, monthly change, and continuity gauge.</div>
+            </div>
+            <button data-tab="hiv_treatment" class="rounded-full border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700 transition hover:bg-purple-100">Open Current on ART</button>
           </div>
-        </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
-          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Periods</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">${entries.length}</div>
-          <div class="text-xs text-slate-400 mt-0.5">months of data</div>
-        </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
-          <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Location</div>
-          <div class="text-base font-bold text-slate-800 mt-1">${county}</div>
-          <div class="text-xs text-slate-400 mt-0.5">${state.facilityFilter !== "all" ? state.facilityFilter : state.subCountyFilter !== "all" ? state.subCountyFilter : "All"}</div>
-        </div>
-      </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">TX_CURR trend</div>
+                <canvas id="jamiiTreatmentCurrentLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Month-on-month change</div>
+                <canvas id="jamiiTreatmentCurrentBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Sex distribution</div>
+                <canvas id="jamiiTreatmentCurrentDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Continuity gauge</div>
+                <canvas id="jamiiTreatmentCurrentGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <!-- TX_CURR Trend Chart -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="text-xs font-semibold text-slate-700 mb-2">📈 TX_CURR Monthly Trend</div>
-        <div style="height:300px"><canvas id="jamiiTrendChart"></canvas></div>
-      </div>
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Newly Started on ART</div>
+              <div class="text-sm text-slate-500">A treatment intake section with new start trends, gender share, growth volume, and uptake gauge.</div>
+            </div>
+            <button data-tab="hiv_treatment" class="rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">Open New Starts</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">TX_NEW trend</div>
+                <canvas id="jamiiTreatmentNewLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">New starts volume</div>
+                <canvas id="jamiiTreatmentNewBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Sex share</div>
+                <canvas id="jamiiTreatmentNewDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Uptake gauge</div>
+                <canvas id="jamiiTreatmentNewGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <!-- Quick Links -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div class="text-xs font-semibold text-slate-700 mb-2">🔍 Quick Links</div>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-          <a href="#" class="jamii-quick-link block rounded-xl border border-slate-100 bg-slate-50 p-3 hover:bg-blue-50 hover:border-blue-200 transition" data-tab="tx-curr-analytics">
-            <div class="text-lg mb-1">💊</div>
-            <div class="text-xs font-semibold text-slate-700">TX_CURR Analytics</div>
-            <div class="text-[10px] text-slate-400">Gender, Age, MMD, Yearly views</div>
-          </a>
-          <a href="#" class="jamii-quick-link block rounded-xl border border-slate-100 bg-slate-50 p-3 hover:bg-blue-50 hover:border-blue-200 transition" data-tab="hiv_treatment">
-            <div class="text-lg mb-1">🧬</div>
-            <div class="text-xs font-semibold text-slate-700">HIV Treatment</div>
-            <div class="text-[10px] text-slate-400">Age-sex pyramid, monthly breakdown</div>
-          </a>
-          <a href="#" class="jamii-quick-link block rounded-xl border border-slate-100 bg-slate-50 p-3 hover:bg-blue-50 hover:border-blue-200 transition" data-tab="hiv_testing">
-            <div class="text-lg mb-1">🧪</div>
-            <div class="text-xs font-semibold text-slate-700">HIV Testing</div>
-            <div class="text-[10px] text-slate-400">Uptake, Linkage, Partner Notification</div>
-          </a>
-        </div>
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">VL Monitoring</div>
+              <div class="text-sm text-slate-500">A viral load section with coverage trend, headroom, split, and coverage gauge.</div>
+            </div>
+            <button data-tab="hiv_treatment" class="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">Open VL Monitoring</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">VL uptake trend</div>
+                <canvas id="jamiiTreatmentVlLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Uptake vs remaining</div>
+                <canvas id="jamiiTreatmentVlBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">VL coverage split</div>
+                <canvas id="jamiiTreatmentVlDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Coverage gauge</div>
+                <canvas id="jamiiTreatmentVlGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">HTS Uptake</div>
+              <div class="text-sm text-slate-500">A testing uptake section with volume trend, positivity split, extraction bar, and momentum gauge.</div>
+            </div>
+            <button data-tab="hiv_testing" class="rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">Open HTS Uptake</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Testing volume trend</div>
+                <canvas id="jamiiTestingUptakeLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Tested vs positive</div>
+                <canvas id="jamiiTestingUptakeBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Positivity split</div>
+                <canvas id="jamiiTestingUptakeDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Momentum gauge</div>
+                <canvas id="jamiiTestingUptakeGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Linkage & partner notification</div>
+              <div class="text-sm text-slate-500">An index cascade section with acceptance trend, outreach volume, acceptance split, and linkage gauge.</div>
+            </div>
+            <button data-tab="hiv_testing" class="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100">Open Linkage</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Linkage acceptance trend</div>
+                <canvas id="jamiiTestingLinkageLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Offered vs accepted</div>
+                <canvas id="jamiiTestingLinkageBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Acceptance split</div>
+                <canvas id="jamiiTestingLinkageDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Linkage gauge</div>
+                <canvas id="jamiiTestingLinkageGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">PrEP</div>
+              <div class="text-sm text-slate-500">A prevention section with current coverage trend, new uptake, client split, and protection gauge.</div>
+            </div>
+            <button data-tab="hiv_testing" class="rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100">Open PrEP</button>
+          </div>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="space-y-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">PrEP current trend</div>
+                <canvas id="jamiiTestingPrepLine"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">PrEP new versus current</div>
+                <canvas id="jamiiTestingPrepBar"></canvas>
+              </div>
+            </div>
+            <div class="grid gap-4">
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">Client split</div>
+                <canvas id="jamiiTestingPrepDonut"></canvas>
+              </div>
+              <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
+                <div class="text-sm font-semibold text-slate-700 mb-2">PrEP coverage gauge</div>
+                <canvas id="jamiiTestingPrepGauge"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div class="text-base font-semibold text-slate-800">Programme highlights</div>
+              <div class="text-sm text-slate-500">A quick read on momentum, continuity and the signals that link the treatment and testing workstreams.</div>
+            </div>
+            <button data-tab="jamii" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Refresh overview</button>
+          </div>
+
+          <div class="mt-4 grid gap-4 lg:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Continuity</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${serviceContinuity}%</div>
+              <div class="mt-1 text-xs text-slate-600">New starts relative to active caseload</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">HTS momentum</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${htsMomentum}%</div>
+              <div class="mt-1 text-xs text-slate-600">Testing volume compared to treatment pool</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Workload index</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${workloadIndex}%</div>
+              <div class="mt-1 text-xs text-slate-600">Active caseload versus HTS capacity</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-sm font-semibold text-slate-700">Workload pressure</div>
+              <div class="mt-3" style="height:220px"><canvas id="jamiiWorkloadPressureChart"></canvas></div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-sm font-semibold text-slate-700">Service readiness</div>
+              <div class="mt-3" style="height:220px"><canvas id="jamiiWorkloadDonut"></canvas></div>
+            </div>
+          </div>
+        </section>
       </div>
     `;
 
-    // Quick link handlers
-    container.querySelectorAll(".jamii-quick-link").forEach((el) => {
+    container.querySelectorAll("[data-tab]").forEach((el) => {
       el.addEventListener("click", (e) => {
         e.preventDefault();
         const tab = el.getAttribute("data-tab");
-        if (tab === "tx-curr-analytics") {
-          state.activeSubtabs["jamii"] = "tx-curr-analytics";
-          renderJamiiPage(container, "tx-curr-analytics");
-        } else {
-          state.activePage = tab;
-          setPageHash(tab);
+        if (!tab) return;
+        if (tab === "jamii") {
+          state.activePage = "jamii";
+          setPageHash("jamii", "overview");
           renderCurrentView();
+          return;
         }
+        state.activePage = tab;
+        setPageHash(tab);
+        renderCurrentView();
       });
     });
 
-    // Render trend chart
     if (window.Chart) {
-      const ctx = document.getElementById("jamiiTrendChart");
-      if (ctx) {
-        new Chart(ctx, {
-          type: "line",
+      const currentTrend = (txCurrTrend || []).map((p) => Number(p.value) || 0);
+      const currentMale = (txCurrTrend || []).map((p) => Number(p.males) || 0);
+      const currentFemale = (txCurrTrend || []).map(
+        (p) => Number(p.females) || 0,
+      );
+      const currentChange = currentTrend.map((value, index) =>
+        index === 0 ? 0 : value - currentTrend[index - 1],
+      );
+      const currentGaugeValue = Number(latestTxCurr)
+        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
+        : 0;
+
+      const newTrend = (txNewTrend || []).map((p) => Number(p.value) || 0);
+      const newMale = (txNewTrend || []).map((p) => Number(p.males) || 0);
+      const newFemale = (txNewTrend || []).map((p) => Number(p.females) || 0);
+      const newChange = newTrend.map((value, index) =>
+        index === 0 ? 0 : value - newTrend[index - 1],
+      );
+      const newGaugeValue = Number(latestTxCurr)
+        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
+        : 0;
+
+      const vlTrend = (vlJson.trend || []).map((p) => Number(p.vl_uptake) || 0);
+      const vlRemaining = vlTrend.map((value) => Math.max(0, 100 - value));
+      const vlGaugeValue = Number(latestVl.vl_uptake) || 0;
+
+      const htsTestedValues = htsTrend.map((p) => Number(p.tested) || 0);
+      const htsPositiveValues = htsTrend.map((p) => Number(p.positive) || 0);
+      const htsNegativeValues = htsTrend.map(
+        (p) => Math.max(0, Number(p.tested) - Number(p.positive)) || 0,
+      );
+      const htsUptakeGauge = htsMomentum;
+
+      const linkageCategories = (linkageJson.trend || []).map((p) => p.label);
+      const linkageAcceptedTrend = (linkageJson.trend || []).map(
+        (p) => Number(p.index_accepted) || 0,
+      );
+      const linkageOfferedTrend = (linkageJson.trend || []).map(
+        (p) => Number(p.index_offered) || 0,
+      );
+      const linkageGaugeValue = latestLinkage.index_offered
+        ? Math.min(
+            100,
+            Math.round(
+              (latestLinkage.index_accepted / latestLinkage.index_offered) *
+                100,
+            ),
+          )
+        : 0;
+
+      const prepCategories = (prepJson.trend || []).map((p) => p.label);
+      const prepCurrentTrend = (prepJson.trend || []).map(
+        (p) => Number(p.prep_curr) || 0,
+      );
+      const prepNewTrend = (prepJson.trend || []).map(
+        (p) => Number(p.prep_new) || 0,
+      );
+      const prepNew = Number(latestPrep.prep_new || 0);
+      const prepSplitGauge =
+        prepCurr + prepNew > 0
+          ? Math.min(100, Math.round((prepCurr / (prepCurr + prepNew)) * 100))
+          : 0;
+
+      function drawGauge(canvasId, value, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        new Chart(canvas, {
+          type: "doughnut",
           data: {
-            labels: entries.map((e) => e[0]),
+            labels: ["Value", "Remaining"],
             datasets: [
               {
-                label: "TX_CURR",
-                data: entries.map((e) => e[1]),
-                borderColor: "#0F3D5C",
-                backgroundColor: "rgba(15,61,92,0.06)",
-                fill: true,
-                tension: 0.3,
-                pointRadius: 3,
-                pointBackgroundColor: "#0F3D5C",
-                borderWidth: 2,
+                data: [value, Math.max(0, 100 - value)],
+                backgroundColor: [color, "#e2e8f0"],
+                borderWidth: 0,
               },
             ],
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: "75%",
+            circumference: Math.PI,
+            rotation: -Math.PI,
             plugins: {
               legend: { display: false },
               tooltip: {
                 callbacks: {
-                  label: (ctx) =>
-                    `Patients: ${parseInt(ctx.raw).toLocaleString()}`,
+                  label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
                 },
               },
             },
+          },
+        });
+      }
+
+      const currentLineCtx = document.getElementById(
+        "jamiiTreatmentCurrentLine",
+      );
+      if (currentLineCtx) {
+        new Chart(currentLineCtx, {
+          type: "line",
+          data: {
+            labels: txCurrCategories,
+            datasets: [
+              {
+                label: "TX_CURR",
+                data: currentTrend,
+                borderColor: "#7c3aed",
+                backgroundColor: "rgba(124,58,237,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#7c3aed",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
             scales: {
-              x: { ticks: { font: { size: 9 }, maxRotation: -45 } },
-              y: { beginAtZero: true, ticks: { font: { size: 9 } } },
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const currentBarCtx = document.getElementById("jamiiTreatmentCurrentBar");
+      if (currentBarCtx) {
+        new Chart(currentBarCtx, {
+          type: "bar",
+          data: {
+            labels: txCurrCategories,
+            datasets: [
+              {
+                label: "Month change",
+                data: currentChange,
+                backgroundColor: currentChange.map((value) =>
+                  value >= 0 ? "#7c3aed" : "#dc2626",
+                ),
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const currentDonutCtx = document.getElementById(
+        "jamiiTreatmentCurrentDonut",
+      );
+      if (currentDonutCtx) {
+        new Chart(currentDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Male", "Female"],
+            datasets: [
+              {
+                data: [
+                  currentMale[currentMale.length - 1] || 0,
+                  currentFemale[currentFemale.length - 1] || 0,
+                ],
+                backgroundColor: ["#2563eb", "#ec4899"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTreatmentCurrentGauge", currentGaugeValue, "#7c3aed");
+
+      const newLineCtx = document.getElementById("jamiiTreatmentNewLine");
+      if (newLineCtx) {
+        new Chart(newLineCtx, {
+          type: "line",
+          data: {
+            labels: txNewCategories,
+            datasets: [
+              {
+                label: "TX_NEW",
+                data: newTrend,
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37,99,235,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#2563eb",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const newBarCtx = document.getElementById("jamiiTreatmentNewBar");
+      if (newBarCtx) {
+        new Chart(newBarCtx, {
+          type: "bar",
+          data: {
+            labels: txNewCategories,
+            datasets: [
+              {
+                label: "TX_NEW",
+                data: newTrend,
+                backgroundColor: "#2563eb",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const newDonutCtx = document.getElementById("jamiiTreatmentNewDonut");
+      if (newDonutCtx) {
+        new Chart(newDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Male", "Female"],
+            datasets: [
+              {
+                data: [
+                  newMale[newMale.length - 1] || 0,
+                  newFemale[newFemale.length - 1] || 0,
+                ],
+                backgroundColor: ["#0f766e", "#7c3aed"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTreatmentNewGauge", newGaugeValue, "#0f766e");
+
+      const vlLineCtx = document.getElementById("jamiiTreatmentVlLine");
+      if (vlLineCtx) {
+        new Chart(vlLineCtx, {
+          type: "line",
+          data: {
+            labels: txCurrCategories,
+            datasets: [
+              {
+                label: "VL uptake",
+                data: vlTrend,
+                borderColor: "#16a34a",
+                backgroundColor: "rgba(16,185,129,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#16a34a",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true, ticks: { callback: (v) => `${v}%` } },
+            },
+          },
+        });
+      }
+
+      const vlBarCtx = document.getElementById("jamiiTreatmentVlBar");
+      if (vlBarCtx) {
+        new Chart(vlBarCtx, {
+          type: "bar",
+          data: {
+            labels: txCurrCategories,
+            datasets: [
+              {
+                label: "VL uptake",
+                data: vlTrend,
+                backgroundColor: "#16a34a",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true, ticks: { callback: (v) => `${v}%` } },
+            },
+          },
+        });
+      }
+
+      const vlDonutCtx = document.getElementById("jamiiTreatmentVlDonut");
+      if (vlDonutCtx) {
+        new Chart(vlDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Uptake", "Remaining"],
+            datasets: [
+              {
+                data: [vlGaugeValue, Math.max(0, 100 - vlGaugeValue)],
+                backgroundColor: ["#16a34a", "#d1fae5"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${ctx.parsed}%`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTreatmentVlGauge", vlGaugeValue, "#16a34a");
+
+      const testingUptakeLineCtx = document.getElementById(
+        "jamiiTestingUptakeLine",
+      );
+      if (testingUptakeLineCtx) {
+        new Chart(testingUptakeLineCtx, {
+          type: "line",
+          data: {
+            labels: htsCategories,
+            datasets: [
+              {
+                label: "HTS tested",
+                data: htsTestedValues,
+                borderColor: "#0891b2",
+                backgroundColor: "rgba(8,145,178,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#0891b2",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const testingUptakeBarCtx = document.getElementById(
+        "jamiiTestingUptakeBar",
+      );
+      if (testingUptakeBarCtx) {
+        new Chart(testingUptakeBarCtx, {
+          type: "bar",
+          data: {
+            labels: htsCategories,
+            datasets: [
+              {
+                label: "HTS positive",
+                data: htsPositiveValues,
+                backgroundColor: "#dc2626",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const testingUptakeDonutCtx = document.getElementById(
+        "jamiiTestingUptakeDonut",
+      );
+      if (testingUptakeDonutCtx) {
+        new Chart(testingUptakeDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Positive", "Negative"],
+            datasets: [
+              {
+                data: [
+                  latestPositive,
+                  Math.max(0, latestTested - latestPositive),
+                ],
+                backgroundColor: ["#dc2626", "#c7d2fe"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTestingUptakeGauge", htsUptakeGauge, "#0891b2");
+
+      const testingLinkageLineCtx = document.getElementById(
+        "jamiiTestingLinkageLine",
+      );
+      if (testingLinkageLineCtx) {
+        new Chart(testingLinkageLineCtx, {
+          type: "line",
+          data: {
+            labels: linkageCategories,
+            datasets: [
+              {
+                label: "Accepted",
+                data: linkageAcceptedTrend,
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37,99,235,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#2563eb",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const testingLinkageBarCtx = document.getElementById(
+        "jamiiTestingLinkageBar",
+      );
+      if (testingLinkageBarCtx) {
+        new Chart(testingLinkageBarCtx, {
+          type: "bar",
+          data: {
+            labels: linkageCategories,
+            datasets: [
+              {
+                label: "Offered",
+                data: linkageOfferedTrend,
+                backgroundColor: "#0f766e",
+                borderRadius: 6,
+              },
+              {
+                label: "Accepted",
+                data: linkageAcceptedTrend,
+                backgroundColor: "#2563eb",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              x: {
+                stacked: true,
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true, stacked: true },
+            },
+          },
+        });
+      }
+
+      const testingLinkageDonutCtx = document.getElementById(
+        "jamiiTestingLinkageDonut",
+      );
+      if (testingLinkageDonutCtx) {
+        new Chart(testingLinkageDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Accepted", "Declined"],
+            datasets: [
+              {
+                data: [linkageAccepted, linkageDeclined],
+                backgroundColor: ["#2563eb", "#c7d2fe"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTestingLinkageGauge", linkageGaugeValue, "#2563eb");
+
+      const testingPrepLineCtx = document.getElementById(
+        "jamiiTestingPrepLine",
+      );
+      if (testingPrepLineCtx) {
+        new Chart(testingPrepLineCtx, {
+          type: "line",
+          data: {
+            labels: prepCategories,
+            datasets: [
+              {
+                label: "PrEP current",
+                data: prepCurrentTrend,
+                borderColor: "#16a34a",
+                backgroundColor: "rgba(16,185,129,0.12)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#16a34a",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true },
+            },
+          },
+        });
+      }
+
+      const testingPrepBarCtx = document.getElementById("jamiiTestingPrepBar");
+      if (testingPrepBarCtx) {
+        new Chart(testingPrepBarCtx, {
+          type: "bar",
+          data: {
+            labels: prepCategories,
+            datasets: [
+              {
+                label: "PrEP current",
+                data: prepCurrentTrend,
+                backgroundColor: "#16a34a",
+                borderRadius: 6,
+              },
+              {
+                label: "PrEP new",
+                data: prepNewTrend,
+                backgroundColor: "#7c3aed",
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              x: {
+                stacked: true,
+                ticks: { maxRotation: -45, font: { size: 10 } },
+              },
+              y: { beginAtZero: true, stacked: true },
+            },
+          },
+        });
+      }
+
+      const testingPrepDonutCtx = document.getElementById(
+        "jamiiTestingPrepDonut",
+      );
+      if (testingPrepDonutCtx) {
+        new Chart(testingPrepDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Current", "New"],
+            datasets: [
+              {
+                data: [prepCurr, prepNewTrend[prepNewTrend.length - 1] || 0],
+                backgroundColor: ["#16a34a", "#7c3aed"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${ctx.parsed.toLocaleString()}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      drawGauge("jamiiTestingPrepGauge", prepSplitGauge, "#16a34a");
+
+      const workloadPressureCtx = document.getElementById(
+        "jamiiWorkloadPressureChart",
+      );
+      if (workloadPressureCtx) {
+        new Chart(workloadPressureCtx, {
+          type: "line",
+          data: {
+            labels: htsCategories,
+            datasets: [
+              {
+                label: "Positivity",
+                data: htsPositivityValues,
+                borderColor: "#f97316",
+                backgroundColor: "rgba(249,115,22,0.14)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: "#f97316",
+              },
+              {
+                label: "Service pressure",
+                data: htsCategories.map(() => servicePressure),
+                borderColor: "#0f766e",
+                backgroundColor: "rgba(15,118,110,0.12)",
+                fill: false,
+                tension: 0.3,
+                pointRadius: 2,
+                pointBackgroundColor: "#0f766e",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              x: { ticks: { maxRotation: -45, font: { size: 10 } } },
+              y: { beginAtZero: true, ticks: { callback: (v) => v + "%" } },
+            },
+          },
+        });
+      }
+
+      const workloadDonutCtx = document.getElementById("jamiiWorkloadDonut");
+      if (workloadDonutCtx) {
+        new Chart(workloadDonutCtx, {
+          type: "doughnut",
+          data: {
+            labels: ["Pressure", "Headroom"],
+            datasets: [
+              {
+                data: [servicePressure, Math.max(0, 100 - servicePressure)],
+                backgroundColor: ["#f97316", "#e2e8f0"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12 } },
+              tooltip: {
+                callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}%` },
+              },
             },
           },
         });
@@ -5870,19 +9891,37 @@ function _chakViewData(btn) {
 function _chakAiAssist(btn) {
   var canvas = _chakGetCanvas(btn);
   var chartTitle = "";
+  var chartMeta = "";
   if (btn) {
     var card = btn.closest(".chak-chart-card");
     if (card) {
       var h3 = card.querySelector("h3");
       if (h3) chartTitle = h3.textContent;
     }
+    // Collect filter context
+    var county = (elements.countyFilter && elements.countyFilter.value) || "";
+    var facility =
+      (elements.facilityFilter && elements.facilityFilter.value) || "";
+    var project =
+      (elements.projectFilter && elements.projectFilter.value) || "";
+    var parts = [];
+    if (county && county !== "all") parts.push(county);
+    if (facility && facility !== "all") parts.push(facility);
+    if (project && project !== "all") parts.push(project);
+    chartMeta = parts.join(" · ");
   }
   var chartId = canvas ? canvas.id : "";
   var html =
-    '<p style="margin:0 0 12px;color:#6b7280;">Ask questions about <strong>' +
+    '<p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Ask about <strong>' +
     escapeHtml(chartTitle || chartId) +
-    "</strong></p>" +
-    '<textarea id="chakAiInput" class="chak-ai-modal-input" rows="3" placeholder="e.g. What is the trend? What caused the drop in March?"></textarea>' +
+    "</strong>" +
+    (chartMeta
+      ? ' <span style="color:#94a3b8;">· Filtered: ' +
+        escapeHtml(chartMeta) +
+        "</span>"
+      : "") +
+    "</p>" +
+    '<textarea id="chakAiInput" class="chak-ai-modal-input" rows="3" placeholder="e.g. What is the trend? Summarize the top values."></textarea>' +
     '<div class="chak-ai-modal-footer">' +
     '<button id="chakAiSubmit" class="chak-ai-modal-submit"><svg style="width:14px;height:14px;display:inline;margin-right:4px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/><circle cx="12" cy="20" r="2"/></svg> Ask AI</button>' +
     "</div>" +
@@ -5899,15 +9938,86 @@ function _chakAiAssist(btn) {
         if (!q) return;
         response.style.display = "block";
         response.innerHTML =
-          '<div style="display:flex;align-items:center;gap:8px;color:#6b7280;"><div style="width:16px;height:16px;border:2px solid #e0e7ff;border-top-color:#4f46e5;border-radius:50%;animation:spin 0.8s linear infinite;"></div> Analyzing chart data...</div>';
+          '<div style="display:flex;align-items:center;gap:8px;color:#6b7280;"><div style="width:16px;height:16px;border:2px solid #e0e7ff;border-top-color:#4f46e5;border-radius:50%;animation:spin 0.8s linear infinite;"></div> Querying data insights...</div>';
         submit.disabled = true;
-        setTimeout(function () {
-          response.innerHTML =
-            '<div style="color:#374151;">Based on the <strong>' +
-            escapeHtml(chartTitle || chartId) +
-            '</strong> chart data, I can see the following trends:<br><br>• The data shows monthly variations across the displayed period<br>• You can examine the specific values in the chart above<br>• For detailed analysis, connect this to the main AI assistant<br><br><em style="color:#9ca3af;font-size:11px;">AI integration coming soon — click the main AI Assist icon for full analysis.</em></div>';
-          submit.disabled = false;
-        }, 1500);
+
+        // Build a context-aware question
+        var chartContext = chartTitle || chartId || "";
+        var filterContext = chartMeta ? " Filters: " + chartMeta : "";
+        var fullQuestion =
+          "Regarding the chart '" +
+          chartContext +
+          "'" +
+          filterContext +
+          ". " +
+          q;
+
+        // Collect chart data for AI context
+        var chartData = null;
+        if (canvas) {
+          var chart = chakChartInstances.find(function (c) {
+            return c.canvas && c.canvas.id === canvas.id;
+          });
+          if (
+            chart &&
+            chart.data &&
+            chart.data.labels &&
+            chart.data.labels.length
+          ) {
+            chartData = {
+              labels: chart.data.labels,
+              datasets: chart.data.datasets.map(function (ds) {
+                return { label: ds.label || "", data: ds.data || [] };
+              }),
+            };
+          }
+        }
+
+        // Call the real /api/chat backend (Groq + SQL)
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: fullQuestion,
+            chart_id: chartId,
+            chart_data: chartData,
+          }),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              return { status: res.status, data: data };
+            });
+          })
+          .then(function (result) {
+            if (result.status !== 200 || result.data.error) {
+              response.innerHTML =
+                '<div style="color:#dc2626;font-size:13px;">' +
+                (result.data.error ||
+                  "Could not get insights for this chart.") +
+                "</div>";
+              submit.disabled = false;
+              return;
+            }
+            response.innerHTML =
+              '<div style="color:#374151;font-size:13px;line-height:1.6;">' +
+              (result.data.answer_html ||
+                result.data.summary ||
+                "No insights available.") +
+              "</div>";
+            if (result.data.source) {
+              var src = document.createElement("div");
+              src.style.cssText =
+                "margin-top:8px;font-size:11px;color:#94a3b8;";
+              src.textContent = "Source: " + result.data.source;
+              response.appendChild(src);
+            }
+            submit.disabled = false;
+          })
+          .catch(function () {
+            response.innerHTML =
+              '<div style="color:#dc2626;font-size:13px;">Network error. Try the main AI Assist chat instead.</div>';
+            submit.disabled = false;
+          });
       }
       submit.addEventListener("click", handleAsk);
       input.addEventListener("keydown", function (e) {
@@ -5956,6 +10066,35 @@ document.addEventListener("click", function (e) {
   if (action === "ai") _chakAiAssist(btn);
   else if (action === "data") _chakViewData(btn);
   else if (action === "download") _chakDownloadChart(btn);
+});
+
+// ── Chat navigation buttons (independent of AI) ──
+document.addEventListener("click", function (e) {
+  var btn = e.target.closest(".chat-nav-btn");
+  if (!btn) return;
+  var pageId = btn.getAttribute("data-nav");
+  if (!pageId) return;
+
+  // Navigate to the selected page
+  state.activePage = pageId;
+  var meta = getPageMeta(pageId);
+  if (meta.subtabs && meta.subtabs.length) {
+    if (!state.activeSubtabs[pageId])
+      state.activeSubtabs[pageId] = toSlug(meta.subtabs[0]);
+    setPageHash(pageId, state.activeSubtabs[pageId]);
+  } else {
+    setPageHash(pageId);
+  }
+  scrollToPageTop();
+  renderCurrentView();
+
+  // Close the chat after navigation
+  closeChat();
+
+  // Highlight the active button
+  document.querySelectorAll(".chat-nav-btn").forEach(function (b) {
+    b.classList.toggle("active", b.getAttribute("data-nav") === pageId);
+  });
 });
 
 // ================================================================

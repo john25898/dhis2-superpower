@@ -20,9 +20,16 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types as genai_types
 except ImportError:  # pragma: no cover - handled at runtime if package is missing
     genai = None
+    genai_types = None
+
+try:
+    from groq import Groq
+except ImportError:  # pragma: no cover - handled at runtime if package is missing
+    Groq = None  # type: ignore[assignment]
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -161,7 +168,7 @@ def create_app() -> Flask:
     app.config["DATABASE_LOCK"] = threading.Lock()
     app.config["DATAFRAME"] = dataframe
     app.config["SCHEMA_SQL"] = schema_sql
-    app.config["GEMINI_PROVIDERS"] = build_gemini_providers()
+    app.config["GEMINI_PROVIDERS"] = build_gemini_providers() + build_groq_providers()
     app.config["GEMINI_ROUTER_STATE"] = {"cursor": 0, "cooldowns": {}}
     app.config["AI_RESPONSE_CACHE"] = {}
     app.config["AI_RESPONSE_CACHE_LOCK"] = threading.Lock()
@@ -707,14 +714,66 @@ def create_app() -> Flask:
         )
         return jsonify(json_safe(payload))
 
+    def _build_chart_database(chart_data: dict) -> tuple:
+        """Create a temp in-memory database from chart data (labels + datasets).
+        Returns (connection, schema_sql, table_info_string)."""
+        labels = chart_data.get("labels", [])
+        datasets = chart_data.get("datasets", [])
+        if not labels or not datasets:
+            return None, "", ""
+        # Build unique sanitized column names
+        col_mapping = []  # list of (sanitized, raw_name)
+        seen = set()
+        for ds in datasets:
+            raw_name = ds.get("label", "value") or "value"
+            base = re.sub(r'[^a-zA-Z0-9_]', '_', raw_name).strip('_') or "col"
+            name = base
+            i = 1
+            while name in seen:
+                name = f"{base}_{i}"
+                i += 1
+            seen.add(name)
+            col_mapping.append((name, raw_name))
+        rows = []
+        for i, label in enumerate(labels):
+            row = {"label": str(label)}
+            for j, (col_name, _) in enumerate(col_mapping):
+                val = datasets[j].get("data", [])[i] if i < len(datasets[j].get("data", [])) else None
+                row[col_name] = val
+            rows.append(row)
+        chart_df = pd.DataFrame(rows)
+        chart_conn = sqlite3.connect(":memory:")
+        chart_df.to_sql("chart_data", chart_conn, index=False, if_exists="replace")
+        chart_schema = pd.io.sql.get_schema(chart_df, "chart_data", con=chart_conn)
+        col_descs = []
+        for c in chart_df.columns:
+            if c == "label":
+                col_descs.append('"label" (the month/label row)')
+            else:
+                raw = next((r for s, r in col_mapping if s == c), c)
+                col_descs.append(f'"{c}" (represents: {raw})')
+        table_info = f'The ONLY table available is "chart_data" with columns: {", ".join(col_descs)}.'
+        return chart_conn, chart_schema, table_info
+
     @app.post("/api/chat")
     def chat() -> object:
         payload = request.get_json(silent=True) or {}
         question = (payload.get("question") or payload.get("message") or "").strip()
         chart_id = (payload.get("chart_id") or "").strip()
+        chart_data = payload.get("chart_data")
+        active_page = (payload.get("active_page") or "").strip()
+        active_tab = (payload.get("active_tab") or "").strip()
 
         if not question:
             return jsonify(json_safe({"error": "A question is required."})), 400
+
+        # Build page/tab context hint for the AI
+        page_context = ""
+        if active_page:
+            page_context = f"The user is currently viewing the '{active_page}' dashboard page"
+            if active_tab:
+                page_context += f", tab '{active_tab}'"
+            page_context += ". "
 
         cache_key = f"{chart_id}::{re.sub(r'\\s+', ' ', question.lower()).strip()}"
         with app.config["AI_RESPONSE_CACHE_LOCK"]:
@@ -723,19 +782,66 @@ def create_app() -> Flask:
             return jsonify(json_safe(cached_response))
 
         try:
+            # ── Determine whether we query chart data or the main clinics table ──
+            chart_db = None
+            chart_schema = None
+            custom_table_info = ""
+            if chart_data:
+                chart_db, chart_schema, custom_table_info = _build_chart_database(chart_data)
+                if chart_db:
+                    print(f"[CHART AI] Built chart database from {len(chart_data.get('labels',[]))} labels")
+                else:
+                    print(f"[CHART AI] chart_data had no labels/datasets: {chart_data}")
+
+            if chart_db is not None:
+                # Per-chart mode: query against the chart's data
+                used_schema = chart_schema
+                chart_df_check = pd.read_sql_query("SELECT * FROM chart_data", chart_db)
+                used_columns = list(chart_df_check.columns)
+                query_connection = chart_db
+                print(f"[CHART AI] Using chart_data table, columns={used_columns}")
+            else:
+                # Main chat mode: query against the clinics table
+                used_schema = app.config["SCHEMA_SQL"]
+                used_columns = app.config["DATAFRAME"].columns.tolist()
+                query_connection = database
+
+            # Inject page context into the question so AI knows what data the user is looking at
+            contextualized_question = page_context + question if page_context else question
+
             sql_query, sql_source, ai_error = generate_sql(
                 app.config["GEMINI_PROVIDERS"],
                 app.config["GEMINI_ROUTER_STATE"],
-                question,
-                app.config["DATAFRAME"].columns.tolist(),
-                app.config["SCHEMA_SQL"],
+                contextualized_question,
+                used_columns,
+                used_schema,
                 chart_id=chart_id,
+                custom_table_info=custom_table_info,
             )
             if sql_query is None:
-                # No provider could produce a SQL query; surface the AI error to the client.
+                # No provider could produce a SQL query; try local fallback
+                fallback_sql = build_fallback_sql(question, used_columns)
+                if fallback_sql:
+                    print(f"[CHART AI] Using fallback SQL: {fallback_sql[:200]}")
+                    validated_sql = validate_sql(fallback_sql, used_columns)
+                    result_frame = run_safe_query(query_connection, validated_sql)
+                    response_payload = build_chat_response(question, validated_sql, result_frame, "fallback", chart_id=chart_id)
+                    if ai_error:
+                        response_payload["ai_error"] = str(ai_error)
+                    with app.config["AI_RESPONSE_CACHE_LOCK"]:
+                        app.config["AI_RESPONSE_CACHE"][cache_key] = response_payload
+                    return jsonify(json_safe(response_payload))
                 return jsonify(json_safe({"error": f"AI providers failed: {ai_error}"})), 502
-            validated_sql = validate_sql(sql_query, app.config["DATAFRAME"].columns.tolist())
-            result_frame = run_safe_query(database, validated_sql)
+            print(f"[CHART AI] AI generated SQL: {sql_query[:200]}")
+            validated_sql = validate_sql(sql_query, used_columns)
+            result_frame = run_safe_query(query_connection, validated_sql)
+            # If AI returned empty results, try local fallback
+            if result_frame.empty and chart_db is None:
+                fallback_sql = build_fallback_sql(question, used_columns)
+                if fallback_sql:
+                    validated_sql = validate_sql(fallback_sql, used_columns)
+                    result_frame = run_safe_query(query_connection, validated_sql)
+                    sql_source = "fallback"
             response_payload = build_chat_response(question, validated_sql, result_frame, sql_source, chart_id=chart_id)
             if ai_error:
                 # include AI error details to help debugging in the UI
@@ -752,7 +858,11 @@ def create_app() -> Flask:
 
     @app.get("/main.js")
     def main_js() -> object:
-        return send_from_directory(BASE_DIR, "main.js")
+        response = send_from_directory(BASE_DIR, "main.js")
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
     @app.post("/api/reload-csvs")
     def reload_csvs_endpoint() -> object:
@@ -893,6 +1003,281 @@ def create_app() -> Flask:
         return out
 
     # ── Helper: find DX IDs from dictionary by pattern ─────────────────
+    # ── Helper: KHIS server fetch (for MHU tab) ──────────────────────
+    KHIS_BASE = os.getenv("KHIS_BASE_URL", "https://hiskenya.dha.go.ke/api")
+    KHIS_USER = os.getenv("KHIS_USERNAME", "rgngumo")
+    KHIS_PASS = os.getenv("KHIS_PASSWORD", "Advisorychs123!")
+
+    def _khis_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
+        """Fetch analytics rows from the KHIS DHIS2 server.
+        Same interface as _dhis2_fetch but targets https://hiskenya.dha.go.ke/api.
+        """
+        import requests as _req
+        from requests.auth import HTTPBasicAuth
+
+        base = app.config.get("KHIS_BASE")
+        if not base:
+            base = KHIS_BASE
+        url_base = base.rstrip("/") + "/analytics.json"
+        auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+
+        if isinstance(dx_ids, (list, set, tuple)):
+            dx_str = ";".join(dx_ids)
+        else:
+            dx_str = dx_ids
+        if not dx_str or not dx_str.strip():
+            return {}
+
+        if isinstance(ou_id, (list, set, tuple)):
+            ou_str = ";".join(ou_id)
+        else:
+            ou_str = ou_id
+        dimensions = [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"]
+        if coc_ids:
+            if isinstance(coc_ids, (list, set, tuple)):
+                coc_str = ";".join(coc_ids)
+            else:
+                coc_str = coc_ids
+            dimensions.append(f"co:{coc_str}")
+
+        params = {"dimension": dimensions, "displayProperty": "NAME"}
+        resp = _req.get(url_base, params=params, auth=auth, timeout=120)
+        if not resp.ok:
+            return {}
+        data = resp.json()
+        rows = data.get("rows", [])
+        meta = data.get("metaData", {}).get("items", {})
+        # Return per-DE data
+        return _khis_parse_per_de(rows, meta)
+
+    def _khis_parse_per_de(rows, meta):
+        """Parse KHIS analytics rows into per-data-element dict.
+        Row format: [dx_id, pe_code, ou_code, value]
+        Returns: {dx_id: {period_name: value, ...}, ...}
+        Only includes DEs that have data.
+        """
+        result = {}
+        for row in rows:
+            if len(row) < 4:
+                continue
+            dx_id = str(row[0])
+            pe_code = str(row[1])
+            pe_name = meta.get(pe_code, {}).get("name", pe_code)
+            val = float(row[-1]) if row[-1] else 0
+            if dx_id not in result:
+                result[dx_id] = {}
+            result[dx_id][pe_name] = result[dx_id].get(pe_name, 0) + val
+        return result
+
+    # ── MHU endpoint (KHIS-sourced) ──────────────────────────────────
+    @app.get("/api/mhu/khis-data")
+    def mhu_khis_data():
+        """Query KHIS DHIS2 analytics for MHU indicators.
+        Params: ?dx=...&ou=...&pe=LAST_12_MONTHS
+        """
+        dx = request.args.get("dx", "")
+        ou = request.args.get("ou", "")
+        pe = request.args.get("pe", "LAST_12_MONTHS")
+        if not dx or not ou:
+            return jsonify({"error": "Both 'dx' and 'ou' parameters are required"}), 400
+        try:
+            result = _khis_fetch(dx, ou, pe, None)
+            return jsonify({"source": "khis_live", "data": result})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── MHU config endpoint (serves mapping JSON) ──────────────────────
+    _MHU_CONFIG_CACHE = None
+
+    @app.get("/api/mhu/config")
+    def mhu_config():
+        """Return the MHU KHIS mapping configuration (facilities, ownership, tabs)."""
+        nonlocal _MHU_CONFIG_CACHE
+        if _MHU_CONFIG_CACHE is not None:
+            return jsonify(_MHU_CONFIG_CACHE)
+        mapping_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
+        if not mapping_path.exists():
+            return jsonify({"error": "Mapping file not found"}), 404
+        try:
+            with open(mapping_path, "r", encoding="utf-8") as f:
+                _MHU_CONFIG_CACHE = json.load(f)
+            return jsonify(_MHU_CONFIG_CACHE)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── MHU CSV data endpoint (from PBIX exports: data.csv + data2.csv) ──
+    _MHU_CSV_CACHE = None
+    _MHU_CSV_ROWS_CACHE = None
+
+    @app.get("/api/mhu/csv-data")
+    def mhu_csv_data():
+        """Return merged facilities from data.csv and data2.csv for cascading filters."""
+        nonlocal _MHU_CSV_CACHE, _MHU_CSV_ROWS_CACHE
+        if _MHU_CSV_CACHE is not None:
+            return jsonify(_MHU_CSV_CACHE)
+
+        csv_paths = [
+            BASE_DIR.parent / "data.csv",
+            BASE_DIR.parent / "data2.csv",
+        ]
+
+        try:
+            import csv
+            from collections import OrderedDict
+
+            facilities = OrderedDict()  # keyed by facility name
+            county_owner_map = {}  # county -> set of owner types
+            ot_owner_map = {}  # owner type -> set of owners
+            all_rows = []  # all data rows for per-facility queries
+
+            for csv_path in csv_paths:
+                if not csv_path.exists():
+                    continue
+                with open(csv_path, "r", encoding="utf-8-sig") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        name = row["Name"].strip()
+                        county = row["County"].strip()
+                        owner_type = row["Owner type"].strip()
+                        owner = row["Owner"].strip()
+                        service = row["Service Type"].strip()
+                        year = row["Year"].strip()
+                        value = float(row["Sum of Value"])
+
+                        # Only store each facility once (first occurrence wins)
+                        if name not in facilities:
+                            facilities[name] = {
+                                "name": name,
+                                "county": county,
+                                "owner_type": owner_type,
+                                "owner": owner,
+                            }
+
+                        # Build filter hierarchies
+                        if county not in county_owner_map:
+                            county_owner_map[county] = set()
+                        county_owner_map[county].add(owner_type)
+
+                        if owner_type not in ot_owner_map:
+                            ot_owner_map[owner_type] = {}
+                        ot_owner_map[owner_type][owner] = True
+
+                        # Store row for per-facility queries
+                        all_rows.append({
+                            "name": name,
+                            "county": county,
+                            "owner_type": owner_type,
+                            "owner": owner,
+                            "service_type": service,
+                            "year": year,
+                            "value": value,
+                        })
+
+            # ── Merge KHIS mapping facilities for counties NOT in CSV ──
+            OWNERSHIP_MAP = {
+                "Revised Ministry of Health (2018)": ("Ministry of Health", "Ministry of Health"),
+                "Revised Faith Based Organisation (2018)": ("Faith Based Organization", "Christian Health Association of Kenya"),
+                "Revised Private(2018)": ("Private Practice", "Private Practice - General Practitioner"),
+                "UNCLASSIFIED": ("Unclassified", "Unclassified"),
+            }
+            try:
+                mapping_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
+                if mapping_path.exists():
+                    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
+                    csv_counties = set(f["county"] for f in facilities.values())
+                    for uid, minfo in mapping.get("facilities", {}).items():
+                        county = minfo["county"]
+                        if county in csv_counties:
+                            continue  # already covered by CSV
+                        name = minfo["name"]
+                        ownership = minfo.get("ownership", "")
+                        owner_type, owner = OWNERSHIP_MAP.get(ownership, ("Unknown", "Unknown"))
+                        if name not in facilities:
+                            facilities[name] = {
+                                "name": name,
+                                "county": county,
+                                "owner_type": owner_type,
+                                "owner": owner,
+                            }
+                        if county not in county_owner_map:
+                            county_owner_map[county] = set()
+                        county_owner_map[county].add(owner_type)
+                        if owner_type not in ot_owner_map:
+                            ot_owner_map[owner_type] = {}
+                        ot_owner_map[owner_type][owner] = True
+            except Exception:
+                pass  # mapping merge is best-effort
+
+            # Build cascading filter structure
+            counties = {}
+            for county, ots in sorted(county_owner_map.items()):
+                owner_type_list = []
+                for ot in sorted(ots):
+                    owners_in_ot = sorted(ot_owner_map[ot].keys())
+                    owner_type_list.append({
+                        "type": ot,
+                        "owners": owners_in_ot,
+                    })
+                fac_count = sum(1 for f in facilities.values() if f["county"] == county)
+                counties[county] = {
+                    "facility_count": fac_count,
+                    "owner_types": owner_type_list,
+                }
+
+            # Build owner_type -> owners globally
+            owner_types = {}
+            for ot, owners_map in sorted(ot_owner_map.items()):
+                owner_types[ot] = sorted(owners_map.keys())
+
+            result = {
+                "facilities": list(facilities.values()),
+                "total_facilities": len(facilities),
+                "counties": counties,
+                "owner_types": owner_types,
+            }
+
+            _MHU_CSV_CACHE = result
+            _MHU_CSV_ROWS_CACHE = all_rows
+            return jsonify(result)
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.get("/api/mhu/csv-facility-data")
+    def mhu_csv_facility_data():
+        """Return all CSV rows for a specific facility name."""
+        nonlocal _MHU_CSV_ROWS_CACHE
+        facility_name = request.args.get("name", "").strip()
+        if not facility_name:
+            return jsonify({"error": "name parameter required"}), 400
+
+        # Ensure cache is loaded
+        if _MHU_CSV_ROWS_CACHE is None:
+            mhu_csv_data()
+
+        rows = [r for r in (_MHU_CSV_ROWS_CACHE or []) if r["name"] == facility_name]
+        if not rows:
+            return jsonify({"rows": [], "total": 0})
+
+        # Pivot: group by service_type -> {year: value}
+        from collections import defaultdict
+        pivot = defaultdict(dict)
+        years_set = set()
+        services_set = set()
+        for r in rows:
+            pivot[r["service_type"]][r["year"]] = r["value"]
+            years_set.add(r["year"])
+            services_set.add(r["service_type"])
+
+        result = {
+            "rows": rows,
+            "total": len(rows),
+            "years": sorted(years_set),
+            "services": sorted(services_set),
+            "pivot": {svc: dict(yrs) for svc, yrs in pivot.items()},
+        }
+        return jsonify(result)
+
     def _find_dx_by_pattern(prefix_pattern, age_bands):
         """Find male & female DX IDs from the data element dictionary.
         prefix_pattern: e.g. 'Tx_New STA' or 'TX_Curr STA'
@@ -2707,7 +3092,7 @@ def initialize_database(csv_path: Path) -> sqlite3.Connection:
 
 
 def build_gemini_providers() -> list[dict[str, str]]:
-    default_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    default_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     provider_slots = [
         ("default", os.getenv("GEMINI_API_KEY"), os.getenv("GEMINI_MODEL", default_model)),
         ("1", os.getenv("GEMINI_API_KEY1"), os.getenv("GEMINI_MODEL1", default_model)),
@@ -2720,12 +3105,21 @@ def build_gemini_providers() -> list[dict[str, str]]:
     seen_keys: set[str] = set()
     for slot, api_key, model_name in provider_slots:
         if api_key and api_key not in seen_keys:
-            providers.append({"slot": slot, "api_key": api_key, "model_name": model_name})
+            providers.append({"slot": slot, "api_key": api_key, "model_name": model_name, "type": "gemini"})
             seen_keys.add(api_key)
     return providers
 
 
-def build_ai_system_instruction(schema_sql: str) -> str:
+def build_groq_providers() -> list[dict[str, str]]:
+    api_key = os.getenv("GROQ_API_KEY")
+    model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    if not api_key or Groq is None:
+        return []
+    return [{"slot": "groq", "api_key": api_key, "model_name": model_name, "type": "groq"}]
+
+
+def build_ai_system_instruction(schema_sql: str, table_name: str = "") -> str:
+    allowed = table_name or TABLE_NAME
     return (
         "You are a precise text-to-SQL engine for a healthcare analytics dashboard. "
         "You must answer by generating only one SQLite SELECT statement. "
@@ -2733,15 +3127,23 @@ def build_ai_system_instruction(schema_sql: str) -> str:
         "Do not invent tables, columns, or external facts. Use only the schema provided below. "
         "If the user's question cannot be answered from this schema, return a single SELECT that yields a short error message as a column named message.\n\n"
         f"Schema:\n{schema_sql}\n\n"
-        f"Allowed table: {TABLE_NAME}."
+        f"Allowed table: {allowed}."
     )
 
 
-def build_ai_prompt(question: str, chart_id: str = "") -> str:
+def build_ai_prompt(question: str, chart_id: str = "", custom_table_info: str = "") -> str:
     chart_context = f"\nCurrent chart context: {chart_id}" if chart_id else ""
+    if custom_table_info:
+        table_info = custom_table_info
+    else:
+        table_info = (
+            'The ONLY table available is "clinics" with columns: '
+            "Indicator, Month, Facility, Total_Visits, Monthly_Expenditure_USD, Cost_Per_ANC_Visit."
+        )
     return (
-        "Generate exactly one SQLite query for the question below. "
-        "Return SQL only. No markdown fences, no commentary, no prose. "
+        f"{table_info} "
+        "Generate exactly one SQLite SELECT query for the question below. "
+        "Return ONLY the raw SQL. No markdown fences, no commentary, no prose, no backticks. "
         "Use only SELECT or WITH clauses. Never use INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, PRAGMA, ATTACH, or multiple statements.\n\n"
         f"Question: {question}{chart_context}"
     )
@@ -3391,12 +3793,12 @@ def build_local_sql(question: str) -> str | None:
 
 def create_gemini_model(schema_sql: str):
     api_key = os.getenv("GEMINI_API_KEY")
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
     if not api_key or genai is None:
         return None
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     system_instruction = (
         "You are a precise text-to-SQL engine for a healthcare analytics dashboard. "
         "You must answer by generating only one SQLite SELECT statement. "
@@ -3406,7 +3808,7 @@ def create_gemini_model(schema_sql: str):
         f"Schema:\n{schema_sql}\n\n"
         f"Allowed table: {TABLE_NAME}."
     )
-    return genai.GenerativeModel(model_name=model_name, system_instruction=system_instruction)
+    return {"client": client, "model_name": model_name, "system_instruction": system_instruction}
 
 
 def generate_sql(
@@ -3416,13 +3818,15 @@ def generate_sql(
     allowed_columns: list[str],
     schema_sql: str,
     chart_id: str = "",
+    custom_table_info: str = "",
 ) -> tuple[str, str]:
     # AI-only mode: require a working Gemini provider and do not fall back to local heuristics.
     if not providers:
         raise ValueError("No Gemini providers are configured. The chat service requires at least one provider.")
 
-    prompt = build_ai_prompt(question, chart_id)
-    system_instruction = build_ai_system_instruction(schema_sql)
+    prompt = build_ai_prompt(question, chart_id, custom_table_info)
+    table_name = "chart_data" if custom_table_info else TABLE_NAME
+    system_instruction = build_ai_system_instruction(schema_sql, table_name)
     last_error: str | None = None
 
     for _ in range(max(1, len(providers))):
@@ -3431,20 +3835,39 @@ def generate_sql(
             break
 
         try:
-            if genai is None:
-                raise RuntimeError("Gemini SDK is unavailable.")
+            provider_type = provider.get("type", "gemini")
 
-            genai.configure(api_key=provider["api_key"])
-            model = genai.GenerativeModel(
-                model_name=provider["model_name"],
-                system_instruction=system_instruction,
-            )
-            response = model.generate_content(prompt)
-            raw_text = getattr(response, "text", "") or ""
+            if provider_type == "groq":
+                if Groq is None:
+                    raise RuntimeError("Groq SDK is unavailable.")
+                groq_client = Groq(api_key=provider["api_key"])
+                groq_response = groq_client.chat.completions.create(
+                    model=provider["model_name"],
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=500,
+                    temperature=0.1,
+                )
+                raw_text = groq_response.choices[0].message.content or ""
+            else:
+                if genai is None:
+                    raise RuntimeError("Gemini SDK is unavailable.")
+                client = genai.Client(api_key=provider["api_key"])
+                response = client.models.generate_content(
+                    model=provider["model_name"],
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                    ),
+                )
+                raw_text = response.text or ""
+
             sql_text = extract_sql(raw_text)
             if not sql_text:
-                raise ValueError("Gemini did not return a SQL query.")
-            return sql_text, f"gemini:{provider['slot']}", None
+                raise ValueError(f"{provider_type} did not return a SQL query.")
+            return sql_text, f"{provider_type}:{provider['slot']}", None
         except Exception as exc:
             last_error = str(exc)
             cooldown_seconds = 300 if is_quota_error(exc) else 45
