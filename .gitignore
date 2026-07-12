@@ -1,4 +1,4 @@
-# Environment variables
+﻿# Environment variables
 .env
 
 # Python cache
@@ -22,65 +22,34 @@ Thumbs.db
 .DS_Store
 ~$*
 
-# Large binary files - not needed for deployment
+# Large binary files
 *.pbix
 *.xlsx
 *.docx
 *.zip
 
-# Extracted PBIX folders
-CHAK_Visuals_4_explore/
-CHAK_Visuals_explore/
+# Ad-hoc / generated scripts
+_check_*.py
+_create_*.py
+_fetch_*.py
+_temp_*.py
+_test_*.py
+train/_*.py
 
-# Large cached data (can be regenerated)
+# Temp data / metadata CSVs
+_pmtct_data.json
+*_metadata.csv
+KHIS_MOH711_DE_COC_AOC.csv
+
+# PBIX exploration workspace
+CHAK_Visuals_4_explore/
+
+# Old API exploration scripts
+DHIS2 APIS/
+
+# Generated mapping files (reproducible from source CSVs)
 train/data/khis_moh717_orgunits.json
+train/data/facility_ward_mapping.json
+train/data/ward_facilities_mapping.json
 train/data/moh717_full.json
 train/data/moh717_mapping.json
-
-# Temp CSV files
-data.csv
-data2.csv
-
-# Utility / test scripts not needed in production
-_check_all_moh717.py
-_check_all_moh717_fast.py
-_check_siaya.py
-_check_siaya_khis.py
-_temp_check.py
-_test_flask_khis.py
-_test_flask_khis2.py
-_test_flask_khis3.py
-_test_khis_api.py
-_test_khis_deep.py
-_test_khis_login.py
-_test_khis2.py
-_test_khis3.py
-_test_khis4.py
-_test_khis5.py
-export_project_structures.py
-extract_pbix_analysis.py
-extract_pbix_per_page.py
-extract_pbix_sections.py
-extract_pbix_types.py
-extract_pbix_visuals.py
-find_missing_uids.py
-find_pivots.py
-generate_report.py
-
-# Temp train scripts
-train/_audit_excel.py
-train/_check_braces.py
-train/_check_kiambu.py
-train/_debug_chart_ai.py
-train/_fetch_extended_khis.py
-train/_find_chak_deep.py
-train/_find_chak_group.py
-train/_test_groq.py
-
-# Other temporary directories
-dictionaries/
-unused files/
-exports.zip
-
-# Nested git repos (causes submodule issues)
-DHIS2 APIS/

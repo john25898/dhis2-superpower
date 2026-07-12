@@ -1069,10 +1069,187 @@ def create_app() -> Flask:
             result[dx_id][pe_name] = result[dx_id].get(pe_name, 0) + val
         return result
 
+    # ── Facility → Ward mapping (for HIV ward-level queries) ─────────
+    _FACILITY_WARD_MAP = None
+
+    def _get_facility_ward_map():
+        nonlocal _FACILITY_WARD_MAP
+        if _FACILITY_WARD_MAP is None:
+            ward_path = BASE_DIR / "data" / "facility_ward_mapping.json"
+            if ward_path.exists():
+                with open(ward_path, "r", encoding="utf-8") as f:
+                    _FACILITY_WARD_MAP = json.load(f)
+            else:
+                _FACILITY_WARD_MAP = {}
+        return _FACILITY_WARD_MAP
+
     # ── MHU endpoint (KHIS-sourced) ──────────────────────────────────
     @app.get("/api/mhu/khis-data")
     def mhu_khis_data():
         """Query KHIS DHIS2 analytics for MHU indicators.
+        Params: ?dx=...&ou=...&pe=LAST_12_MONTHS&resolve_ward=false
+        When resolve_ward=true, resolves facility OU to its LEVEL-4 (ward) parent.
+        """
+        dx = request.args.get("dx", "")
+        ou = request.args.get("ou", "")
+        pe = request.args.get("pe", "LAST_12_MONTHS")
+        resolve_ward = request.args.get("resolve_ward", "false").lower() == "true"
+        if not dx or not ou:
+            return jsonify({"error": "Both 'dx' and 'ou' parameters are required"}), 400
+        try:
+            actual_ou = ou
+            ward_info = None
+            if resolve_ward:
+                ward_map = _get_facility_ward_map()
+                entry = ward_map.get(ou)
+                if entry:
+                    actual_ou = entry["ward_id"]
+                    ward_info = {
+                        "ward_id": entry["ward_id"],
+                        "ward_name": entry["ward_name"],
+                        "facility_name": entry["facility_name"],
+                    }
+                    # Try LAST_12_MONTHS first, fall back to yearly periods
+                    result = _khis_fetch(dx, actual_ou, "LAST_12_MONTHS", None)
+                    if not result or all(len(v) == 0 for v in result.values()):
+                        result = _khis_fetch(dx, actual_ou, "2025", None)
+                    if not result or all(len(v) == 0 for v in result.values()):
+                        result = _khis_fetch(dx, actual_ou, "2024;2025", None)
+                    if not result or all(len(v) == 0 for v in result.values()):
+                        result = _khis_fetch(dx, actual_ou, "LAST_5_YEARS", None)
+                    return jsonify({
+                        "source": "khis_live",
+                        "data": result,
+                        "ward": ward_info,
+                        "resolved_ou": actual_ou,
+                    })
+                # If facility not in ward map, fall through to default query
+
+            result = _khis_fetch(dx, actual_ou, pe, None)
+            return jsonify({"source": "khis_live", "data": result, "ward": ward_info})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── MHU aggregate endpoint (across multiple facilities) ──────────
+    @app.post("/api/mhu/khis-data-aggregate")
+    def mhu_khis_data_aggregate():
+        """Aggregate KHIS data across multiple facilities.
+        POST JSON body: {dx: "...", names: ["Fac1", "Fac2", ...], pe: "LAST_12_MONTHS"}
+        Looks up KHIS IDs from the mapping config by facility name.
+        Batches requests (max ~300 OUs each) to avoid KHIS URL length limits.
+        """
+        body = request.get_json(silent=True) or {}
+        dx = body.get("dx", "")
+        names = body.get("names", [])
+        pe = body.get("pe", "LAST_12_MONTHS")
+        if not dx or not names or not isinstance(names, list):
+            return jsonify({"error": "Body must include 'dx' (string) and 'names' (array)"}), 400
+        try:
+            # Load config to get facility -> KHIS ID mappings
+            config_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
+            if not config_path.exists():
+                return jsonify({"error": "Mapping file not found"}), 404
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            facilities_map = config.get("facilities", {})
+
+            # Build name -> KHIS ID lookup (case-insensitive exact match)
+            name_to_id = {}
+            for uid, finfo in facilities_map.items():
+                fn = finfo.get("name", "").strip().lower()
+                if fn:
+                    name_to_id[fn] = uid
+
+            # Match requested names to KHIS IDs
+            matched_ids = []
+            matched_names = []
+            for name in names:
+                key = name.lower().strip()
+                uid = name_to_id.get(key)
+                if uid:
+                    matched_ids.append(uid)
+                    matched_names.append(name)
+
+            if not matched_ids:
+                return jsonify({
+                    "source": "khis_aggregate",
+                    "data": {},
+                    "matched_count": 0,
+                    "total_requested": len(names),
+                    "note": "No facilities could be matched to KHIS IDs",
+                })
+
+            # Batch query KHIS - max 300 OUs per request to avoid URL limits
+            BATCH_SIZE = 300
+            merged = {}
+            for i in range(0, len(matched_ids), BATCH_SIZE):
+                batch_ids = matched_ids[i:i + BATCH_SIZE]
+                ou_str = ";".join(batch_ids)
+                result = _khis_fetch(dx, ou_str, pe, None)
+                if not result or all(len(v) == 0 for v in result.values()):
+                    result = _khis_fetch(dx, ou_str, "2025", None)
+                if not result or all(len(v) == 0 for v in result.values()):
+                    result = _khis_fetch(dx, ou_str, "2024;2025", None)
+                # Merge batch results
+                for de_id, period_data in result.items():
+                    if de_id not in merged:
+                        merged[de_id] = {}
+                    for period, val in period_data.items():
+                        merged[de_id][period] = merged[de_id].get(period, 0) + val
+
+            return jsonify({
+                "source": "khis_aggregate",
+                "data": merged,
+                "matched_count": len(matched_ids),
+                "total_requested": len(names),
+                "matched_names": matched_names[:5],
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── CHAK DHIS2 config (for MOH 740 / MOH 731) ──────────────────────
+    CHAK_BASE = "http://ereporting.chak.or.ke:8500/api"
+    CHAK_USER = "Johnbrian"
+    CHAK_PASS = "JOHNb123\\"
+
+    def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
+        """Fetch analytics rows from CHAK DHIS2.
+        Returns {dx_id: {period_name: value, ...}, ...}
+        """
+        import requests as _req
+        from requests.auth import HTTPBasicAuth
+
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+        if isinstance(dx_ids, (list, set, tuple)):
+            dx_str = ";".join(dx_ids)
+        else:
+            dx_str = dx_ids
+        if not dx_str or not dx_str.strip():
+            return {}
+        if isinstance(ou_id, (list, set, tuple)):
+            ou_str = ";".join(ou_id)
+        else:
+            ou_str = ou_id
+
+        url = CHAK_BASE.rstrip("/") + "/analytics.json"
+        params = {
+            "dimension": [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"],
+            "displayProperty": "NAME",
+        }
+        try:
+            resp = _req.get(url, params=params, auth=auth, verify=False, timeout=120)
+            if not resp.ok:
+                return {}
+            data = resp.json()
+            rows = data.get("rows", [])
+            meta = data.get("metaData", {}).get("items", {})
+            return _khis_parse_per_de(rows, meta)
+        except Exception:
+            return {}
+
+    @app.get("/api/mhu/chak-data")
+    def mhu_chak_data():
+        """Query CHAK DHIS2 analytics for MOH 740 / MOH 731 indicators.
         Params: ?dx=...&ou=...&pe=LAST_12_MONTHS
         """
         dx = request.args.get("dx", "")
@@ -1081,10 +1258,57 @@ def create_app() -> Flask:
         if not dx or not ou:
             return jsonify({"error": "Both 'dx' and 'ou' parameters are required"}), 400
         try:
-            result = _khis_fetch(dx, ou, pe, None)
-            return jsonify({"source": "khis_live", "data": result})
+            result = _chak_analytics_fetch(dx, ou, pe)
+            return jsonify({"source": "chak_live", "data": result})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+    # ── CHAK org unit lookup by name ──────────────────────────────────
+    _CHAK_OUS_CACHE = None
+
+    @app.get("/api/mhu/chak-ou-lookup")
+    def mhu_chak_ou_lookup():
+        """Look up CHAK org unit ID by facility name.
+        Params: ?name=...  Returns {uid, name} or null.
+        """
+        nonlocal _CHAK_OUS_CACHE
+        name = request.args.get("name", "").strip().lower()
+        if not name:
+            return jsonify({"error": "name parameter required"}), 400
+
+        if _CHAK_OUS_CACHE is None:
+            import csv
+            _CHAK_OUS_CACHE = []
+            # Load from all_chak_facilities.csv (PBIX export)
+            csv_path = BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv"
+            if csv_path.exists():
+                with open(csv_path, encoding="utf-8-sig") as f:
+                    for row in csv.DictReader(f):
+                        _CHAK_OUS_CACHE.append({
+                            "uid": row["UID"],
+                            "name": row["Name"].strip().lower(),
+                        })
+            # Also load from CHAK MHUs.csv (official CHAK member list)
+            chak_mhu_path = BASE_DIR.parent / "CHAK MHUs.csv"
+            if chak_mhu_path.exists():
+                seen_ids = set(x["uid"] for x in _CHAK_OUS_CACHE)
+                with open(chak_mhu_path, encoding="utf-8-sig") as f:
+                    for row in csv.DictReader(f):
+                        uid = row.get("organisationunitid", "").strip()
+                        name = row.get("organisationunitname", "").strip().lower()
+                        if uid and name and uid not in seen_ids:
+                            _CHAK_OUS_CACHE.append({"uid": uid, "name": name})
+                            seen_ids.add(uid)
+
+        # Try exact match first, then contains
+        exact = [x for x in _CHAK_OUS_CACHE if x["name"] == name]
+        if exact:
+            return jsonify({"uid": exact[0]["uid"], "name": exact[0]["name"]})
+
+        partial = [x for x in _CHAK_OUS_CACHE if name in x["name"] or x["name"] in name]
+        if partial:
+            return jsonify({"uid": partial[0]["uid"], "name": partial[0]["name"]})
+        return jsonify(None)
 
     # ── MHU config endpoint (serves mapping JSON) ──────────────────────
     _MHU_CONFIG_CACHE = None
@@ -1173,6 +1397,69 @@ def create_app() -> Flask:
                             "value": value,
                         })
 
+            # ── Strip out old PBIX CHAK facilities, replace with facilities_report ──
+            # Remove any facility previously assigned as "Christian Health Association of Kenya"
+            # so only the new facilities_report list appears for that owner
+            chak_facility_names = {name for name, f in facilities.items()
+                                   if f["owner"] == "Christian Health Association of Kenya"}
+            for name in chak_facility_names:
+                del facilities[name]
+
+            # ── First, load old CHAK MHUs.csv to build name→chak_ou_id lookup (for HIV routing) ──
+            chak_ou_lookup = {}
+            chak_mhu_path = BASE_DIR.parent / "CHAK MHUs.csv"
+            if chak_mhu_path.exists():
+                with open(chak_mhu_path, "r", encoding="utf-8-sig") as f:
+                    for row in csv.DictReader(f):
+                        name = row.get("organisationunitname", "").strip()
+                        ou_id = row.get("organisationunitid", "").strip()
+                        if name and ou_id:
+                            chak_ou_lookup[name] = ou_id
+
+            # ── Merge facilities_report_2026-07-09 (1).csv (CHAK-supported facilities, 591 facilities) ──
+            chak_new_path = BASE_DIR.parent / "facilities_report_2026-07-09 (1).csv"
+            if chak_new_path.exists():
+                with open(chak_new_path, "r", encoding="utf-8-sig") as f:
+                    reader = csv.DictReader(f)
+                    seen_names = set()
+                    for row in reader:
+                        name = row.get("Facility Name", "").strip()
+                        county = row.get("County", "").strip()
+                        if not name or not county:
+                            continue
+                        # Normalize county to Title Case (e.g. "MURANG'A" -> "Murang'a")
+                        county = county.title()
+                        # Disambiguate duplicates: "Ndumari Dispensary" -> "Ndumari Dispensary (Tharaka Nithi)"
+                        if name in seen_names:
+                            orig_name = name
+                            name = f"{name} ({county})"
+                        else:
+                            seen_names.add(name)
+                            orig_name = name
+                        # Look up chak_ou_id: try exact name first, then original (pre-disambiguation) name
+                        chak_ou_id = chak_ou_lookup.get(name, "") or chak_ou_lookup.get(orig_name, "")
+                        if name not in facilities:
+                            facilities[name] = {
+                                "name": name,
+                                "county": county,
+                                "owner_type": "Faith Based Organization",
+                                "owner": "Christian Health Association of Kenya",
+                                "chak_ou_id": chak_ou_id,
+                            }
+                        else:
+                            # Overwrite existing facility's owner to CHAK
+                            facilities[name]["owner_type"] = "Faith Based Organization"
+                            facilities[name]["owner"] = "Christian Health Association of Kenya"
+                            facilities[name]["county"] = county
+                            facilities[name]["chak_ou_id"] = chak_ou_id
+                        # Ensure county -> owner_type mapping includes FBO
+                        if county not in county_owner_map:
+                            county_owner_map[county] = set()
+                        county_owner_map[county].add("Faith Based Organization")
+                        if "Faith Based Organization" not in ot_owner_map:
+                            ot_owner_map["Faith Based Organization"] = {}
+                        ot_owner_map["Faith Based Organization"]["Christian Health Association of Kenya"] = True
+
             # ── Merge KHIS mapping facilities for counties NOT in CSV ──
             OWNERSHIP_MAP = {
                 "Revised Ministry of Health (2018)": ("Ministry of Health", "Ministry of Health"),
@@ -1192,6 +1479,9 @@ def create_app() -> Flask:
                         name = minfo["name"]
                         ownership = minfo.get("ownership", "")
                         owner_type, owner = OWNERSHIP_MAP.get(ownership, ("Unknown", "Unknown"))
+                        # Skip CHAK facilities from KHIS mapping — only CHAK MHUs.csv defines them
+                        if owner == "Christian Health Association of Kenya":
+                            continue
                         if name not in facilities:
                             facilities[name] = {
                                 "name": name,
@@ -1208,12 +1498,35 @@ def create_app() -> Flask:
             except Exception:
                 pass  # mapping merge is best-effort
 
+            # ── Rebuild filter maps from actual facilities dict ──
+            # This ensures only owners that actually have facilities appear in filters
+            # (critical after stripping CSV Christian Health Association of Kenya facilities)
+            county_owner_map = {}
+            ot_owner_map = {}
+            for f in facilities.values():
+                co = f["county"]
+                ot = f["owner_type"]
+                ow = f["owner"]
+                if co not in county_owner_map:
+                    county_owner_map[co] = set()
+                county_owner_map[co].add(ot)
+                if ot not in ot_owner_map:
+                    ot_owner_map[ot] = {}
+                ot_owner_map[ot][ow] = True
+
             # Build cascading filter structure
             counties = {}
             for county, ots in sorted(county_owner_map.items()):
                 owner_type_list = []
+                # First, collect which owners actually exist in this county
+                county_owners = {}  # ot -> set of owners
+                for f in facilities.values():
+                    if f["county"] == county:
+                        if f["owner_type"] not in county_owners:
+                            county_owners[f["owner_type"]] = set()
+                        county_owners[f["owner_type"]].add(f["owner"])
                 for ot in sorted(ots):
-                    owners_in_ot = sorted(ot_owner_map[ot].keys())
+                    owners_in_ot = sorted(county_owners.get(ot, []))
                     owner_type_list.append({
                         "type": ot,
                         "owners": owners_in_ot,
@@ -1277,6 +1590,92 @@ def create_app() -> Flask:
             "pivot": {svc: dict(yrs) for svc, yrs in pivot.items()},
         }
         return jsonify(result)
+
+    # ── CHAK DHIS program indicators discovery ──────────────────────
+    @app.get("/api/mhu/chak-program-indicators")
+    def mhu_chak_program_indicators():
+        """Query CHAK DHIS2 for HIV-related program indicators.
+        Params: ?search=HIV (default) to search by name
+        """
+        import requests as _req
+        from requests.auth import HTTPBasicAuth
+
+        search = request.args.get("search", "HIV")
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+
+        # First: search program indicators
+        pi_url = CHAK_BASE.rstrip("/") + "/programIndicators.json"
+        pi_params = {
+            "filter": f"name:ilike:{search}",
+            "fields": "id,name,program[id,name],shortName",
+            "paging": "false",
+        }
+        pi_result = {"count": 0, "indicators": []}
+        try:
+            resp = _req.get(pi_url, params=pi_params, auth=auth, verify=False, timeout=60)
+            if resp.ok:
+                data = resp.json()
+                pis = data.get("programIndicators", [])
+                pi_result["count"] = len(pis)
+                pi_result["indicators"] = [{
+                    "id": p["id"],
+                    "name": p.get("name", ""),
+                    "shortName": p.get("shortName", ""),
+                    "program": p.get("program", {}),
+                } for p in pis]
+        except Exception as e:
+            pi_result["error"] = str(e)
+
+        # Also: search data elements (in case program indicators not used)
+        de_url = CHAK_BASE.rstrip("/") + "/dataElements.json"
+        de_params = {
+            "filter": f"name:ilike:{search}",
+            "fields": "id,name,shortName",
+            "paging": "false",
+        }
+        de_result = {"count": 0, "elements": []}
+        try:
+            resp = _req.get(de_url, params=de_params, auth=auth, verify=False, timeout=60)
+            if resp.ok:
+                data = resp.json()
+                des = data.get("dataElements", [])
+                de_result["count"] = len(des)
+                de_result["elements"] = [{
+                    "id": d["id"],
+                    "name": d.get("name", ""),
+                    "shortName": d.get("shortName", ""),
+                } for d in des]
+        except Exception as e:
+            de_result["error"] = str(e)
+
+        # Also: list HIV programs
+        prog_url = CHAK_BASE.rstrip("/") + "/programs.json"
+        prog_params = {
+            "filter": f"name:ilike:{search}",
+            "fields": "id,name,shortName",
+            "paging": "false",
+        }
+        prog_result = {"count": 0, "programs": []}
+        try:
+            resp = _req.get(prog_url, params=prog_params, auth=auth, verify=False, timeout=60)
+            if resp.ok:
+                data = resp.json()
+                progs = data.get("programs", [])
+                prog_result["count"] = len(progs)
+                prog_result["programs"] = [{
+                    "id": p["id"],
+                    "name": p.get("name", ""),
+                    "shortName": p.get("shortName", ""),
+                } for p in progs]
+        except Exception as e:
+            prog_result["error"] = str(e)
+
+        return jsonify({
+            "search_term": search,
+            "program_indicators": pi_result,
+            "data_elements": de_result,
+            "programs": prog_result,
+        })
 
     def _find_dx_by_pattern(prefix_pattern, age_bands):
         """Find male & female DX IDs from the data element dictionary.

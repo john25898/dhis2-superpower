@@ -142,6 +142,19 @@ function scrollToPageTop() {
   });
 }
 
+// ── Get subtabs filtered for current context (Jamii Tekelezi vs global) ──
+function getSubtabsForPage(pageId) {
+  const meta = getPageMeta(pageId);
+  let subtabs = Array.isArray(meta.subtabs) ? meta.subtabs : [];
+  if (state.activeProject === "jamii_tekelezi" && pageId === "hiv_treatment") {
+    const exclude = new Set(["otz", "ovc", "covid-19", "care-treatment"]);
+    subtabs = subtabs.filter(function (s) {
+      return !exclude.has(toSlug(s));
+    });
+  }
+  return subtabs;
+}
+
 function bindHeaderNavLinks() {
   try {
     const headerLinks = Array.from(document.querySelectorAll("header a"));
@@ -159,7 +172,7 @@ function bindHeaderNavLinks() {
         PrEP: "prep_page",
         PMTCT: "pmtct",
         TB: "tb",
-        "Post Rape": "post_rape",
+        "Post ResP": "post_rape",
         CACX: "cacx",
         "Service Desk": "service_desk",
         Resources: "resources",
@@ -246,7 +259,6 @@ function getPageMeta(pageId) {
         "HIV TESTING SERVICES UPTAKE",
         "HIV TESTING SERVICES LINKAGE",
         "PARTNER NOTIFICATION SERVICES",
-        "PrEP",
         "HTS Performance",
         "HTS Index Testing",
         "SNS Cascade",
@@ -294,7 +306,7 @@ function getPageMeta(pageId) {
       subtabs: ["Overview"],
     },
     post_rape: {
-      title: "Post Rape",
+      title: "Post ResP",
       subtabs: ["Overview"],
     },
     cacx: {
@@ -355,7 +367,7 @@ function renderPageContext(pageId) {
   )
     return;
 
-  const subtabs = Array.isArray(meta.subtabs) ? meta.subtabs : [];
+  var subtabs = getSubtabsForPage(pageId);
   if (subtabs.length && !state.activeSubtabs[pageId]) {
     state.activeSubtabs[pageId] = toSlug(subtabs[0]);
   }
@@ -701,9 +713,8 @@ function renderPageTabs() {
       { id: "prep_page", label: "PrEP" },
       { id: "pmtct", label: "PMTCT" },
       { id: "tb", label: "TB" },
-      { id: "post_rape", label: "Post Rape" },
+      { id: "post_rape", label: "Post ResP" },
       { id: "cacx", label: "CACX" },
-      { id: "linkage", label: "Linkage" },
     ];
   } else {
     // Global navigation
@@ -1023,7 +1034,29 @@ async function renderMhuPage() {
 
       <!-- Detail Area: KHIS MOH 717 subtabs (always visible) -->
       <div id="mhuRoot" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm min-h-[200px]">
-        ${renderMhuSubtabNavAlways(selectedFacility, null, activeSubtab, tabKeys)}
+        ${
+          !selectedFacility && filteredByOwner.length > 0 && tabKeys.length > 0
+            ? renderMhuAggregateNavHtml(
+                selectedCounty !== "all" && selectedOwnerType === "all"
+                  ? selectedCounty + " — All Types"
+                  : selectedCounty !== "all" &&
+                      selectedOwnerType !== "all" &&
+                      selectedOwner === "all"
+                    ? selectedCounty + " — " + selectedOwnerType
+                    : "All Counties (" +
+                      filteredByOwner.length +
+                      " facilities)",
+                filteredByOwner.length,
+                activeSubtab,
+                tabKeys,
+              )
+            : renderMhuSubtabNavAlways(
+                selectedFacility,
+                null,
+                activeSubtab,
+                tabKeys,
+              )
+        }
       </div>
     </div>
   `;
@@ -1089,23 +1122,92 @@ async function renderMhuPage() {
       }
     }
 
+    // Always look up CHAK OU ID from CSV data (for HIV tab routing)
+    let chakFacilityId = null;
+    if (allFacilities) {
+      const facObj = allFacilities.find((f) => f.name === selectedFacility);
+      if (facObj && facObj.chak_ou_id) {
+        chakFacilityId = facObj.chak_ou_id;
+      }
+    }
+
+    // Use CHAK facility ID as effective ID if no KHIS mapping
+    const effectiveFacilityId =
+      khisFacilityId || (chakFacilityId ? `chak::${chakFacilityId}` : null);
+
     // Re-render subtab nav with facility name and load data
     renderKhisSubtabNav(
       selectedFacility,
-      khisFacilityId,
+      effectiveFacilityId,
       activeSubtab,
       tabKeys,
+      chakFacilityId,
     );
 
-    if (khisFacilityId) {
-      loadAndRenderMhuTab(config, khisFacilityId, activeSubtab);
+    if (effectiveFacilityId) {
+      loadAndRenderMhuTab(
+        config,
+        effectiveFacilityId,
+        activeSubtab,
+        selectedFacility,
+        chakFacilityId,
+      );
     } else {
       const contentEl = document.getElementById("mhuTabContent");
       if (contentEl) {
         contentEl.innerHTML = `
           <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
-            <div class="font-semibold text-slate-500">No KHIS MOH 717 data</div>
-            <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS MOH 717 dataset. Only the 68 CHAK member facilities have MOH 717 records.</div>
+            <div class="font-semibold text-slate-500">No KHIS data</div>
+            <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS dataset.</div>
+          </div>`;
+      }
+    }
+  } else if (!selectedFacility && filteredByOwner.length > 0 && config?.tabs) {
+    // ── Aggregate mode — show aggregated data across all filtered facilities ──
+    const facilityNames = filteredByOwner.map(function (f) {
+      return f.name;
+    });
+    state.mhuAggregateNames = facilityNames;
+
+    // Build aggregate label based on filter level
+    let aggregateLabel = "All Facilities";
+    if (selectedCounty !== "all" && selectedOwnerType === "all") {
+      aggregateLabel = selectedCounty + " — All Types";
+    } else if (
+      selectedCounty !== "all" &&
+      selectedOwnerType !== "all" &&
+      selectedOwner === "all"
+    ) {
+      aggregateLabel = selectedCounty + " — " + selectedOwnerType;
+    } else if (selectedCounty === "all") {
+      aggregateLabel =
+        "All Counties (" + filteredByOwner.length + " facilities)";
+    }
+
+    // Re-render subtab nav with aggregate info
+    renderMhuAggregateNav(
+      aggregateLabel,
+      filteredByOwner.length,
+      activeSubtab,
+      tabKeys,
+    );
+
+    // Load aggregated data for the active subtab (skip HIV — per-facility only)
+    if (activeSubtab !== "HIV_DASHBOARD") {
+      loadAndRenderMhuAggregatedTab(
+        config,
+        facilityNames,
+        activeSubtab,
+        filteredByOwner.length,
+        aggregateLabel,
+      );
+    } else {
+      const contentEl = document.getElementById("mhuTabContent");
+      if (contentEl) {
+        contentEl.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+            <div class="font-semibold text-slate-500">Aggregate not available</div>
+            <div class="mt-1 text-xs text-center max-w-md">HIV Dashboard is only available for individual facilities. Select a specific facility to view HIV data.</div>
           </div>`;
       }
     }
@@ -1120,7 +1222,7 @@ function renderMhuDetail(facilityId) {
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
         </svg>
         <div class="font-semibold text-slate-500">Select a Member Health Unit</div>
-        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS MOH 717 workload data</div>
+        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS/CHAK data</div>
       </div>
     `;
   }
@@ -1132,6 +1234,55 @@ function renderMhuDetail(facilityId) {
   `;
 }
 
+// ── Aggregate mode nav HTML (no click handlers, for initial render) ──
+function renderMhuAggregateNavHtml(
+  label,
+  facilityCount,
+  activeSubtab,
+  tabKeys,
+) {
+  if (!tabKeys || tabKeys.length === 0) {
+    return '<div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400"><div class="font-semibold text-slate-500">No tabs configured</div></div>';
+  }
+
+  const tabLabels = {
+    WORKLOAD: "Workload",
+    HYPERTENSION_DIABETES: "Hypertension & Diabetes",
+    MNCH: "MNCH",
+    HIV_DASHBOARD: "HIV Dashboard",
+    OTHER: "Other",
+  };
+
+  return `
+    <div class="mb-4">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="text-sm font-bold text-slate-700">${escapeHtml(label)}</div>
+        <span class="text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">${facilityCount} facilities · Aggregated</span>
+      </div>
+      <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+        ${tabKeys
+          .map(
+            (slug) => `
+          <button class="mhu-tab-btn px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+            ${
+              activeSubtab === slug
+                ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }"
+            data-tab-slug="${slug}">${tabLabels[slug] || slug.replace(/_/g, " ")}</button>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div id="mhuTabContent" class="min-h-[200px]">
+      <div class="flex items-center justify-center py-12">
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+        <div class="ml-3 text-sm text-slate-500">Loading aggregated data across ${facilityCount} facilities…</div>
+      </div>
+    </div>`;
+}
+
 // ── Always-rendered subtab nav bar (even without a selected facility) ──
 function renderMhuSubtabNavAlways(
   facilityName,
@@ -1141,7 +1292,7 @@ function renderMhuSubtabNavAlways(
 ) {
   if (!tabKeys || tabKeys.length === 0) {
     return `<div class="flex flex-col items-center justify-center py-10 text-sm text-slate-400">
-      <div class="font-semibold text-slate-500">No KHIS MOH 717 tabs configured</div>
+      <div class="font-semibold text-slate-500">No tabs configured</div>
     </div>`;
   }
 
@@ -1159,7 +1310,7 @@ function renderMhuSubtabNavAlways(
       <div class="mb-4">
         <div class="flex flex-wrap items-center gap-2 mb-3">
           <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-          <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? "KHIS MOH 717" : "PBIX — no KHIS data"}</span>
+          <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? (khisFacilityId.startsWith("chak::") ? "CHAK DHIS" : "KHIS MOH 717") : "PBIX — no CHAK data"}</span>
         </div>
         <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
           ${tabKeys
@@ -1183,7 +1334,7 @@ function renderMhuSubtabNavAlways(
             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
           <div class="font-semibold text-slate-500">${escapeHtml(facilityName)}</div>
-          <div class="mt-1 text-xs text-center max-w-md">Loading KHIS MOH 717 data…</div>
+          <div class="mt-1 text-xs text-center max-w-md">Loading data…</div>
         </div>
       </div>`;
   }
@@ -1213,7 +1364,7 @@ function renderMhuSubtabNavAlways(
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
         </svg>
         <div class="font-semibold text-slate-500">Select a Member Health Unit</div>
-        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS MOH 717 workload data</div>
+        <div class="mt-1 text-xs">Choose a county and ownership, then pick a unit to view KHIS/CHAK data</div>
       </div>
     </div>`;
 }
@@ -1224,6 +1375,7 @@ function renderKhisSubtabNav(
   khisFacilityId,
   activeSubtab,
   tabKeys,
+  chakFacilityId,
 ) {
   const root = document.getElementById("mhuRoot");
   if (!root) return;
@@ -1241,7 +1393,7 @@ function renderKhisSubtabNav(
     <div class="mb-4">
       <div class="flex flex-wrap items-center gap-2 mb-3">
         <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-        <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? "KHIS MOH 717" : "PBIX — no KHIS data"}</span>
+        <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${khisFacilityId ? (khisFacilityId.startsWith("chak::") ? "CHAK DHIS" : "KHIS MOH 717") : "PBIX — no KHIS data"}</span>
       </div>
       <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
         ${tabKeys
@@ -1262,7 +1414,7 @@ function renderKhisSubtabNav(
     <div id="mhuTabContent" class="min-h-[200px]">
       <div class="flex items-center justify-center py-12">
         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
-        <div class="ml-3 text-sm text-slate-500">Loading MOH 717 data…</div>
+        <div class="ml-3 text-sm text-slate-500">Loading data…</div>
       </div>
     </div>
   `;
@@ -1276,7 +1428,14 @@ function renderKhisSubtabNav(
       if (khisFacilityId) {
         // Re-fetch config and load tab
         loadMhuConfig().then((cfg) => {
-          if (cfg) loadAndRenderMhuTab(cfg, khisFacilityId, slug);
+          if (cfg)
+            loadAndRenderMhuTab(
+              cfg,
+              khisFacilityId,
+              slug,
+              facilityName,
+              chakFacilityId,
+            );
         });
       } else {
         // No KHIS mapping — show empty state
@@ -1284,8 +1443,8 @@ function renderKhisSubtabNav(
         if (contentEl) {
           contentEl.innerHTML = `
             <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
-              <div class="font-semibold text-slate-500">No KHIS MOH 717 data</div>
-              <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS MOH 717 dataset.</div>
+              <div class="font-semibold text-slate-500">No KHIS data</div>
+              <div class="mt-1 text-xs text-center max-w-md">This facility is not mapped in the KHIS dataset.</div>
             </div>`;
         }
       }
@@ -1293,8 +1452,18 @@ function renderKhisSubtabNav(
   });
 }
 
+// ── Determine data source per tab ─────────────────────────────────────
+const MHU_API = "/api/mhu/khis-data";
+const MHU_BADGE = "KHIS MOH 717";
+
 // ── Load & render MHU tab data ────────────────────────────────────────
-async function loadAndRenderMhuTab(config, facilityId, tabSlug) {
+async function loadAndRenderMhuTab(
+  config,
+  facilityId,
+  tabSlug,
+  selectedFacilityName,
+  chakFacilityId,
+) {
   const tabElements = config.tabs?.[tabSlug];
   const contentEl = document.getElementById("mhuTabContent");
   if (!contentEl) return; // nav not rendered yet
@@ -1307,22 +1476,47 @@ async function loadAndRenderMhuTab(config, facilityId, tabSlug) {
     return;
   }
 
-  // Build dx param
-  const dxIds = tabElements.map((e) => e.id).join(";");
-  const facility = config.facilities?.[facilityId];
-  const facilityName = facility?.name || facilityId;
+  // Detect CHAK facility mode (from CHAK MHUs.csv or passed chakFacilityId)
+  const isChakFacility =
+    typeof facilityId === "string" && facilityId.startsWith("chak::");
+  const chakOuId = isChakFacility
+    ? facilityId.replace("chak::", "")
+    : chakFacilityId || null;
+  const facilityName =
+    selectedFacilityName || config.facilities?.[facilityId]?.name || facilityId;
+  const ouId = isChakFacility ? chakOuId : facilityId;
+
+  // For CHAK-only facilities (no KHIS mapping), non-HIV tabs show message
+  if (isChakFacility && tabSlug !== "HIV_DASHBOARD") {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+        <div class="font-semibold text-slate-500">CHAK DHIS only</div>
+        <div class="mt-1 text-xs text-center max-w-md">CHAK DHIS only provides HIV (MOH 731) data. Non-HIV tabs require KHIS data which isn't available for this CHAK facility.</div>
+      </div>`;
+    return;
+  }
+
+  // For any facility with CHAK OU, route HIV tab to CHAK DHIS
+  if (chakOuId && tabSlug === "HIV_DASHBOARD") {
+    // Route CHAK HIV tab directly to CHAK DHIS (for both CHAK-only and KHIS-mapped CHAK facilities)
+    await renderMhuHivDashboard(contentEl, facilityName, chakOuId);
+    return;
+  }
 
   // Show loading
   contentEl.innerHTML = `
     <div class="flex items-center justify-center py-12">
       <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
-      <div class="ml-3 text-sm text-slate-500">Loading MOH 717 data…</div>
+      <div class="ml-3 text-sm text-slate-500">Loading KHIS data…</div>
     </div>
   `;
 
+  // Build dx param
+  const dxIds = tabElements.map((e) => e.id).join(";");
+
   try {
     const resp = await fetch(
-      `/api/mhu/khis-data?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(facilityId)}&pe=LAST_12_MONTHS`,
+      `${MHU_API}?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(ouId)}&pe=LAST_12_MONTHS`,
     );
     if (!resp.ok) {
       throw new Error(`API returned ${resp.status}`);
@@ -1346,11 +1540,12 @@ async function loadAndRenderMhuTab(config, facilityId, tabSlug) {
     if (tabSlug === "WORKLOAD") {
       renderMhuWorkload(contentEl, data, tabElements, facilityName);
     } else if (tabSlug === "HYPERTENSION_DIABETES") {
-      renderMhuRehab(contentEl, data, tabElements, facilityName);
+      renderMhuDiabetesHypertension(contentEl, data, tabElements, facilityName);
     } else if (tabSlug === "MNCH") {
       renderMhuMnch(contentEl, data, tabElements, facilityName);
     } else if (tabSlug === "HIV_DASHBOARD") {
-      renderMhuOther(contentEl, data, tabElements, facilityName);
+      // HIV_DASHBOARD uses hardcoded KHIS UIDs for HIV metrics
+      await renderMhuHivDashboard(contentEl, facilityName, ouId);
     } else {
       renderMhuGenericTable(
         contentEl,
@@ -1364,6 +1559,186 @@ async function loadAndRenderMhuTab(config, facilityId, tabSlug) {
     contentEl.innerHTML = `
       <div class="flex flex-col items-center justify-center py-14 text-sm text-red-400">
         <div class="font-semibold text-red-500">Error loading data</div>
+        <div class="mt-1 text-xs">${escapeHtml(err.message)}</div>
+      </div>`;
+  }
+}
+
+// ── Aggregate endpoint ────────────────────────────────────────────────
+const MHU_AGGREGATE_API = "/api/mhu/khis-data-aggregate";
+
+// ── Render MHU aggregate nav (no specific facility selected) ──────────
+function renderMhuAggregateNav(label, facilityCount, activeSubtab, tabKeys) {
+  const root = document.getElementById("mhuRoot");
+  if (!root) return;
+
+  const tabLabels = {
+    WORKLOAD: "Workload",
+    HYPERTENSION_DIABETES: "Hypertension & Diabetes",
+    MNCH: "MNCH",
+    HIV_DASHBOARD: "HIV Dashboard",
+    OTHER: "Other",
+  };
+
+  root.innerHTML = `
+    <div class="mb-4">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="text-sm font-bold text-slate-700">${escapeHtml(label)}</div>
+        <span class="text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">${facilityCount} facilities · Aggregated</span>
+      </div>
+      <div class="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+        ${tabKeys
+          .map(
+            (slug) => `
+          <button class="mhu-tab-btn px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+            ${
+              activeSubtab === slug
+                ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }"
+            data-tab-slug="${slug}">${tabLabels[slug] || slug.replace(/_/g, " ")}</button>
+        `,
+          )
+          .join("")}
+      </div>
+    </div>
+    <div id="mhuTabContent" class="min-h-[200px]">
+      <div class="flex items-center justify-center py-12">
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+        <div class="ml-3 text-sm text-slate-500">Loading aggregated data across ${facilityCount} facilities…</div>
+      </div>
+    </div>
+  `;
+
+  // Bind subtab click handlers for aggregate mode
+  document.querySelectorAll(".mhu-tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const slug = btn.getAttribute("data-tab-slug");
+      state.mhuMhuSubtab = slug;
+      const aggNames = state.mhuAggregateNames || [];
+
+      // Re-render nav
+      renderMhuAggregateNav(label, facilityCount, slug, tabKeys);
+
+      if (slug === "HIV_DASHBOARD") {
+        const contentEl = document.getElementById("mhuTabContent");
+        if (contentEl) {
+          contentEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+              <div class="font-semibold text-slate-500">Aggregate not available</div>
+              <div class="mt-1 text-xs text-center max-w-md">HIV Dashboard is only available for individual facilities. Select a specific facility to view HIV data.</div>
+            </div>`;
+        }
+        return;
+      }
+
+      loadMhuConfig().then(function (cfg) {
+        if (cfg && aggNames.length > 0) {
+          loadAndRenderMhuAggregatedTab(
+            cfg,
+            aggNames,
+            slug,
+            facilityCount,
+            label,
+          );
+        }
+      });
+    });
+  });
+}
+
+// ── Load & render MHU aggregated tab data ─────────────────────────────
+async function loadAndRenderMhuAggregatedTab(
+  config,
+  facilityNames,
+  tabSlug,
+  facilityCount,
+  aggregateLabel,
+) {
+  const tabElements = config.tabs?.[tabSlug];
+  const contentEl = document.getElementById("mhuTabContent");
+  if (!contentEl) return;
+
+  if (!tabElements || tabElements.length === 0) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+        <div class="font-semibold text-slate-500">No data elements defined for this tab</div>
+      </div>`;
+    return;
+  }
+
+  // Show loading
+  contentEl.innerHTML = `
+    <div class="flex items-center justify-center py-12">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500"></div>
+      <div class="ml-3 text-sm text-slate-500">Loading aggregated data across ${facilityCount} facilities…</div>
+    </div>
+  `;
+
+  const dxIds = tabElements
+    .map(function (e) {
+      return e.id;
+    })
+    .join(";");
+
+  try {
+    const resp = await fetch(MHU_AGGREGATE_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dx: dxIds,
+        names: facilityNames,
+        pe: "LAST_12_MONTHS",
+      }),
+    });
+    if (!resp.ok) throw new Error("API returned " + resp.status);
+    const result = await resp.json();
+    const data = result.data || {};
+
+    if (Object.keys(data).length === 0) {
+      contentEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+          <div class="font-semibold text-slate-500">No aggregated data available</div>
+          <div class="mt-1 text-xs text-center max-w-md">KHIS returned no records for ${result.matched_count || 0} matched facilities.</div>
+        </div>`;
+      return;
+    }
+
+    // Render based on tab type using existing chart renderers
+    if (tabSlug === "WORKLOAD") {
+      renderMhuWorkload(
+        contentEl,
+        data,
+        tabElements,
+        aggregateLabel + " (Aggregated)",
+      );
+    } else if (tabSlug === "HYPERTENSION_DIABETES") {
+      renderMhuDiabetesHypertension(
+        contentEl,
+        data,
+        tabElements,
+        aggregateLabel + " (Aggregated)",
+      );
+    } else if (tabSlug === "MNCH") {
+      renderMhuMnch(
+        contentEl,
+        data,
+        tabElements,
+        aggregateLabel + " (Aggregated)",
+      );
+    } else {
+      renderMhuGenericTable(
+        contentEl,
+        data,
+        tabElements,
+        aggregateLabel + " (Aggregated)",
+        tabSlug.replace(/_/g, " "),
+      );
+    }
+  } catch (err) {
+    contentEl.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-red-400">
+        <div class="font-semibold text-red-500">Error loading aggregated data</div>
         <div class="mt-1 text-xs">${escapeHtml(err.message)}</div>
       </div>`;
   }
@@ -1607,14 +1982,19 @@ function renderMhuWorkload(container, data, tabElements, facilityName) {
   }
 }
 
-// ── REHABILITATION tab (currently orthopaedic/physio elements) ────────
-function renderMhuRehab(container, data, tabElements, facilityName) {
+// ── HYPERTENSION & DIABETES tab (MOH 740) ─────────────────────────────
+function renderMhuDiabetesHypertension(
+  container,
+  data,
+  tabElements,
+  facilityName,
+) {
   renderMhuGenericTab(
     container,
     data,
     tabElements,
     facilityName,
-    "Rehabilitation / Physiotherapy",
+    "Diabetes & Hypertension · MOH 740",
   );
 }
 
@@ -1629,15 +2009,364 @@ function renderMhuMnch(container, data, tabElements, facilityName) {
   );
 }
 
-// ── OTHER tab (HIV dashboard fallback) ────────────────────────────────
-function renderMhuOther(container, data, tabElements, facilityName) {
-  renderMhuGenericTab(
-    container,
-    data,
-    tabElements,
-    facilityName,
-    "HIV & Other Indicators",
-  );
+// ── HIV DASHBOARD tab — CHAK DHIS UIDs ──────────────────────────
+// Data elements from CHAK DHIS (MER/C&T & MOH 731 compatible)
+const HIV_UIDS = [
+  "aMp82zBYPnx", // CHAK: TX_CURR Patients on Care (was: HV01-01)
+  "yVSPslVCpu3", // HV01-07 Total Revisit on ART
+  "MQF59FTGl7N", // HV01-04 Total Starting on ART
+  "iZHADd1svrB", // HV01-10 Total Ever on ART
+  "QJX1IYymTwR", // HV01-11 Total Enrolled in Care
+  "PLOzPReieli", // HV01-12 Total Currently in Care
+  "RHyfJDq4FsT", // CHAK: TB_ICF OPD Screened for TB (was: HV04-01)
+  "pDoW8tq74Co", // HV01-14 Current on ART Female 15+
+  "KMWQGDpqPcJ", // HV01-13 Current on ART Male 15+
+  "FmEfFpTP1Tu", // HV01-15 Current on ART Male <15
+  "lOyMumfLe7d", // HV01-16 Current on ART Female <15
+  "ezNx1i74mpa", // HV01-17 Starting ART Male 15+
+  "TJxRQq9K8jl", // HV01-18 Starting ART Female 15+
+  "CcOr3MB7Mh4", // HV01-19 Starting ART Pregnant
+  "imgvJzyf6ww", // HV01-08 Revisit on ART Male 15+
+  "BPFYXYonMWF", // HV01-09 Revisit on ART Female 15+
+  "BdbVjZPWvYP", // CHAK: TB_ICF CCC Started on IPT (was: Starting IPT)
+];
+
+// Friendly labels for the CHAK UIDs
+const HIV_LABELS = {
+  aMp82zBYPnx: "TX_CURR Patients on Care (ART)",
+  yVSPslVCpu3: "Total Revisit on ART",
+  MQF59FTGl7N: "Total Starting on ART",
+  iZHADd1svrB: "Total Ever on ART",
+  QJX1IYymTwR: "Total Enrolled in Care",
+  PLOzPReieli: "HIV Currently in Care (Total)",
+  RHyfJDq4FsT: "TB Screened (OPD ICF)",
+  pDoW8tq74Co: "Current on ART (Female 15+)",
+  KMWQGDpqPcJ: "Current on ART (Male 15+)",
+  FmEfFpTP1Tu: "Current on ART (Male <15)",
+  lOyMumfLe7d: "Current on ART (Female <15)",
+  ezNx1i74mpa: "Male 15+ Starting on ART",
+  TJxRQq9K8jl: "Female 15+ Starting on ART",
+  CcOr3MB7Mh4: "Pregnant Starting on ART",
+  imgvJzyf6ww: "Male 15+ Revisit on ART",
+  BPFYXYonMWF: "Female 15+ Revisit on ART",
+  BdbVjZPWvYP: "Started on IPT (CCC)",
+};
+
+async function renderMhuHivDashboard(container, facilityName, ouId) {
+  // Look up the CHAK OU ID by facility name (CHAK uses different OU IDs than KHIS)
+  let chakOuId = ouId;
+  try {
+    const lookupResp = await fetch(
+      `/api/mhu/chak-ou-lookup?name=${encodeURIComponent(facilityName)}`,
+    );
+    if (lookupResp.ok) {
+      const lookupResult = await lookupResp.json();
+      if (lookupResult && lookupResult.uid) {
+        chakOuId = lookupResult.uid;
+      }
+    }
+  } catch (e) {
+    // fallback: use passed ouId (might be wrong but try anyway)
+  }
+
+  const dxStr = HIV_UIDS.join(";");
+
+  try {
+    // Use CHAK DHIS endpoint (not KHIS)
+    const resp = await fetch(
+      `/api/mhu/chak-data?dx=${encodeURIComponent(dxStr)}&ou=${encodeURIComponent(chakOuId)}&pe=LAST_12_MONTHS`,
+    );
+    if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+    const result = await resp.json();
+    const data = result.data || {};
+
+    const subtitleHtml = `<div class="text-[11px] text-slate-400">HIV Dashboard · CHAK DHIS (MER/C&T)</div>`;
+
+    if (Object.keys(data).length === 0) {
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
+          <div class="font-semibold text-slate-500">No HIV data available</div>
+          <div class="mt-1 text-xs max-w-md text-center">CHAK DHIS returned no HIV records for this facility. It may not report MOH 731 HIV data.</div>
+        </div>`;
+      return;
+    }
+
+    // Parse into per-DE time series
+    const parsed = [];
+    const allPeriods = new Set();
+    for (const uid of HIV_UIDS) {
+      const dxData = data[uid];
+      if (!dxData) continue;
+      const periods = Object.keys(dxData).sort(sortPeriodLabels);
+      const values = periods.map((p) => parseFloat(dxData[p]) || 0);
+      const total = values.reduce((a, b) => a + b, 0);
+      periods.forEach((p) => allPeriods.add(p));
+      parsed.push({
+        id: uid,
+        name: HIV_LABELS[uid] || uid,
+        periods,
+        values,
+        total,
+      });
+    }
+
+    const sortedPeriods = Array.from(allPeriods).sort(sortPeriodLabels);
+
+    // Compute derived KPIs (CHAK DHIS UIDs)
+    const totalOnArt = findValue(parsed, "aMp82zBYPnx");
+    const totalStarting = findValue(parsed, "MQF59FTGl7N");
+    const totalEver = findValue(parsed, "iZHADd1svrB");
+    const totalRevisit = findValue(parsed, "yVSPslVCpu3");
+    const totalEnrolled = findValue(parsed, "QJX1IYymTwR");
+    const totalScreenedTb = findValue(parsed, "RHyfJDq4FsT");
+
+    // Current on ART by sex
+    const currFemale15 = findValue(parsed, "pDoW8tq74Co");
+    const currMale15 = findValue(parsed, "KMWQGDpqPcJ");
+    const currMaleChild = findValue(parsed, "FmEfFpTP1Tu");
+    const currFemaleChild = findValue(parsed, "lOyMumfLe7d");
+    const totalCurrBreakdown =
+      currMale15 + currFemale15 + currMaleChild + currFemaleChild;
+
+    // Starting on ART by sex
+    const maleStart = findValue(parsed, "ezNx1i74mpa");
+    const femaleStart = findValue(parsed, "TJxRQq9K8jl");
+    const pregnantStart = findValue(parsed, "CcOr3MB7Mh4");
+    const totalNewStart = maleStart + femaleStart + pregnantStart;
+
+    // IPT (CHAK DHIS — disaggregated by OPD/IPD)
+    const iptTotal = findValue(parsed, "BdbVjZPWvYP");
+    const iptMale = 0;
+    const iptFemale = 0;
+
+    let html = `
+      <div class="mb-4">
+        <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
+        ${subtitleHtml}
+      </div>
+
+      <!-- KPI Cards (6) -->
+      <div class="mb-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div class="rounded-xl border border-violet-200 bg-violet-50 p-3">
+          <div class="text-[20px] font-bold text-violet-800">${totalOnArt.toLocaleString()}</div>
+          <div class="text-[10px] text-violet-600 leading-tight">Current on ART</div>
+        </div>
+        <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
+          <div class="text-[20px] font-bold text-sky-800">${totalStarting.toLocaleString()}</div>
+          <div class="text-[10px] text-sky-600 leading-tight">Starting on ART</div>
+        </div>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+          <div class="text-[20px] font-bold text-emerald-800">${totalRevisit.toLocaleString()}</div>
+          <div class="text-[10px] text-emerald-600 leading-tight">Revisit on ART</div>
+        </div>
+        <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
+          <div class="text-[20px] font-bold text-cyan-800">${totalEnrolled.toLocaleString()}</div>
+          <div class="text-[10px] text-cyan-600 leading-tight">Enrolled in Care</div>
+        </div>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-3">
+          <div class="text-[20px] font-bold text-rose-800">${totalEver.toLocaleString()}</div>
+          <div class="text-[10px] text-rose-600 leading-tight">Ever on ART</div>
+        </div>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div class="text-[20px] font-bold text-amber-800">${totalScreenedTb.toLocaleString()}</div>
+          <div class="text-[10px] text-amber-600 leading-tight">Screened for TB</div>
+        </div>
+      </div>
+    `;
+
+    // Trend chart
+    if (parsed.length >= 2 && sortedPeriods.length > 0) {
+      html += `<div class="mb-5"><div id="hivTrendChart" class="rounded-xl border border-slate-200 p-3"></div></div>`;
+    }
+
+    // Breakdown charts (side by side)
+    const hasPieData = totalCurrBreakdown > 0 || totalNewStart > 0;
+    if (hasPieData) {
+      html += `<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="hivCurrChart" class="rounded-xl border border-slate-200 p-3"></div>
+        <div id="hivStartChart" class="rounded-xl border border-slate-200 p-3"></div>
+      </div>`;
+    }
+
+    // IPT + TB summary cards
+    if (iptTotal > 0) {
+      html += `<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div id="hivIptChart" class="rounded-xl border border-slate-200 p-3"></div>
+        <div id="hivRevisitChart" class="rounded-xl border border-slate-200 p-3"></div>
+      </div>`;
+    }
+
+    // Full data table
+    html += `<div class="overflow-x-auto rounded-xl border border-slate-200 mt-4">
+      <div class="p-3 text-xs font-semibold text-slate-700">📋 HIV Indicators — Monthly Values</div>
+      <table class="w-full text-left text-[12px]">
+        <thead><tr class="bg-slate-100 text-slate-600">
+          <th class="px-3 py-2 font-semibold">Indicator</th>`;
+    for (const m of sortedPeriods)
+      html += `<th class="px-3 py-2 font-semibold text-right">${escapeHtml(m)}</th>`;
+    html += `<th class="px-3 py-2 font-semibold text-right">Total</th></tr></thead><tbody>`;
+    for (const item of parsed) {
+      html += `<tr class="border-t border-slate-100 hover:bg-slate-50">`;
+      html += `<td class="px-3 py-1.5 font-medium text-slate-700">${escapeHtml(item.name)}</td>`;
+      for (const v of item.values)
+        html += `<td class="px-3 py-1.5 text-right text-slate-600">${v.toLocaleString()}</td>`;
+      html += `<td class="px-3 py-1.5 text-right font-semibold text-slate-800">${item.total.toLocaleString()}</td>`;
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+
+    container.innerHTML = html;
+
+    // ── Trend chart ──
+    if (parsed.length >= 2 && sortedPeriods.length > 0) {
+      const trendUids = [
+        "aMp82zBYPnx",
+        "yVSPslVCpu3",
+        "MQF59FTGl7N",
+        "RHyfJDq4FsT",
+      ];
+      const trendItems = [];
+      for (const uid of trendUids) {
+        const item = parsed.find((p) => p.id === uid);
+        if (item) {
+          trendItems.push({
+            name: HIV_LABELS[uid] || uid,
+            data: item.values,
+          });
+        }
+      }
+      if (trendItems.length >= 2) {
+        renderHighchartLine(
+          "hivTrendChart",
+          "HIV Indicators — Monthly Trend (CHAK DHIS)",
+          trendItems,
+          sortedPeriods,
+          "Patients",
+        );
+      }
+    }
+
+    // ── Current on ART by sex/age (donut) ──
+    if (totalCurrBreakdown > 0) {
+      Highcharts.chart("hivCurrChart", {
+        chart: { type: "pie" },
+        title: { text: "Current on ART by Sex/Age" },
+        tooltip: { pointFormat: "<b>{point.y}</b> ({point.percentage:.1f}%)" },
+        plotOptions: {
+          pie: {
+            innerSize: "50%",
+            allowPointSelect: true,
+            cursor: "pointer",
+            dataLabels: {
+              enabled: true,
+              format: "<b>{point.name}</b>: {point.y}",
+            },
+          },
+        },
+        series: [
+          {
+            name: "Patients",
+            colorByPoint: true,
+            data: [
+              { name: "Male 15+", y: currMale15, color: "#2563eb" },
+              { name: "Female 15+", y: currFemale15, color: "#ec4899" },
+              { name: "Male <15", y: currMaleChild, color: "#60a5fa" },
+              { name: "Female <15", y: currFemaleChild, color: "#f472b6" },
+            ].filter((d) => d.y > 0),
+          },
+        ],
+        credits: { enabled: false },
+      });
+    }
+
+    // ── Starting on ART breakdown (column) ──
+    if (totalNewStart > 0) {
+      Highcharts.chart("hivStartChart", {
+        chart: { type: "column" },
+        title: { text: "Starting on ART by Sex" },
+        xAxis: { categories: ["New on ART"] },
+        yAxis: { title: { text: "Patients" }, allowDecimals: false },
+        tooltip: { pointFormat: "{series.name}: <b>{point.y}</b>" },
+        plotOptions: { column: { stacking: "normal" } },
+        series: [
+          { name: "Male 15+", data: [maleStart], color: "#2563eb" },
+          { name: "Female 15+", data: [femaleStart], color: "#ec4899" },
+          { name: "Pregnant", data: [pregnantStart], color: "#f59e0b" },
+        ].filter((s) => s.data[0] > 0),
+        credits: { enabled: false },
+      });
+    }
+
+    // ── IPT (single bar with total) ──
+    if (iptTotal > 0) {
+      Highcharts.chart("hivIptChart", {
+        chart: { type: "column" },
+        title: { text: "Isoniazid Preventive Therapy (IPT)" },
+        xAxis: { categories: ["Started on IPT"] },
+        yAxis: { title: { text: "Patients" }, allowDecimals: false },
+        tooltip: { pointFormat: "{series.name}: <b>{point.y}</b>" },
+        plotOptions: { column: { stacking: "normal" } },
+        series: [
+          { name: "Total Started IPT", data: [iptTotal], color: "#8b5cf6" },
+        ],
+        credits: { enabled: false },
+      });
+
+      // ── Revisit on ART by sex ──
+      const revisitMale = findValue(parsed, "imgvJzyf6ww");
+      const revisitFemale = findValue(parsed, "BPFYXYonMWF");
+      Highcharts.chart("hivRevisitChart", {
+        chart: { type: "column" },
+        title: { text: "Revisit on ART by Sex" },
+        xAxis: { categories: ["Revisit on ART"] },
+        yAxis: { title: { text: "Patients" }, allowDecimals: false },
+        tooltip: { pointFormat: "{series.name}: <b>{point.y}</b>" },
+        plotOptions: { column: { stacking: "normal" } },
+        series: [
+          { name: "Male 15+", data: [revisitMale], color: "#2563eb" },
+          { name: "Female 15+", data: [revisitFemale], color: "#ec4899" },
+        ].filter((s) => s.data[0] > 0),
+        credits: { enabled: false },
+      });
+    }
+  } catch (err) {
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-14 text-sm text-red-400">
+        <div class="font-semibold text-red-500">Error loading HIV data</div>
+        <div class="mt-1 text-xs">${escapeHtml(err.message)}</div>
+      </div>`;
+  }
+}
+
+function findValue(parsed, uid) {
+  const item = parsed.find((p) => p.id === uid);
+  return item ? item.total : 0;
+}
+
+function sortPeriodLabels(a, b) {
+  // Sort "July 2025"-style month labels chronologically
+  const MONTHS = {
+    January: 1,
+    February: 2,
+    March: 3,
+    April: 4,
+    May: 5,
+    June: 6,
+    July: 7,
+    August: 8,
+    September: 9,
+    October: 10,
+    November: 11,
+    December: 12,
+  };
+  const pa = a.split(" ");
+  const pb = b.split(" ");
+  if (pa.length >= 2 && pb.length >= 2 && MONTHS[pa[0]] && MONTHS[pb[0]]) {
+    const ya = parseInt(pa[1]) || 0,
+      yb = parseInt(pb[1]) || 0;
+    return ya !== yb ? ya - yb : MONTHS[pa[0]] - MONTHS[pb[0]];
+  }
+  return a.localeCompare(b);
 }
 
 // ── Generic tab renderer: summary KPIs + trend line chart + table ────
@@ -1656,7 +2385,7 @@ function renderMhuGenericTab(
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">${escapeHtml(tabTitle)} · MOH 717 · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">${escapeHtml(tabTitle)} · Last 12 months</div>
     </div>
   `;
 
@@ -2300,13 +3029,25 @@ function renderCurrentView() {
 
   // Check if we have a specific subtab to render content for
   const meta = getPageMeta(pageId);
-  const defaultActiveSlug = toSlug((meta.subtabs && meta.subtabs[0]) || "");
-  const activeSlug = state.activeSubtabs[pageId] || defaultActiveSlug;
+  const subtabs = getSubtabsForPage(pageId);
+  const defaultActiveSlug = toSlug(subtabs[0] || "");
+  var activeSlug = state.activeSubtabs[pageId] || defaultActiveSlug;
+  // If the stored slug is no longer in the filtered subtabs, reset to first
+  if (
+    !subtabs.some(function (s) {
+      return toSlug(s) === activeSlug;
+    })
+  ) {
+    activeSlug = defaultActiveSlug;
+    state.activeSubtabs[pageId] = activeSlug;
+  }
   if (!state.activeSubtabs[pageId] && defaultActiveSlug) {
     state.activeSubtabs[pageId] = activeSlug;
   }
-  const activeLabel = meta.subtabs
-    ? meta.subtabs.find((s) => toSlug(s) === activeSlug) || ""
+  const activeLabel = subtabs
+    ? subtabs.find(function (s) {
+        return toSlug(s) === activeSlug;
+      }) || ""
     : "";
 
   if (activeSlug === "overview") {
@@ -2332,7 +3073,22 @@ function renderCurrentView() {
 
   // ── HIV Testing → Unified DHIS2 HTS Live Charts ──
   if (pageId === "hiv_testing" && SUBTAB_TYPE_MAP[activeSlug]) {
-    elements.chartRoot.innerHTML = `<div id="categoryContent" class="space-y-6"></div>`;
+    // In Jamii Tekelezi, HIV Testing Services Linkage → show global Linkage page
+    if (
+      state.activeProject === "jamii_tekelezi" &&
+      activeSlug === "hiv-testing-services-linkage"
+    ) {
+      elements.chartRoot.innerHTML =
+        '<div id="categoryContent" class="space-y-6"></div>';
+      renderChakPage(
+        document.getElementById("categoryContent"),
+        "linkage",
+        "linkage",
+      );
+      return;
+    }
+    elements.chartRoot.innerHTML =
+      '<div id="categoryContent" class="space-y-6"></div>';
     const container = document.getElementById("categoryContent");
     renderHtsLiveChart(container, pageId, activeSlug);
     return;
@@ -9726,6 +10482,7 @@ function chakRenderPivotTable(data, rows, columns, valueKey, valueLabel) {
     .chak-chart-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
     .chak-chart-card h3 { font-size:13px; font-weight:600; color:#374151; margin-bottom:8px; }
     .chak-chart-card.full { grid-column:1 / -1; }
+    .chak-chart-card.full .chak-chart-container { height: 400px; }
     .chak-chart-container { position:relative; width:100%; height:280px; }
     .chak-page-info { margin-bottom:16px; }
     .chak-page-info h2 { font-size:16px; font-weight:700; color:#1f2937; }
@@ -9802,6 +10559,52 @@ function chakChartCard(title, canvasId, extraClasses) {
     '<div class="chak-chart-container"><canvas id="' +
     canvasId +
     '"></canvas></div>' +
+    "</div>"
+  );
+}
+
+// ── CHAK Highcharts Card (uses <div> instead of <canvas>) ──
+function chakHighchartsCard(title, divId, extraClasses) {
+  return (
+    '<div class="chak-chart-card' +
+    (extraClasses ? " " + extraClasses : "") +
+    '">' +
+    '<div class="chak-chart-header">' +
+    "<h3>" +
+    title +
+    "</h3>" +
+    '<div class="chak-chart-actions">' +
+    '<button class="chak-action-btn chak-ai-btn" data-chak-action="ai" data-chart="' +
+    divId +
+    '" title="AI Assist">' +
+    '<svg class="chak-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/>' +
+    '<circle cx="12" cy="20" r="2"/>' +
+    "</svg>" +
+    "</button>" +
+    '<button class="chak-action-btn" data-chak-action="data" data-chart="' +
+    divId +
+    '" title="View Data">' +
+    '<svg class="chak-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
+    '<line x1="3" y1="9" x2="21" y2="9"/>' +
+    '<line x1="9" y1="3" x2="9" y2="21"/>' +
+    "</svg>" +
+    "</button>" +
+    '<button class="chak-action-btn" data-chak-action="download" data-chart="' +
+    divId +
+    '" title="Download PNG">' +
+    '<svg class="chak-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>' +
+    '<polyline points="7 10 12 15 17 10"/>' +
+    '<line x1="12" y1="15" x2="12" y2="3"/>' +
+    "</svg>" +
+    "</button>" +
+    "</div>" +
+    "</div>" +
+    '<div class="chak-chart-container"><div id="' +
+    divId +
+    '"></div></div>' +
     "</div>"
   );
 }
@@ -10844,99 +11647,855 @@ registerChakRenderer("vl-cascade", "vl-cascade", function (el, data) {
 // ── PMTCT ──
 registerChakRenderer("pmtct", "pmtct", function (el, data) {
   const trend = data.trend || [];
-  el.innerHTML = `
-    <div class="chak-page-info"><h2><i class="fas fa-baby"></i> PMTCT</h2><p>Prevention of Mother-to-Child Transmission: ANC cascade</p></div>
-    <div class="chak-kpi-grid">
-      <div class="chak-kpi-card"><div class="chak-kpi-label">Known Pos at ANC1</div><div class="chak-kpi-value blue">${chakFmt(chakLast(trend, "anc1_known_pos"))}</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">New Pos at ANC1</div><div class="chak-kpi-value pink">${chakFmt(chakLast(trend, "anc1_new_pos"))}</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">Started ART</div><div class="chak-kpi-value green">${chakFmt(chakLast(trend, "started_art"))}</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">PMTCT Uptake</div><div class="chak-kpi-value purple">${chakLast(trend, "pmtct_uptake_pct")}%</div></div>
-    </div>
-    <div class="chak-chart-grid">
-            ${chakChartCard("PMTCT Cascade", "chakPmtctCascade")}
-            ${chakChartCard("PMTCT Trend", "chakPmtctTrend")}
+  const pmtctKp = chakSum(trend, "anc1_known_pos");
+  const pmtctNewPos = chakSum(trend, "anc1_new_pos");
+  const pmtctTotalPos = chakSum(trend, "total_pos");
+  const pmtctStartedArt = chakSum(trend, "started_art");
+
+  // ── Preserved existing content (hidden from UI, not removed) ──
+  const existingHtml = `
+    <div style="display:none" aria-hidden="true">
+      <div class="chak-page-info"><h2><i class="fas fa-baby"></i> PMTCT</h2><p>Prevention of Mother-to-Child Transmission: ANC cascade</p></div>
+      <div class="chak-kpi-grid">
+        <div class="chak-kpi-card"><div class="chak-kpi-label">Known Pos at ANC1</div><div class="chak-kpi-value blue">${chakFmt(chakLast(trend, "anc1_known_pos"))}</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">New Pos at ANC1</div><div class="chak-kpi-value pink">${chakFmt(chakLast(trend, "anc1_new_pos"))}</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">Started ART</div><div class="chak-kpi-value green">${chakFmt(chakLast(trend, "started_art"))}</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">PMTCT Uptake</div><div class="chak-kpi-value purple">${chakLast(trend, "pmtct_uptake_pct")}%</div></div>
+      </div>
+      <div class="chak-chart-grid">
+              ${chakChartCard("PMTCT Cascade", "chakPmtctCascade")}
+              ${chakChartCard("PMTCT Trend", "chakPmtctTrend")}
+      </div>
     </div>`;
+
+  // ── New PMTCT Cascade UI ──
+  el.innerHTML =
+    existingHtml +
+    `
+    <div class="chak-page-info" style="margin-top:0">
+      <h2><i class="fas fa-baby"></i> PMTCT Cascade · Jamii Tekelezi</h2>
+      <p>Prevention of Mother-to-Child Transmission: Entry-to-Treatment cascade — 1st ANC → Tested → Positive → Total on ART</p>
+    </div>
+
+    <!-- Step 1–2: Baseline & Testing -->
+    <div class="chak-kpi-grid">
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❶ 1st ANC Attendances</div>
+        <div class="chak-kpi-value blue">0</div>
+        <div class="chak-kpi-sub">Total ANC 1 visits (universe of pregnant women)</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❷ KP (Known Positive at Entry)</div>
+        <div class="chak-kpi-value pink">${chakFmt(pmtctKp)}</div>
+        <div class="chak-kpi-sub">Known HIV+ before this ANC visit</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❸ Tested for HIV at ANC</div>
+        <div class="chak-kpi-value teal">0</div>
+        <div class="chak-kpi-sub">Unknown status women who accepted testing</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❹ New Pos (Newly Tested +)</div>
+        <div class="chak-kpi-value red">${chakFmt(pmtctNewPos)}</div>
+        <div class="chak-kpi-sub">Newly diagnosed HIV+ during this visit</div>
+      </div>
+    </div>
+
+    <!-- Step 3–5: Burden & Treatment -->
+    <div class="chak-kpi-grid">
+      <div class="chak-kpi-card" style="border-left:4px solid #ea580c">
+        <div class="chak-kpi-label">❺ Total HIV Positive Pregnant</div>
+        <div class="chak-kpi-value orange">${chakFmt(pmtctTotalPos)}</div>
+        <div class="chak-kpi-sub">KP + New Pos = <strong>${chakFmt(pmtctTotalPos)}</strong> (total burden)</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❻ Already on ART</div>
+        <div class="chak-kpi-value purple">0</div>
+        <div class="chak-kpi-sub">Known positives already on treatment</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❼ ART New (Newly Initiated)</div>
+        <div class="chak-kpi-value" style="color:#0891b2">${chakFmt(pmtctStartedArt)}</div>
+        <div class="chak-kpi-sub">Newly started ART this visit</div>
+      </div>
+      <div class="chak-kpi-card" style="border-left:4px solid #16a34a">
+        <div class="chak-kpi-label">❽ Total on Maternal ART</div>
+        <div class="chak-kpi-value green">${chakFmt(pmtctStartedArt)}</div>
+        <div class="chak-kpi-sub">Already ART + ART New = <strong>${chakFmt(pmtctStartedArt)}</strong> ← GOAL</div>
+      </div>
+    </div>
+
+    <!-- Cascade Charts (5) — Top: Full horizontal cascade, then 4 detail charts -->
+    <div class="chak-chart-grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      ${chakHighchartsCard("📊 PMTCT All-Indicators Cascade — Full Flow (Horizontal)", "chakPmtctTopCascade", "full")}
+      ${chakChartCard("📊 PMTCT Cascade — 1st ANC → Tested → Positive → Total on ART", "chakPmtctCascade1")}
+      ${chakChartCard("📊 ANC Testing Coverage — 1st ANC · Tested · Not Tested", "chakPmtctCascade2")}
+      ${chakChartCard("📊 HIV Positive Breakdown — Total Positive · KP · New Pos", "chakPmtctCascade3")}
+      ${chakChartCard("📊 ART Uptake — Total on ART · Already ART · ART New", "chakPmtctCascade4")}
+    </div>
+
+    <!-- Cascade Description -->
+    <div class="chak-chart-card full" style="margin-top:4px">
+      <div class="chak-chart-header"><h3>🔍 How to read this cascade</h3></div>
+      <div style="font-size:12px;color:#4b5563;line-height:1.7">
+        <p><strong>Step 1 (Baseline):</strong> <code>1st ANC</code> — All pregnant women attending first ANC visit. <code>KP</code> = known HIV+ at entry.</p>
+        <p><strong>Step 2 (Testing):</strong> <code>Tested</code> = women tested for HIV. <code>New Pos</code> = newly diagnosed positive.</p>
+        <p><strong>Step 3 (Burden):</strong> <code>Positive</code> = <code>KP</code> + <code>New Pos</code> — total HIV+ pregnant women.</p>
+        <p><strong>Step 4 (Treatment):</strong> <code>Already ART</code> + <code>ART New</code> = women on ART.</p>
+        <p><strong>Step 5 (Goal):</strong> <code>ART Uptake</code> = <code>Already ART</code> + <code>ART New</code>. <span style="color:#16a34a;font-weight:600">Target: 100% of Positive = on ART.</span></p>
+        <p style="margin-top:6px;color:#6b7280;font-size:11px"><strong>Charts:</strong> ① Full cascade (horizontal, all indicators) · ② Cascade (stepped) · ③ Testing coverage (1st ANC, Tested, Not Tested) · ④ Positive breakdown (Total, KP, New Pos) · ⑤ ART uptake (Total, Already, New)</p>
+        <p style="margin-top:4px;color:#ea580c;font-weight:500">ℹ️ ❶ 1st ANC, ❸ Tested, ❻ Already ART show 0 — awaiting additional DHIS data fields. All other values are wired from available data.</p>
+      </div>
+    </div>`;
+
   el.setAttribute("data-chak-slug", "pmtct");
   _chakSetData("pmtct", data);
-  // Combo: Total HIV+ bars + % Uptake line
-  chakCreateChart(
-    "chakPmtctCascade",
-    chakLineClusteredColumnComboChart(
-      trend,
-      [
+
+  // ── Chart 1: PMTCT Cascade (1st ANC → Tested → Positive → Total on ART) ──
+  chakCreateChart("chakPmtctCascade1", {
+    type: "bar",
+    data: {
+      labels: ["1st ANC", "Tested", "Positive (KP+New)", "Total on ART"],
+      datasets: [
         {
-          key: "total_pos",
-          label: "HIV+ at ANC1",
-          color: CHAK_COLORS.pink + "80",
-        },
-        {
-          key: "started_art",
-          label: "Started ART",
-          color: CHAK_COLORS.green + "80",
+          label: "Patients",
+          data: [0, 0, pmtctTotalPos, pmtctStartedArt],
+          backgroundColor: ["#2563eb", "#0d9488", "#ea580c", "#16a34a"],
+          borderRadius: 4,
         },
       ],
-      [
-        {
-          key: "pmtct_uptake_pct",
-          label: "% PMTCT Uptake",
-          color: CHAK_COLORS.purple,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Total ANC 1 visits (universe)",
+                "Tested for HIV at ANC",
+                "KP + New Pos (total HIV+)",
+                "Already ART + ART New (goal)",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
         },
-      ],
-    ),
-  );
-  chakCreateChart(
-    "chakPmtctTrend",
-    chakBarChart(trend, [
-      {
-        key: "pmtct_uptake_pct",
-        label: "% PMTCT Uptake",
-        color: CHAK_COLORS.purple,
       },
-    ]),
-  );
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 2: ANC Testing Coverage (1st ANC · Tested · Not Tested) ──
+  chakCreateChart("chakPmtctCascade2", {
+    type: "bar",
+    data: {
+      labels: ["1st ANC", "Tested", "Not Tested"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [0, 0, 0],
+          backgroundColor: ["#2563eb", "#0d9488", "#94a3b8"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Total ANC 1 visits",
+                "Tested for HIV at ANC",
+                "1st ANC − Tested (not tested)",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 3: HIV Positive Breakdown (Total Positive · KP · New Pos) ──
+  chakCreateChart("chakPmtctCascade3", {
+    type: "bar",
+    data: {
+      labels: ["Total Positive", "KP (Known Pos)", "New Pos"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [pmtctTotalPos, pmtctKp, pmtctNewPos],
+          backgroundColor: ["#ea580c", "#db2777", "#dc2626"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "KP + New Pos (total HIV+ burden)",
+                "Known HIV+ before ANC visit",
+                "Newly diagnosed HIV+ at this visit",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 4: ART Uptake (Total on ART · Already ART · ART New) ──
+  chakCreateChart("chakPmtctCascade4", {
+    type: "bar",
+    data: {
+      labels: ["Total on ART", "Already ART", "ART New"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [pmtctStartedArt, 0, pmtctStartedArt],
+          backgroundColor: ["#16a34a", "#9333ea", "#0891b2"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Already ART + ART New (treatment goal)",
+                "Known positives already on ART",
+                "Newly initiated on ART",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── TOP CASCADE: Horizontal bar showing ALL 8 indicators ──
+  setTimeout(function () {
+    const topEl = document.getElementById("chakPmtctTopCascade");
+    if (!topEl) return;
+    // Compute cascade values
+    const anc1 = 0; // 1st ANC — not yet in DHIS data
+    const knownPos = pmtctKp;
+    const tested = 0; // Tested — not yet in DHIS data
+    const newPos = pmtctNewPos;
+    const totalPos = pmtctTotalPos;
+    const alreadyArt = 0; // Already ART — not yet in DHIS data
+    const artNew = pmtctStartedArt;
+    const totalArt = pmtctStartedArt; // Total on ART = Already ART + ART New
+
+    Highcharts.chart("chakPmtctTopCascade", {
+      chart: { type: "bar", height: 380 },
+      title: {
+        text: "PMTCT Cascade — All Indicators (Horizontal)",
+        style: { fontSize: "14px", fontWeight: "bold" },
+      },
+      subtitle: {
+        text: "Antenatal HIV cascade from entry to treatment · Flow: Step ❶ → Step ❽",
+        style: { fontSize: "11px", color: "#6b7280" },
+      },
+      xAxis: {
+        categories: [
+          "❶ 1st ANC",
+          "❷ KP at Entry",
+          "❸ Tested",
+          "❹ New Positive",
+          "❺ Total Positive",
+          "❻ Already on ART",
+          "❼ ART New",
+          "❽ Total on ART",
+        ],
+        labels: { style: { fontSize: "11px", fontWeight: "bold" } },
+        title: {
+          text: "Cascade Step",
+          style: { fontSize: "11px", color: "#4b5563" },
+        },
+      },
+      yAxis: {
+        title: {
+          text: "Patients (Count)",
+          style: { fontSize: "11px", color: "#4b5563" },
+        },
+        min: 0,
+        gridLineColor: "#f0f0f0",
+      },
+      tooltip: {
+        shared: true,
+        formatter: function () {
+          const descs = [
+            "Total ANC 1 visits (universe)",
+            "Known HIV+ before this ANC visit",
+            "Unknown status women who accepted testing",
+            "Newly diagnosed HIV+ during this visit",
+            "KP + New Pos (total HIV+ burden)",
+            "Known positives already on treatment",
+            "Newly started ART this visit",
+            "Already ART + ART New (goal)",
+          ];
+          const pt = this.points?.[0];
+          if (!pt) return "";
+          const i = pt.point.index;
+          return (
+            "<b>" +
+            pt.category +
+            "</b><br/>" +
+            (pt.y || 0).toLocaleString() +
+            " — " +
+            (descs[i] || "")
+          );
+        },
+      },
+      plotOptions: {
+        series: {
+          groupPadding: 0.08,
+          borderRadius: 3,
+          dataLabels: {
+            enabled: true,
+            formatter: function () {
+              return this.y > 0 ? Highcharts.numberFormat(this.y, 0) : "—";
+            },
+            style: { fontSize: "10px", fontWeight: "bold" },
+          },
+        },
+      },
+      legend: { enabled: false },
+      colors: [
+        "#2563eb",
+        "#db2777",
+        "#0d9488",
+        "#dc2626",
+        "#ea580c",
+        "#9333ea",
+        "#0891b2",
+        "#16a34a",
+      ],
+      series: [
+        {
+          name: "Patients",
+          data: [
+            anc1,
+            knownPos,
+            tested,
+            newPos,
+            totalPos,
+            alreadyArt,
+            artNew,
+            totalArt,
+          ],
+        },
+      ],
+    });
+  }, 100);
 });
 
 // ── TB ──
+// ── TB ──
 registerChakRenderer("tb", "tb", function (el, data) {
   const trend = data.trend || [];
-  el.innerHTML = `
-    <div class="chak-page-info"><h2><i class="fas fa-lungs"></i> TB/HIV</h2><p>TB screening, diagnosis, and ART among TB patients</p></div>
-    <div class="chak-kpi-grid">
-      <div class="chak-kpi-card"><div class="chak-kpi-label">TB Screened</div><div class="chak-kpi-value blue">${chakFmt(chakSum(trend, "tb_screened"))}</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">TB Positive</div><div class="chak-kpi-value red">${chakFmt(chakSum(trend, "tb_pos"))}</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">TB Positivity</div><div class="chak-kpi-value orange">${chakAvg(trend, "tb_positivity_pct")}%</div></div>
-      <div class="chak-kpi-card"><div class="chak-kpi-label">On ART Among TB</div><div class="chak-kpi-value green">${chakAvg(trend, "tb_art_uptake_pct")}%</div></div>
-    </div>
-    <div class="chak-chart-grid">
-            ${chakChartCard("TB Cascade", "chakTbCascade")}
-            ${chakChartCard("TB on ART Uptake", "chakTbArt")}
+
+  // ── Preserved existing content (hidden from UI, not removed) ──
+  const existingHtml = `
+    <div style="display:none" aria-hidden="true">
+      <div class="chak-page-info"><h2><i class="fas fa-lungs"></i> TB/HIV</h2><p>TB screening, diagnosis, and ART among TB patients</p></div>
+      <div class="chak-kpi-grid">
+        <div class="chak-kpi-card"><div class="chak-kpi-label">TB Screened</div><div class="chak-kpi-value blue">${chakFmt(chakSum(trend, "tb_screened"))}</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">TB Positive</div><div class="chak-kpi-value red">${chakFmt(chakSum(trend, "tb_pos"))}</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">TB Positivity</div><div class="chak-kpi-value orange">${chakAvg(trend, "tb_positivity_pct")}%</div></div>
+        <div class="chak-kpi-card"><div class="chak-kpi-label">On ART Among TB</div><div class="chak-kpi-value green">${chakAvg(trend, "tb_art_uptake_pct")}%</div></div>
+      </div>
+      <div class="chak-chart-grid">
+              ${chakChartCard("TB Cascade", "chakTbCascade")}
+              ${chakChartCard("TB on ART Uptake", "chakTbArt")}
+      </div>
     </div>`;
+
+  // Compute dynamic KPIs
+  const totScreened = chakSum(trend, "tb_screened");
+  const totPos = chakSum(trend, "tb_pos");
+  const totOnArt = chakSum(trend, "tb_on_art");
+  const notPositive = Math.max(0, totScreened - totPos);
+  const notOnArt = Math.max(0, totPos - totOnArt);
+  const posPct = chakAvg(trend, "tb_positivity_pct");
+  const artPct = chakAvg(trend, "tb_art_uptake_pct");
+
+  el.innerHTML =
+    existingHtml +
+    `
+    <div class="chak-page-info" style="margin-top:0">
+      <h2><i class="fas fa-lungs"></i> TB Cascade · Screening → Diagnosis → ART Integration</h2>
+      <p>TB screening-to-treatment cascade: Everyone screened → confirmed TB+ → linked to ART</p>
+    </div>
+
+    <!-- Row 1: Screening & Diagnosis -->
+    <div class="chak-kpi-grid">
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❶ TB Screened</div>
+        <div class="chak-kpi-value blue">${chakFmt(totScreened)}</div>
+        <div class="chak-kpi-sub">Total TB screening encounters (universe)</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❷ TB Positive</div>
+        <div class="chak-kpi-value red">${chakFmt(totPos)}</div>
+        <div class="chak-kpi-sub">Confirmed bacteriologically positive</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❸ Positivity Rate</div>
+        <div class="chak-kpi-value orange">${posPct}%</div>
+        <div class="chak-kpi-sub">% of screened that tested positive</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❹ Not Positive</div>
+        <div class="chak-kpi-value" style="color:#94a3b8">${chakFmt(notPositive)}</div>
+        <div class="chak-kpi-sub">Screened but negative (Screened − Positive)</div>
+      </div>
+    </div>
+
+    <!-- Row 2: ART Integration -->
+    <div class="chak-kpi-grid">
+      <div class="chak-kpi-card" style="border-left:4px solid #ea580c">
+        <div class="chak-kpi-label">❺ TB on ART</div>
+        <div class="chak-kpi-value purple">${chakFmt(totOnArt)}</div>
+        <div class="chak-kpi-sub">TB patients on ART (treatment integration)</div>
+      </div>
+      <div class="chak-kpi-card">
+        <div class="chak-kpi-label">❻ ART Uptake</div>
+        <div class="chak-kpi-value green">${artPct}%</div>
+        <div class="chak-kpi-sub">% of TB+ patients on ART</div>
+      </div>
+      <div class="chak-kpi-card" style="border-left:4px solid #dc2626">
+        <div class="chak-kpi-label">❼ Not on ART</div>
+        <div class="chak-kpi-value" style="color:#dc2626">${chakFmt(notOnArt)}</div>
+        <div class="chak-kpi-sub">TB+ not on ART (gap − <strong>target: 0</strong>)</div>
+      </div>
+      <div class="chak-kpi-card" style="border-left:4px solid #16a34a">
+        <div class="chak-kpi-label">❽ Treatment Gap Closed</div>
+        <div class="chak-kpi-value" style="color:#16a34a">${totPos > 0 ? Math.round((totOnArt / totPos) * 100) : 0}%</div>
+        <div class="chak-kpi-sub">% of TB+ on ART (on ART ÷ Positive)</div>
+      </div>
+    </div>
+
+    <!-- Cascade Charts (5) — Top: Full horizontal cascade, then 4 detail charts -->
+    <div class="chak-chart-grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+      ${chakHighchartsCard("📊 TB All-Indicators Cascade — Full Flow (Horizontal)", "chakTbTopCascade", "full")}
+      ${chakChartCard("📊 TB Cascade — Screened → TB+ → On ART", "chakTbCascade1")}
+      ${chakChartCard("📊 Screening Outcome — Screened · Positive · Not Positive", "chakTbCascade2")}
+      ${chakChartCard("📊 Treatment Gap — TB+ · On ART · Not on ART", "chakTbCascade3")}
+      ${chakChartCard("📊 ART Integration — TB+ · On ART · Uptake %", "chakTbCascade4")}
+    </div>
+
+    <!-- Cascade Description -->
+    <div class="chak-chart-card full" style="margin-top:4px">
+      <div class="chak-chart-header"><h3>🔍 How to read this cascade</h3></div>
+      <div style="font-size:12px;color:#4b5563;line-height:1.7">
+        <p><strong>Step 1 (Screening):</strong> <code>TB Screened</code> — All patients screened for TB (universe). <code>Positivity Rate</code> = % who test positive.</p>
+        <p><strong>Step 2 (Diagnosis):</strong> <code>TB Positive</code> = confirmed bacteriologically. <code>Not Positive</code> = screened but negative.</p>
+        <p><strong>Step 3 (ART Integration):</strong> <code>TB on ART</code> = TB+ patients on antiretroviral therapy. <code>Not on ART</code> = the treatment gap.</p>
+        <p><strong>Step 4 (Goal):</strong> 100% of TB+ patients on ART. <span style="color:#16a34a;font-weight:600">Target: Gap = 0, ART Uptake = 100%.</span></p>
+        <p style="margin-top:6px;color:#6b7280;font-size:11px"><strong>Charts:</strong> ① Full cascade (horizontal, all indicators) · ② Cascade (stepped) · ③ Screening outcome (Screened, Positive, Not Positive) · ④ Treatment gap (TB+, On ART, Not on ART) · ⑤ ART integration (TB+, On ART, Uptake %)</p>
+      </div>
+    </div>`;
+
   el.setAttribute("data-chak-slug", "tb");
   _chakSetData("tb", data);
-  // Combo: cascade bars + % positivity line
-  chakCreateChart(
-    "chakTbCascade",
-    chakLineClusteredColumnComboChart(
-      trend,
-      [
+
+  // ── Chart 1: TB Cascade (Screened → TB+ → On ART) ──
+  chakCreateChart("chakTbCascade1", {
+    type: "bar",
+    data: {
+      labels: ["TB Screened", "TB Positive", "On ART"],
+      datasets: [
         {
-          key: "tb_screened",
-          label: "Screened",
-          color: CHAK_COLORS.blue + "80",
+          label: "Patients",
+          data: [totScreened, totPos, totOnArt],
+          backgroundColor: ["#2563eb", "#dc2626", "#9333ea"],
+          borderRadius: 4,
         },
-        { key: "tb_pos", label: "TB+", color: CHAK_COLORS.red + "80" },
-        { key: "tb_on_art", label: "On ART", color: CHAK_COLORS.green + "80" },
       ],
-      [{ key: "tb_positivity_pct", label: "% TB+", color: CHAK_COLORS.orange }],
-    ),
-  );
-  chakCreateChart(
-    "chakTbArt",
-    chakLineChart(trend, [
-      { key: "tb_art_uptake_pct", label: "% on ART", color: CHAK_COLORS.green },
-      { key: "tb_positivity_pct", label: "% TB+", color: CHAK_COLORS.orange },
-    ]),
-  );
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Total TB screening encounters",
+                "Confirmed TB positive",
+                "TB patients on ART",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 2: Screening Outcome (Screened · Positive · Not Positive) ──
+  chakCreateChart("chakTbCascade2", {
+    type: "bar",
+    data: {
+      labels: ["TB Screened", "TB Positive", "Not Positive"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [totScreened, totPos, notPositive],
+          backgroundColor: ["#2563eb", "#dc2626", "#94a3b8"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Total TB screening encounters",
+                "Confirmed TB positive",
+                "Screened − Positive (negative)",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 3: Treatment Gap (TB+ · On ART · Not on ART) ──
+  chakCreateChart("chakTbCascade3", {
+    type: "bar",
+    data: {
+      labels: ["TB Positive", "On ART", "Not on ART"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [totPos, totOnArt, notOnArt],
+          backgroundColor: ["#ea580c", "#9333ea", "#dc2626"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Confirmed TB positive (total)",
+                "TB patients on ART",
+                "TB+ not on ART (gap)",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients" },
+        },
+      },
+    },
+  });
+
+  // ── Chart 4: ART Integration (TB+ · On ART · Uptake %) ──
+  // Mixed: bars for counts + line for %
+  chakCreateChart("chakTbCascade4", {
+    type: "bar",
+    data: {
+      labels: ["TB Positive", "On ART", "ART Uptake"],
+      datasets: [
+        {
+          label: "Patients",
+          data: [
+            totPos,
+            totOnArt,
+            totPos > 0 ? Math.round((totOnArt / totPos) * 100) : 0,
+          ],
+          backgroundColor: ["#ea580c", "#16a34a", "#0891b2"],
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const labels = [
+                "Confirmed TB positive (total)",
+                "TB patients on ART",
+                "ART uptake % among TB+",
+              ];
+              return (
+                (ctx.raw || 0).toLocaleString() +
+                " — " +
+                (labels[ctx.dataIndex] || "")
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "#f0f0f0" },
+          title: { display: true, text: "Patients / %" },
+        },
+      },
+    },
+  });
+
+  // ── TOP CASCADE: Horizontal bar showing ALL 8 TB indicators ──
+  const totPresumptive = chakSum(trend, "tb_presumptive");
+  setTimeout(function () {
+    const topEl = document.getElementById("chakTbTopCascade");
+    if (!topEl) return;
+
+    Highcharts.chart("chakTbTopCascade", {
+      chart: { type: "bar", height: 380 },
+      title: {
+        text: "TB Cascade — All Indicators (Horizontal)",
+        style: { fontSize: "14px", fontWeight: "bold" },
+      },
+      subtitle: {
+        text: "TB screening-to-treatment cascade · Flow: Step ❶ → Step ❽",
+        style: { fontSize: "11px", color: "#6b7280" },
+      },
+      xAxis: {
+        categories: [
+          "❶ TB Screened",
+          "❷ TB Presumptive",
+          "❸ TB Positive",
+          "❹ Not Positive",
+          "❺ TB on ART",
+          "❻ ART Uptake %",
+          "❼ Not on ART",
+          "❽ Gap Closed %",
+        ],
+        labels: { style: { fontSize: "11px", fontWeight: "bold" } },
+        title: {
+          text: "Cascade Step",
+          style: { fontSize: "11px", color: "#4b5563" },
+        },
+      },
+      yAxis: {
+        title: {
+          text: "Patients / Percentage",
+          style: { fontSize: "11px", color: "#4b5563" },
+        },
+        min: 0,
+        gridLineColor: "#f0f0f0",
+      },
+      tooltip: {
+        shared: true,
+        formatter: function () {
+          const descs = [
+            "Total TB screening encounters (universe)",
+            "TB presumptive cases identified",
+            "Confirmed TB bacteriologically positive",
+            "Screened but negative (Screened − Positive)",
+            "TB patients on ART (treatment integration)",
+            "% of TB+ patients on ART",
+            "TB+ not on ART (gap — target: 0)",
+            "% of TB+ on ART (on ART ÷ Positive)",
+          ];
+          const pt = this.points?.[0];
+          if (!pt) return "";
+          const i = pt.point.index;
+          return (
+            "<b>" +
+            pt.category +
+            "</b><br/>" +
+            (pt.y || 0).toLocaleString() +
+            " — " +
+            (descs[i] || "")
+          );
+        },
+      },
+      plotOptions: {
+        series: {
+          groupPadding: 0.08,
+          borderRadius: 3,
+          dataLabels: {
+            enabled: true,
+            formatter: function () {
+              if (this.y === 0) return "—";
+              return [5, 7].includes(this.point.index)
+                ? this.y + "%"
+                : Highcharts.numberFormat(this.y, 0);
+            },
+            style: { fontSize: "10px", fontWeight: "bold" },
+          },
+        },
+      },
+      legend: { enabled: false },
+      colors: [
+        "#2563eb",
+        "#0d9488",
+        "#dc2626",
+        "#94a3b8",
+        "#9333ea",
+        "#16a34a",
+        "#dc2626",
+        "#16a34a",
+      ],
+      series: [
+        {
+          name: "Patients",
+          data: [
+            totScreened,
+            totPresumptive,
+            totPos,
+            notPositive,
+            totOnArt,
+            artPct,
+            notOnArt,
+            totPos > 0 ? Math.round((totOnArt / totPos) * 100) : 0,
+          ],
+        },
+      ],
+    });
+  }, 100);
 });
 
 // ── Post Rape ──
