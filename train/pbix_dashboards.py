@@ -42,6 +42,22 @@ HTS_POSITIVE = "CcOr3MB7Mh4"
 HTS_LINKED_WITHIN = ["wQ5AA7GTs9G", "YroUdlNVeR2", "h13L1gcUaCS"]
 HTS_LINKED_OUTSIDE = ["DdPzCAtN3J2", "ZnetI7sd8Ub", "BeO9dmxTBMg"]
 
+# Test Kits (HIV_ST)
+HIV_ST_KITS_ASSISTED = "F2xJbmWy7Ci"   # HIV_ST - Kits Distributed :Directly Assisted
+HIV_ST_KITS_UNASSISTED = "GcN1zIpraSK"  # HIV_ST - Kits Distributed :Unassisted
+
+# Modality entry points with labels
+MODALITY_LABELS = {
+    "VCT": "J4zibSjbBCt",
+    "TB Clinic": "XYhYAMivUX5",
+    "PITC Emergency": "XKAlilawdhN",
+    "PITC Inpatient": "THJbtDzxplR",
+    "PITC Pediatric": "Lwtqyjus0Mb",
+    "STI Clinic": "QBsyLQZRdiH",
+    "Malnutrition": "ymKviaHZtQN",
+    "Other PITC": "vFlUDposW0Y",
+}
+
 # PrEP
 PREP_NEW = ["HmUEZ2yWtAE", "tSOqRYW3fUp", "CYLF8hUOHpv", "Q57YuHsnTKm",
             "OOhFACMqmKp", "hxfjIrnxHBF", "EmzN6C78vFE", "BSx4nKKwK1r",
@@ -417,6 +433,7 @@ def pbix_api_hts_performance():
     pe = request.args.get("period", "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_safe(county, subcounty, facility)
 
+    # 1) Trend data (existing)
     results, errors = _fetch_multi([
         ("tested", HTS_TST_ENTRY_POINTS),
         ("positive", HTS_POSITIVE),
@@ -425,6 +442,19 @@ def pbix_api_hts_performance():
         ("tx_new", TX_NEW),
     ], ou_id, pe)
 
+    # 2) Modality-level data (each entry point individually)
+    modality_specs = [(label, uid) for label, uid in MODALITY_LABELS.items()]
+    modality_results, modality_errors = _fetch_multi(modality_specs, ou_id, pe)
+    errors.extend(f"modality_{e}" for e in modality_errors)
+
+    # 3) Test kits data
+    kits_results, kits_errors = _fetch_multi([
+        ("assisted", HIV_ST_KITS_ASSISTED),
+        ("unassisted", HIV_ST_KITS_UNASSISTED),
+    ], ou_id, pe)
+    errors.extend(f"kits_{e}" for e in kits_errors)
+
+    # Build trend
     all_periods = sorted(
         set().union(*[d.keys() for d in results.values()]),
         key=_period_sort_key,
@@ -455,12 +485,45 @@ def pbix_api_hts_performance():
             "tx_new": round(tx_new_v, 1),
         })
 
+    # Build modality trend
+    modality_all_periods = sorted(
+        set().union(*[d.keys() for d in modality_results.values()]),
+        key=_period_sort_key,
+    )
+    modality_trend = []
+    for p in modality_all_periods:
+        entry = {"period": p, "label": _period_label(p)}
+        for label in MODALITY_LABELS:
+            entry[label.lower().replace(" ", "_")] = round(
+                float(modality_results.get(label, {}).get(p, 0)), 1
+            )
+        modality_trend.append(entry)
+
+    # Build kits trend
+    kits_all_periods = sorted(
+        set().union(*[d.keys() for d in kits_results.values()]),
+        key=_period_sort_key,
+    )
+    kits_trend = []
+    for p in kits_all_periods:
+        assisted = float(kits_results.get("assisted", {}).get(p, 0))
+        unassisted = float(kits_results.get("unassisted", {}).get(p, 0))
+        kits_trend.append({
+            "period": p,
+            "label": _period_label(p),
+            "directly_assisted": round(assisted, 1),
+            "unassisted": round(unassisted, 1),
+            "total_kits": round(assisted + unassisted, 1),
+        })
+
     return jsonify({
         "page": "HTS Performance",
         "county": county,
         "source": "dhis2_live",
         "period_range": pe,
         "trend": trend,
+        "modality_trend": modality_trend,
+        "kits_trend": kits_trend,
         "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "errors": errors or None,
     })

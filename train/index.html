@@ -10,6 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
       :root {
         color-scheme: light;
@@ -100,8 +101,481 @@
         border-color: #38bdf8;
         color: #0284c7;
       }
+      .project-map {
+        height: 380px;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .map-legend {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 1000;
+        background: rgba(255,255,255,0.95);
+        border-radius: 8px;
+        padding: 8px 10px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        pointer-events: none;
+      }
+
+      /* ═══════════════════════════════════════════
+         HOMEPAGE REDESIGN
+         ═══════════════════════════════════════════ */
+
+      /* ── Hero Section ── */
+      .home-hero {
+        background: linear-gradient(135deg, #07559e 0%, #0ea5e9 50%, #38bdf8 100%);
+        border-radius: 20px;
+        padding: 40px 36px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(10, 102, 194, 0.15);
+      }
+      .home-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+      }
+      .hero-stat {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 20px 16px;
+        text-align: center;
+        transition: transform 0.3s ease, background 0.3s ease;
+      }
+      .hero-stat:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.22);
+      }
+      .hero-stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .hero-stat-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 6px;
+      }
+
+      /* ── Collapsible Project Cards ── */
+      .project-card-c {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .project-card-c:hover {
+        box-shadow: 0 12px 40px rgba(10, 102, 194, 0.08);
+        transform: translateY(-2px);
+      }
+      .project-card-header {
+        padding: 18px 22px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        user-select: none;
+        transition: background 0.2s ease;
+      }
+      .project-card-header:hover {
+        background: #f8fcff;
+      }
+      .project-card-header:active {
+        background: #eff6ff;
+      }
+      .project-card-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+        opacity: 0;
+      }
+      .project-card-body.open {
+        max-height: 2000px;
+        opacity: 1;
+      }
+      .expand-icon {
+        font-size: 11px;
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        color: #94a3b8;
+      }
+      .expand-icon.rotated {
+        transform: rotate(180deg);
+      }
+
+      /* ── Stat Badges ── */
+      .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        white-space: nowrap;
+      }
+
+      /* ── Scroll Animations ── */
+      .animate-on-scroll {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .animate-on-scroll.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .animate-on-scroll.delay-1 { transition-delay: 0.05s; }
+      .animate-on-scroll.delay-2 { transition-delay: 0.12s; }
+      .animate-on-scroll.delay-3 { transition-delay: 0.2s; }
+      .animate-on-scroll.delay-4 { transition-delay: 0.28s; }
+
+      /* ── Tab View Transitions ── */
+      .hp-view-enter {
+        animation: hpViewEnter 0.4s ease both;
+      }
+      @keyframes hpViewEnter {
+        from {
+          opacity: 0;
+          transform: translateX(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* ── Homepage Hero ── */
+      .hp-hero {
+        background: linear-gradient(135deg, #0a2540 0%, #1a4a7a 40%, #0ea5e9 100%);
+        position: relative;
+        overflow: hidden;
+      }
+      .hp-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 600px 300px at 10% 20%, rgba(14,165,233,0.15) 0%, transparent 70%),
+          radial-gradient(ellipse 400px 400px at 90% 80%, rgba(99,102,241,0.10) 0%, transparent 70%),
+          radial-gradient(ellipse 300px 300px at 50% 50%, rgba(16,185,129,0.06) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .hp-hero-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.4;
+      }
+      .hp-hero-count {
+        font-size: 3.5rem;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, #ffffff 0%, #93c5fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hp-hero-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.7);
+      }
+
+      /* ── Scroll Animations ── */
+      .hp-fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .hp-fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .hp-stagger-1 { transition-delay: 0.0s; }
+      .hp-stagger-2 { transition-delay: 0.1s; }
+      .hp-stagger-3 { transition-delay: 0.2s; }
+      .hp-stagger-4 { transition-delay: 0.3s; }
+      .hp-stagger-5 { transition-delay: 0.4s; }
+
+      /* ── Project Cards (Hero-style) ── */
+      .hp-project-card {
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.35s ease, box-shadow 0.4s ease;
+        cursor: pointer;
+      }
+      .hp-project-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 20px 50px rgba(10,102,194,0.15);
+      }
+
+      /* Hero-like gradient background */
+      .hp-card-hero-bg {
+        position: relative;
+        overflow: hidden;
+        border-radius: 20px;
+      }
+      .hp-card-hero-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 500px 250px at 10% 30%, rgba(255,255,255,0.10) 0%, transparent 70%),
+          radial-gradient(ellipse 300px 300px at 85% 80%, rgba(255,255,255,0.06) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 1;
+      }
+      .hp-card-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        opacity: 0.5;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      /* Card header area (always visible) */
+      .hp-card-hero {
+        padding: 28px 32px;
+        position: relative;
+        z-index: 2;
+        cursor: pointer;
+        user-select: none;
+      }
+      /* Top row: icon + name + expand */
+      .hp-card-top-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .hp-card-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.18);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+      }
+      .hp-card-name {
+        flex: 1;
+        min-width: 0;
+      }
+      .hp-card-name-main {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.10);
+      }
+      .hp-card-name-sub {
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.6);
+        line-height: 1.3;
+        margin-top: 2px;
+      }
+      .hp-card-expand-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 0.9rem;
+        transition: all 0.35s ease;
+        flex-shrink: 0;
+      }
+      .hp-card-expand-btn.open {
+        transform: rotate(180deg);
+        background: rgba(255,255,255,0.25);
+      }
+
+      /* Big numbers row (hero-style counters) */
+      .hp-card-numbers {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .hp-card-num-item {
+        text-align: center;
+      }
+      .hp-card-num-value {
+        font-size: 2.8rem;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-variant-numeric: tabular-nums;
+      }
+      .hp-card-num-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.65);
+        margin-top: 4px;
+      }
+
+      /* Glass chips row */
+      .hp-card-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .hp-glass-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.12);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.10);
+        color: rgba(255,255,255,0.85);
+        transition: all 0.25s ease;
+      }
+      .hp-glass-chip:hover {
+        background: rgba(255,255,255,0.20);
+        transform: scale(1.04);
+      }
+
+      /* Collapsible body */
+      .hp-card-body {
+        overflow: hidden;
+        transition: max-height 0.5s ease, opacity 0.4s ease;
+        max-height: 0;
+        opacity: 0;
+        position: relative;
+        z-index: 2;
+      }
+      .hp-card-body.open {
+        max-height: 2400px;
+        opacity: 1;
+      }
+      .hp-card-body-inner {
+        padding: 24px 32px 32px;
+        background: rgba(0,0,0,0.25);
+        backdrop-filter: blur(4px);
+        border-top: 1px solid rgba(255,255,255,0.08);
+      }
+
+      /* Rolling number shimmer on cards */
+      .hp-card-num-value.shimmer {
+        background: linear-gradient(90deg, #ffffff 20%, rgba(255,255,255,0.5) 50%, #ffffff 80%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: hpCardShimmer 2.5s ease-in-out infinite;
+      }
+      @keyframes hpCardShimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      /* ── County Cards ── */
+      .hp-county-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #fff;
+        padding: 16px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .hp-county-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #0ea5e9, #10b981);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .hp-county-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(10,102,194,0.10);
+        border-color: #b9d8f8;
+      }
+      .hp-county-card:hover::before {
+        opacity: 1;
+      }
+
+      /* ── Quick Stats Row ── */
+      .hp-stat-box {
+        border-radius: 14px;
+        padding: 16px 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+      .hp-stat-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(10,102,194,0.12);
+      }
+
+      /* ── Tab Bar ── */
+      .hp-tab-btn-v2 {
+        padding: 10px 24px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 12px 12px 0 0;
+        transition: all 0.25s ease;
+        cursor: pointer;
+      }
+      .hp-tab-btn-v2.active {
+        background: #fff;
+        color: #0369a1;
+        box-shadow: 0 -2px 8px rgba(10,102,194,0.06);
+      }
+      .hp-tab-btn-v2:not(.active) {
+        color: #64748b;
+      }
+      .hp-tab-btn-v2:not(.active):hover {
+        color: #334155;
+        background: #f1f8fe;
+      }
     </style>
-  </head>
   <body class="font-sans text-slate-900 antialiased">
     <div class="min-h-screen">
       <header class="border-b border-slate-200 bg-white">
@@ -271,6 +745,7 @@
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <script src="/main.js?v=20260711"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/main.js?v=20260715a"></script>
   </body>
 </html>

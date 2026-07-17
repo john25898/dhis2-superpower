@@ -116404,1135 +116404,497 @@
     ],
     "HYPERTENSION_DIABETES": [
       {
-        "id": "sMa1HNbtUKH",
-        "name": "MHU type 2 20-35F",
-        "categoryCombo": "default",
+        "id": "X1nfVRZfgoj",
+        "name": "NCD_No. of newly diagnosed diabetes cases",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "IdhPpmXgylv",
-        "name": "MHU hypertension 60+M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "XsklT5He1Qt",
-        "name": "MHU revisit diabetes F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "QewB2or0sd6",
-        "name": "MHU type 1 35+M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "tMWZxTb40ur",
-        "name": "MHU hypertension 10-19F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "m1FHQSi0XVK",
-        "name": "MHU hypertension highBP M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "miriiowTYpc",
-        "name": "MHU diabetes amputation M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "jGnlScmkGTf",
-        "name": "MHU diabetes retinopathy M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "IgipH57rMvy",
-        "name": "MHU diabetes ins_ogla F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "e6jCrEnYAQ5",
-        "name": "MHU type 2 60+M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "paipvc1sTpg",
-        "name": "MHU type 1 10-19F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "Dhj2OHF1tqF",
-        "name": "MHU hypertension 20-35M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "wK9GnBDp58U",
-        "name": "MHU diabetes diet M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "XWU6eAprRo2",
-        "name": "MHU type 2 36-60F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "EDMg3LBKCZ4",
-        "name": "MHU revisit hypertension F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "mjgWvmruQdm",
-        "name": "MHU diabetes insulin F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "BQnjDZfbVpH",
-        "name": "MHU new diabetes F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "lpQN3uVpjwQ",
-        "name": "MHU diabetes new foot F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "VirXG8eUar4",
-        "name": "MHU new hypertension F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "yWTMyVt7Gmo",
-        "name": "MHU hypertension stroke F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "gXHS3g1vpds",
-        "name": "MHU diabetes hba1c<7 M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "Uv5EIGUf0Q8",
-        "name": "MHU diabetes new foot M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "CALW0SsZMwP",
-        "name": "MHU new comorbid F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "YVVxj3n1Kwm",
-        "name": "MHU diabetes ins_ogla M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "pk3VFb0p5Il",
-        "name": "MHU secondary diabetes M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "mUqzywEVmjQ",
-        "name": "MHU diabetes TB F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "tMCnAwCEip7",
-        "name": "MHU hypertension highBP F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "NxC64gnGcmJ",
-        "name": "MHU diabetes admitted Hypo M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "Mwhen8ylF4R",
-        "name": "MHU diabetes kidney M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "JfdWh02YhPt",
-        "name": "MHU hypertension stroke M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "IZKzFnD2d3T",
-        "name": "MHU cumm diabetes M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "l57KnZdJusX",
-        "name": "MHU hypertention neuropathies M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "KUcxdmW79Wy",
-        "name": "MHU diabetes admitted Hypo F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "V1phkCBbVao",
-        "name": "MHU hypertension ischemic F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "yKb4StR6WPV",
-        "name": "MHU hypertension 10-19M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "XJznj7ReQI6",
-        "name": "MHU diabetes hba1c M",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "ygW3yRKHPig",
-        "name": "MHU hypertension emergency F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "jC0hT7cUMKi",
-        "name": "MHU type 1 35+F",
-        "categoryCombo": "default",
-        "cocs": [
-          {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "tAgd0OpLtVI",
-        "name": "MHU hypertension 0-18M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "cxMJW0HxZwa",
-        "name": "MHU diabetes admitted DKA F",
-        "categoryCombo": "default",
+        "id": "s7cDALEmOP0",
+        "name": "NCD_No. of newly diagnosed hypertension cases",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "BBq7a3cF0Ip",
-        "name": "MHU diabetes NHIF F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "H1jHjOerMBL",
-        "name": "MHU hypertension death M",
-        "categoryCombo": "default",
+        "id": "lzXHQzLfZ3Y",
+        "name": "MOH 740_Newly diagnosed co-morbid with both DM and HTN cases",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "VbVLS0PICk5",
-        "name": "MHU new hypertension M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "ccpBhqbQc4O",
-        "name": "MHU new comorbid M",
-        "categoryCombo": "default",
+        "id": "PMAwYlc0jCR",
+        "name": "MOH 740_Revisits to clinic/Known DM",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "H6uvE3zjrMy",
-        "name": "MHU type 2 10-19F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "nyDdv6MAEy1",
-        "name": "MHU hypertension antihyper M",
-        "categoryCombo": "default",
+        "id": "zaaOEKkYUYN",
+        "name": "MOH 740_Re-visit to clinic/Known HTN",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "RWHfCjBsi6U",
-        "name": "MHU diabetes death F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "tK9f54Ko9uG",
-        "name": "MHU hypertension failure M",
-        "categoryCombo": "default",
+        "id": "U2C1pH3FhPr",
+        "name": "MOH 740_Revisits to clinic/Known co-morbid DM and HTN",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "tODD2q2g6Qb",
-        "name": "MHU diabetes foot F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "RuwPZvqa4dW",
-        "name": "MHU diabetes admitted DKA M",
-        "categoryCombo": "default",
+        "id": "QxrKGwLa01d",
+        "name": "NCD_Re-visit (DM and HTN)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "hGcZeVFxKPc",
-        "name": "MHU hypertension 0-18F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "OeV8S0QLQws",
-        "name": "MHU hypertension 35-60F",
-        "categoryCombo": "default",
+        "id": "DJaovg3DyCN",
+        "name": "NCD_First visit (DM and HTN)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "oB7Uswx9iBA",
-        "name": "MHU new diabetes M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "Kh73ytHyuba",
-        "name": "MHU cumm hypertension F",
-        "categoryCombo": "default",
+        "id": "j4XffLyqcY7",
+        "name": "NCD_No. of patients on diet and exercise only (DM and HTN)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "xG5CjkSkxPc",
-        "name": "MHU diabetes admitted Stroke F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "fIcd7iFhL1R",
-        "name": "MHU type 2 60+F",
-        "categoryCombo": "default",
+        "id": "EgtgGwiEZVK",
+        "name": "NCD_No. of patients on insulin",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "VImd3MVYEl6",
-        "name": "MHU revisit hypertension M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "a00biJP5DTx",
-        "name": "MHU type 1 0-5F",
-        "categoryCombo": "default",
+        "id": "K9iAjXdslFq",
+        "name": "NCD_No. of patients on OGLAs",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "CeuXW9CjXDJ",
-        "name": "MHU type 2 20-35M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "HhHcRy9pRlB",
-        "name": "MHU type 1 10-19M",
-        "categoryCombo": "default",
+        "id": "nVAnB1FaQvS",
+        "name": "NCD_No. of patients on both (Insulin and OGLAs)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "HCR3lKMkxz9",
-        "name": "MHU revisit diabetes M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "SKopQGzwayW",
-        "name": "MHU hypertension emergency M",
-        "categoryCombo": "default",
+        "id": "OPV0jQg6XUq",
+        "name": "NCD_No. of patients on antihypertensives",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "qwhAwDrZcMS",
-        "name": "MHU hypertention neuropathies F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "fRijLHs8iWi",
-        "name": "MHU cumm diabetes F",
-        "categoryCombo": "default",
+        "id": "SNIA8DX7tap",
+        "name": "NCD_No. of patients done HbA1c",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "f7aQiEkSWQE",
-        "name": "MHU diabetes insulin M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "zGbRffm7WZg",
-        "name": "MHU diabetes diet F",
-        "categoryCombo": "default",
+        "id": "VoFeZvr48Lh",
+        "name": "NCD_No. that met HbA1c target (< 7%)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "b2ooso3efQM",
-        "name": "MHU hypertension 20-35F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "oVjplBYbEmC",
-        "name": "MHU type 1 20-35F",
-        "categoryCombo": "default",
+        "id": "Ni5RRjLGWQH",
+        "name": "NCD_No. admitted with DKA",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "TT4fj8RKLgG",
-        "name": "MHU diabetes foot M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "FeX2ppZfPsw",
-        "name": "MHU diabetes hba1c F",
-        "categoryCombo": "default",
+        "id": "bZn8S29lVjp",
+        "name": "NCD_No. admitted with Hypoglycemia",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "y7iz6fYaxoN",
-        "name": "MHU type 1 6-9F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "adzZEIvU9YJ",
-        "name": "MHU cumm comorbid F",
-        "categoryCombo": "default",
+        "id": "mkPM8byu5Zx",
+        "name": "NCD_No. admitted with stroke",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "Z0FugaBdIQM",
-        "name": "MHU gestational F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "iBzIZGGyWGp",
-        "name": "MHU diabetes hba1c<7 F",
-        "categoryCombo": "default",
+        "id": "nHL9YUGPVGt",
+        "name": "NCD_No. admitted with heart failure",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "HLbMAGQgp4U",
-        "name": "MHU type 2 10-19M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "DEMgwBX2kru",
-        "name": "MHU hypertension 35-60M",
-        "categoryCombo": "default",
+        "id": "qNqKmxk27MU",
+        "name": "NCD_No. with kidney complications",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "C523Cm8JAfU",
-        "name": "MHU type 2 36-60M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "deXQw4RRcPH",
-        "name": "MHU diabetes ogla F",
-        "categoryCombo": "default",
+        "id": "yie5hljYlAv",
+        "name": "NCD_No. with diabetic retinopathy",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "mYFrL7EOAxX",
-        "name": "MHU diabetes death M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "kV668QiRtmV",
-        "name": "MHU hypertension 60+F",
-        "categoryCombo": "default",
+        "id": "VwCqIauu3qT",
+        "name": "NCD_No. of Patients with neuropathies",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "IGTYmSstyk6",
-        "name": "MHU hypertension ischemic M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "AuPubTF6X3X",
-        "name": "MHU cumm comorbid M",
-        "categoryCombo": "default",
+        "id": "ZtOe9P9tKDG",
+        "name": "MOH 740_No. of patients with diabetic foot (new diagnosis)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "qoQH68gcruz",
-        "name": "MHU type 1 6-9M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "CRkusaqxUmj",
-        "name": "MHU diabetes kidney F",
-        "categoryCombo": "default",
+        "id": "z88eEimoRGI",
+        "name": "NCD_No. of patients screened for diabetic foot",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "whfcDhhZXs7",
-        "name": "MHU type 1 20-35M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "b7PnmntMzx4",
-        "name": "MHU type 1 0-5M",
-        "categoryCombo": "default",
+        "id": "ZRSBoRa00hj",
+        "name": "NCD_No. of patients with diabetic foot ulcer",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "PoNGzU0vghY",
-        "name": "MHU diabetes ogla M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "k79u3U85l07",
-        "name": "MHU diabetes NHIF M",
-        "categoryCombo": "default",
+        "id": "QURrpyQyh6b",
+        "name": "NCD_No. of amputation due to diabetic foot",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "bDIfx47UOUw",
-        "name": "MHU type 2 0-18M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "JewzVxh98SU",
-        "name": "MHU secondary diabetes F",
-        "categoryCombo": "default",
+        "id": "Tjf74bmUe8h",
+        "name": "NCD_No. of feet saved through treatment",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "mQdYO1ieTd8",
-        "name": "MHU hypertension failure F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "JPwEBbLg2EM",
-        "name": "MHU diabetes retinopathy F",
-        "categoryCombo": "default",
+        "id": "ebigsxT6fUb",
+        "name": "NCD_No. Screened for Tuberculosis",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "JRgpSRCaKhe",
-        "name": "MHU revisit comorbid M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "j4Ed7XO7F0H",
-        "name": "MHU diabetes amputation F",
-        "categoryCombo": "default",
+        "id": "WlyzeVsquET",
+        "name": "NCD_No. Screened Positive for Tuberclosis",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "Hu1DkcE67eD",
-        "name": "MHU diabetes TB M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "QsPDEgwJkG2",
-        "name": "MHU type 2 0-18F",
-        "categoryCombo": "default",
+        "id": "x0UpKUf3qN4",
+        "name": "NCD_No. screened for Gestational Diabetes Mellitus",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "KnOitUvc0nA",
-        "name": "MHU diabetes admitted Stroke M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "lQXflNcxk6i",
-        "name": "MHU cumm hypertension M",
-        "categoryCombo": "default",
+        "id": "Qcz2146ffun",
+        "name": "NCD_No. diagnosed for Gestational Diabetes Mellitus",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "H6IQRHUxWS1",
-        "name": "MHU diabetes TB Pos F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "wuHSw5dxeNf",
-        "name": "MHU hypertension antihyper F",
-        "categoryCombo": "default",
+        "id": "vkgcaOcqEX9",
+        "name": "NCD_No. of Diabetes secondary to other causes",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "RIDbyF0xRTK",
-        "name": "MHU revisit comorbid F",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       },
       {
-        "id": "q3l2hSIOHt4",
-        "name": "MHU hypertension death F",
-        "categoryCombo": "default",
+        "id": "CJB9gTlPyD5",
+        "name": "NCD_No. with high BP (More than140/90)",
+        "categoryCombo": "iHRIS Gender",
         "cocs": [
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
-          }
-        ]
-      },
-      {
-        "id": "AtBE6DfnL56",
-        "name": "MHU diabetes TB Pos M",
-        "categoryCombo": "default",
-        "cocs": [
+            "id": "FuhsC4lsmD6",
+            "name": "Male"
+          },
           {
-            "id": "HllvX50cXC0",
-            "name": "default"
+            "id": "nCqrSIqkTGH",
+            "name": "Female"
           }
         ]
       }

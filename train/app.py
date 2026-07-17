@@ -1069,6 +1069,78 @@ def create_app() -> Flask:
             result[dx_id][pe_name] = result[dx_id].get(pe_name, 0) + val
         return result
 
+    def _khis_parse_per_coc(rows, meta, headers):
+        """Parse KHIS analytics rows into per-(DE+COC) dict preserving category combos.
+        The column order is dynamic (depends on dimension order):
+          [dx, co, pe, ou, value]
+        Uses header names to find correct column indices.
+        Returns: {"DE_ID.CO_ID": {period_name: value, ...}, ...}
+        """
+        # Build index map: column name -> index
+        col_idx = {}
+        for i, h in enumerate(headers):
+            col_idx[h.get("name", "")] = i
+        dx_col = col_idx.get("dx", 0)
+        co_col = col_idx.get("co", 1)
+        pe_col = col_idx.get("pe", 2)
+        val_col = col_idx.get("value", len(headers) - 1)
+
+        result = {}
+        for row in rows:
+            if len(row) <= max(dx_col, co_col, pe_col, val_col):
+                continue
+            dx_id = str(row[dx_col])
+            co_code = str(row[co_col])
+            composite_key = f"{dx_id}.{co_code}"
+            pe_code = str(row[pe_col])
+            pe_name = meta.get(pe_code, {}).get("name", pe_code)
+            val = float(row[val_col]) if row[val_col] else 0
+            if composite_key not in result:
+                result[composite_key] = {}
+            result[composite_key][pe_name] = result[composite_key].get(pe_name, 0) + val
+        return result
+
+    def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_12_MONTHS"):
+        """Fetch analytics rows with CO dimension, returning per-COC data.
+        Returns: {"DE_ID.CO_ID": {period_name: value, ...}, ...}
+        """
+        import requests as _req
+        from requests.auth import HTTPBasicAuth
+
+        base = app.config.get("KHIS_BASE")
+        if not base:
+            base = KHIS_BASE
+        url_base = base.rstrip("/") + "/analytics.json"
+        auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+
+        if isinstance(dx_ids, (list, set, tuple)):
+            dx_str = ";".join(dx_ids)
+        else:
+            dx_str = dx_ids
+        if not dx_str or not dx_str.strip():
+            return {}
+
+        if isinstance(ou_id, (list, set, tuple)):
+            ou_str = ";".join(ou_id)
+        else:
+            ou_str = ou_id
+
+        if isinstance(coc_ids, (list, set, tuple)):
+            coc_str = ";".join(coc_ids)
+        else:
+            coc_str = coc_ids
+
+        dimensions = [f"dx:{dx_str}", f"co:{coc_str}", f"pe:{pe}", f"ou:{ou_str}"]
+        params = {"dimension": dimensions, "displayProperty": "NAME"}
+        resp = _req.get(url_base, params=params, auth=auth, timeout=120)
+        if not resp.ok:
+            return {}
+        data = resp.json()
+        rows = data.get("rows", [])
+        meta = data.get("metaData", {}).get("items", {})
+        headers = data.get("headers", [])
+        return _khis_parse_per_coc(rows, meta, headers)
+
     # ── Facility → Ward mapping (for HIV ward-level queries) ─────────
     _FACILITY_WARD_MAP = None
 
@@ -1082,6 +1154,230 @@ def create_app() -> Flask:
             else:
                 _FACILITY_WARD_MAP = {}
         return _FACILITY_WARD_MAP
+
+    # ── Kenya county centroids (static, for project maps) ──────────────
+    KENYA_COUNTY_CENTERS = {
+        "Meru County": {"lat": 0.0500, "lng": 37.6500},
+        "Nairobi": {"lat": -1.2921, "lng": 36.8219},
+        "Kiambu": {"lat": -1.1667, "lng": 36.8167},
+        "Machakos": {"lat": -1.5167, "lng": 37.2667},
+        "Kisumu": {"lat": -0.1022, "lng": 34.7617},
+        "Homabay": {"lat": -0.5833, "lng": 34.4500},
+        "Migori": {"lat": -1.0667, "lng": 34.4667},
+        "Siaya": {"lat": 0.0500, "lng": 34.2833},
+        "Mombasa": {"lat": -4.0500, "lng": 39.6667},
+        "Turkana": {"lat": 3.1500, "lng": 35.6000},
+        "West Pokot": {"lat": 1.5000, "lng": 35.2000},
+        "Mandera": {"lat": 3.9333, "lng": 41.8667},
+        "Garissa": {"lat": -0.4569, "lng": 39.6583},
+        "Kajiado": {"lat": -2.0000, "lng": 36.8833},
+        "Nakuru": {"lat": -0.3031, "lng": 36.0667},
+        "Nandi": {"lat": 0.1167, "lng": 35.1167},
+        "Uasin Gishu": {"lat": 0.5167, "lng": 35.2833},
+        "Busia": {"lat": 0.4667, "lng": 34.1167},
+        "Kakamega": {"lat": 0.2833, "lng": 34.7500},
+        "Bungoma": {"lat": 0.5667, "lng": 34.5667},
+        "Trans Nzoia": {"lat": 1.0833, "lng": 34.9500},
+        "Elgeyo Marakwet": {"lat": 1.0000, "lng": 35.5000},
+        "Nyeri": {"lat": -0.4167, "lng": 36.9500},
+        "Kirinyaga": {"lat": -0.5000, "lng": 37.2833},
+        "Muranga": {"lat": -0.7167, "lng": 37.1500},
+        "Laikipia": {"lat": 0.0833, "lng": 36.8833},
+        "Tharaka Nithi": {"lat": -0.0833, "lng": 37.8333},
+        "Embu": {"lat": -0.5333, "lng": 37.4500},
+        "Kitui": {"lat": -1.3667, "lng": 38.0167},
+        "Makueni": {"lat": -1.8000, "lng": 37.6333},
+        "Taita Taveta": {"lat": -3.0833, "lng": 38.3667},
+        "Kwale": {"lat": -4.1667, "lng": 39.4500},
+        "Kilifi": {"lat": -3.6333, "lng": 39.8333},
+        "Lamu": {"lat": -2.2667, "lng": 40.9000},
+        "Tana River": {"lat": -1.5000, "lng": 39.5000},
+        "Wajir": {"lat": 1.7500, "lng": 40.0500},
+        "Marsabit": {"lat": 2.3333, "lng": 37.9833},
+        "Isiolo": {"lat": 0.3500, "lng": 37.5833},
+        "Samburu": {"lat": 1.0000, "lng": 36.8000},
+        "Baringo": {"lat": 0.4667, "lng": 35.9667},
+        "Kericho": {"lat": -0.3667, "lng": 35.2833},
+        "Bomet": {"lat": -0.7833, "lng": 35.3500},
+        "Nyamira": {"lat": -0.5667, "lng": 34.9333},
+        "Kisii": {"lat": -0.6667, "lng": 34.7667},
+        "Vihiga": {"lat": 0.0333, "lng": 34.7167},
+        "Narok": {"lat": -1.0833, "lng": 35.8667},
+        "Nyandarua": {"lat": -0.2000, "lng": 36.4333},
+        "Lamu": {"lat": -2.2667, "lng": 40.9000},
+    }
+
+    # ── Project facility locations (uses local data, no KHIS API needed) ──
+    @app.get("/api/khis/facility-locations")
+    def khis_facility_locations():
+        """Return facility locations from local mapping data with county centroids.
+        Uses jamii_tekelezi_filters.csv and facility_ward_mapping.json.
+        """
+        cache_key = "_khis_facility_locations"
+        if cache_key in app.config:
+            return jsonify({"ok": True, "facilities": app.config[cache_key]})
+
+        facilities = {}
+        try:
+            jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+            if jt_path.exists():
+                import csv
+                with open(jt_path, "r", encoding="utf-8-sig") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        fid = row.get("facility_id", "").strip()
+                        fname = row.get("facility_name", "").strip()
+                        county = row.get("county_name", "").strip()
+                        if fid:
+                            center = KENYA_COUNTY_CENTERS.get(county, {"lat": 0.0, "lng": 38.0})
+                            facilities[fid] = {
+                                "name": fname,
+                                "lat": center["lat"],
+                                "lng": center["lng"],
+                                "county": county,
+                            }
+
+            app.config[cache_key] = facilities
+            return jsonify({"ok": True, "facilities": facilities})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e), "facilities": {}})
+
+    # ── Project-to-Facility Mapping (for homepage project cards) ──────
+    @app.get("/api/projects/facility-mapping")
+    def project_facility_mapping():
+        """Return which KHIS facility IDs belong to each project.
+        Uses the Jamii Tekelezi filters CSV to map facilities by county.
+        """
+        projects = {
+            "jamii_tekelezi": {
+                "name": "Jamii Tekelezi",
+                "icon": "📊",
+                "description": "HIV/AIDS program — Testing, Treatment, PrEP, PMTCT, TB.",
+                "counties": ["Embu County", "Meru County", "Nyandarua County", "Tharaka Nithi County"],
+            },
+            "chap_stawisha": {
+                "name": "CHAP Stawisha",
+                "icon": "🌱",
+                "description": "Community Health and Adolescent Program.",
+                "counties": ["Nairobi", "Kiambu", "Machakos"],
+            },
+            "eye_health": {
+                "name": "Eye Health — ACSP & GitLab",
+                "icon": "👁️",
+                "description": "Eye Health program partnership.",
+                "counties": ["Nairobi", "Kisumu", "Mombasa"],
+            },
+            "eis": {
+                "name": "EIS",
+                "icon": "🔬",
+                "description": "Enhanced Infection Surveillance.",
+                "counties": ["Nairobi", "Kiambu"],
+            },
+            "bftw_hss": {
+                "name": "BFTW HSS",
+                "icon": "🏗️",
+                "description": "Health Systems Strengthening.",
+                "counties": ["Kisumu", "Homabay", "Migori"],
+            },
+            "bftw_rmncah": {
+                "name": "BFTW RMNCAH",
+                "icon": "👶",
+                "description": "Reproductive, Maternal, Newborn, Child & Adolescent Health.",
+                "counties": ["Kisumu", "Homabay", "Migori", "Siaya"],
+            },
+            "pep": {
+                "name": "PEP",
+                "icon": "💊",
+                "description": "Post-Exposure Prophylaxis program.",
+                "counties": ["Nairobi", "Mombasa", "Kisumu"],
+            },
+            "gf_mnch": {
+                "name": "GF-MNCH",
+                "icon": "🤱",
+                "description": "Global Fund — Maternal, Newborn & Child Health.",
+                "counties": ["Turkana", "West Pokot", "Mandera", "Garissa"],
+            },
+            "impact": {
+                "name": "IMPACT",
+                "icon": "🎯",
+                "description": "Integrated Monitoring & Program Analysis.",
+                "counties": ["Nairobi", "Kiambu", "Machakos", "Kajiado"],
+            },
+            "cdic_icare": {
+                "name": "CDIC-iCARE",
+                "icon": "💻",
+                "description": "Comprehensive Data Integration for Community AIDS Response.",
+                "counties": ["Nairobi", "Mombasa", "Kisumu", "Homabay"],
+            },
+        }
+
+        # Load facility locations from cached data
+        facility_locations = app.config.get("_khis_facility_locations", {})
+        result = {}
+        for proj_id, proj_info in projects.items():
+            target_counties = set(c.lower().strip() for c in proj_info.get("counties", []))
+            matched_facilities = {}
+            for fid, finfo in facility_locations.items():
+                finfo_county = (finfo.get("county", "") or "").lower().strip()
+                if finfo_county in target_counties:
+                    matched_facilities[fid] = finfo
+            result[proj_id] = {
+                **proj_info,
+                "facility_count": len(matched_facilities),
+                "facilities": matched_facilities,
+            }
+
+        # For projects with no matched facilities, create county-center markers for visual
+        for proj_id, proj_info in projects.items():
+            if result[proj_id]["facility_count"] == 0:
+                counties = proj_info.get("counties", [])
+                fallback_facs = {}
+                for i, county in enumerate(counties):
+                    center = KENYA_COUNTY_CENTERS.get(county, {"lat": 0.5, "lng": 38.0})
+                    fallback_facs[f"__{proj_id}_{i}"] = {
+                        "name": f"{county} Office",
+                        "lat": center["lat"],
+                        "lng": center["lng"],
+                        "county": county,
+                    }
+                result[proj_id]["facilities"] = fallback_facs
+                result[proj_id]["facility_count"] = len(fallback_facs)
+
+        # ── Add MHU/County counts from full KHIS mapping ──────────
+        try:
+            mhu_map_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
+            if mhu_map_path.exists():
+                with open(mhu_map_path, "r", encoding="utf-8") as f:
+                    khis_all = json.load(f).get("facilities", {})
+                # Count facilities per county from the full mapping
+                county_fac_counts = {}
+                for finfo in khis_all.values():
+                    co = finfo.get("county", "").strip()
+                    if co:
+                        county_fac_counts[co] = county_fac_counts.get(co, 0) + 1
+                for proj_id, proj_info in projects.items():
+                    total_mhu = 0
+                    for c in proj_info.get("counties", []):
+                        # Normalize: strip " County" suffix for matching
+                        c_key = c.replace(" County", "").strip()
+                        total_mhu += county_fac_counts.get(c_key, 0) or county_fac_counts.get(c, 0)
+                    result[proj_id]["mhu_count"] = total_mhu
+        except Exception:
+            pass
+
+        return jsonify({"ok": True, "projects": result})
+
+    @app.get("/api/kenya-counties")
+    def kenya_counties_geojson():
+        """Serve Kenya county boundaries as GeoJSON for choropleth maps."""
+        geojson_path = BASE_DIR / "data" / "kenya_counties.geojson"
+        if not geojson_path.exists():
+            return jsonify({"error": "County boundary file not found"}), 404
+        try:
+            with open(geojson_path, "r", encoding="utf-8") as f:
+                return jsonify(json.load(f))
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     # ── MHU endpoint (KHIS-sourced) ──────────────────────────────────
     @app.get("/api/mhu/khis-data")
@@ -1127,6 +1423,25 @@ def create_app() -> Flask:
 
             result = _khis_fetch(dx, actual_ou, pe, None)
             return jsonify({"source": "khis_live", "data": result, "ward": ward_info})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── MHU COC-disaggregated endpoint ──────────────────────────────
+    @app.get("/api/mhu/khis-data-coc")
+    def mhu_khis_data_coc():
+        """Query KHIS analytics with CO dimension for COC-level breakdown.
+        Params: ?dx=...&co=COC1;COC2&ou=...&pe=LAST_12_MONTHS
+        Returns: {"data": {"DE_ID.CO_ID": {period: value, ...}, ...}}
+        """
+        dx = request.args.get("dx", "")
+        co = request.args.get("co", "")
+        ou = request.args.get("ou", "")
+        pe = request.args.get("pe", "LAST_12_MONTHS")
+        if not dx or not ou or not co:
+            return jsonify({"error": "Parameters 'dx', 'co', and 'ou' are required"}), 400
+        try:
+            result = _khis_fetch_disaggregated(dx, ou, co, pe)
+            return jsonify({"source": "khis_live", "data": result})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -1203,6 +1518,55 @@ def create_app() -> Flask:
                 "matched_count": len(matched_ids),
                 "total_requested": len(names),
                 "matched_names": matched_names[:5],
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ── Key Indicators Drill down CSV ───────────────────────────────────
+    @app.get("/api/key-indicators")
+    def key_indicators():
+        """Serve the Key Indicators Drill down.csv as JSON."""
+        csv_path = SUPERPOWER_DIR / "Key Indicators Drill down.csv"
+        if not csv_path.exists():
+            return jsonify({"error": "Key Indicators file not found"}), 404
+        try:
+            df = pd.read_csv(csv_path)
+            df = df.fillna("")
+            # Clean percentage columns — strip % and convert to numeric
+            pct_cols = ["Linkage", "% VL Uptake", "% VL Suppression", "%IIT", "CD4 Uptake", "TPT Uptake"]
+            for col in pct_cols:
+                if col in df.columns:
+                    df[col] = df[col].astype(str).str.replace("%", "", regex=False).str.strip()
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+            count_cols = ["HTS Positive", "TX_NEW", "TX_NEW CD4", "TPT"]
+            for col in count_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+            # Convert to list of dicts with native Python types
+            records = df.to_dict(orient="records")
+            for r in records:
+                for k, v in r.items():
+                    if isinstance(v, float):
+                        if pd.isna(v):
+                            r[k] = None
+            # Compute summary aggregates
+            summary = {}
+            numeric_cols = ["HTS Positive", "Linkage", "% VL Uptake", "% VL Suppression",
+                           "%IIT", "TX_NEW", "TX_NEW CD4", "CD4 Uptake", "TPT", "TPT Uptake"]
+            for col in numeric_cols:
+                vals = df[col]
+                valid = vals.dropna()
+                summary[col] = {
+                    "total": int(valid.sum()) if col in count_cols and len(valid) > 0 else None,
+                    "avg": round(float(valid.mean()), 1) if len(valid) > 0 else 0,
+                    "min": round(float(valid.min()), 1) if len(valid) > 0 else 0,
+                    "max": round(float(valid.max()), 1) if len(valid) > 0 else 0,
+                }
+            return jsonify({
+                "rows": records,
+                "count": len(records),
+                "summary": summary,
+                "columns": list(df.columns),
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 500
