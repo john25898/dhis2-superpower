@@ -305,211 +305,328 @@
       /* ── Scroll Animations ── */
       .hp-fade-in {
         opacity: 0;
-        transform: translateY(30px);
-        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        transform: translateY(40px);
+        transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
       }
       .hp-fade-in.visible {
         opacity: 1;
         transform: translateY(0);
       }
+      .hp-slide-left {
+        opacity: 0;
+        transform: translateX(-50px);
+        transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+      }
+      .hp-slide-left.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .hp-slide-right {
+        opacity: 0;
+        transform: translateX(50px);
+        transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+      }
+      .hp-slide-right.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
       .hp-stagger-1 { transition-delay: 0.0s; }
-      .hp-stagger-2 { transition-delay: 0.1s; }
-      .hp-stagger-3 { transition-delay: 0.2s; }
-      .hp-stagger-4 { transition-delay: 0.3s; }
-      .hp-stagger-5 { transition-delay: 0.4s; }
+      .hp-stagger-2 { transition-delay: 0.08s; }
+      .hp-stagger-3 { transition-delay: 0.16s; }
+      .hp-stagger-4 { transition-delay: 0.24s; }
+      .hp-stagger-5 { transition-delay: 0.32s; }
+      .hp-stagger-6 { transition-delay: 0.40s; }
+      .hp-stagger-7 { transition-delay: 0.48s; }
+      .hp-stagger-8 { transition-delay: 0.56s; }
 
-      /* ── Project Cards (Hero-style) ── */
-      .hp-project-card {
-        border-radius: 20px;
+      /* ── Scroll indicator gradient at bottom ── */
+      .hp-scroll-cue {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+        z-index: 40;
+        opacity: 1;
+        transition: opacity 0.6s ease;
+      }
+      .hp-scroll-cue.faded {
+        opacity: 0;
+      }
+
+      /* ── Stat KPI Cards (CHAP Stawisha style) ── */
+      .hp-stat-card {
         position: relative;
         overflow: hidden;
-        transition: transform 0.35s ease, box-shadow 0.4s ease;
-        cursor: pointer;
+        border-radius: 5px;
+        padding: 50px 40px;
+        text-align: center;
+        transition: all 0.4s ease;
+        cursor: default;
+        box-shadow: 0 3px 15px rgba(16,16,16,0.10);
+        background-size: cover;
+        background-position: 50% 50%;
+        background-repeat: no-repeat;
+        border: none;
       }
-      .hp-project-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 20px 50px rgba(10,102,194,0.15);
-      }
-
-      /* Hero-like gradient background */
-      .hp-card-hero-bg {
-        position: relative;
-        overflow: hidden;
-        border-radius: 20px;
-      }
-      .hp-card-hero-bg::before {
+      .hp-stat-card::before {
         content: '';
         position: absolute;
         inset: 0;
-        background:
-          radial-gradient(ellipse 500px 250px at 10% 30%, rgba(255,255,255,0.10) 0%, transparent 70%),
-          radial-gradient(ellipse 300px 300px at 85% 80%, rgba(255,255,255,0.06) 0%, transparent 70%);
+        background: rgba(30,58,95,0.15);
         pointer-events: none;
         z-index: 1;
+        opacity: 0;
+        transition: opacity 0.5s ease;
       }
-      .hp-card-pattern {
-        position: absolute;
-        inset: 0;
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        opacity: 0.5;
-        pointer-events: none;
-        z-index: 1;
+      .hp-stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(16,16,16,0.18);
       }
-
-      /* Card header area (always visible) */
-      .hp-card-hero {
-        padding: 28px 32px;
+      .hp-stat-card:hover::before {
+        opacity: 1;
+      }
+      .hp-stat-card > * {
         position: relative;
         z-index: 2;
-        cursor: pointer;
-        user-select: none;
       }
-      /* Top row: icon + name + expand */
-      .hp-card-top-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-      .hp-card-icon-wrap {
-        width: 52px;
-        height: 52px;
-        border-radius: 16px;
+      .hp-stat-icon {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 20px !important;
+        color: #0891b2;
+        margin: 0 auto 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.6rem;
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.18);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.15);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.10);
       }
-      .hp-card-name {
-        flex: 1;
-        min-width: 0;
-      }
-      .hp-card-name-main {
-        font-size: 1.2rem;
+      .hp-stat-number {
+        font-size: 2.4rem;
         font-weight: 700;
-        color: #fff;
-        letter-spacing: -0.01em;
-        line-height: 1.3;
-        text-shadow: 0 1px 4px rgba(0,0,0,0.10);
+        color: #1e3a5f;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
       }
-      .hp-card-name-sub {
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.6);
+      .hp-stat-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #2c5282;
+        margin-top: 4px;
+        line-height: 1.3;
+      }
+      @media (max-width: 768px) {
+        .hp-stat-card { padding: 36px 24px; }
+        .hp-stat-number { font-size: 1.8rem; }
+      }
+
+      /* ── Project Cards (Clean card grid) ── */
+      .hp-proj-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 24px;
+        transition: all 0.25s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .hp-proj-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--accent, #0ea5e9);
+      }
+      .hp-proj-card:hover {
+        box-shadow: 0 8px 28px rgba(14,165,233,0.10);
+        transform: translateY(-2px);
+        border-color: #b9d8f8;
+      }
+      .hp-proj-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+      }
+      .hp-proj-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
+      }
+      .hp-proj-desc {
+        font-size: 0.78rem;
+        color: #64748b;
         line-height: 1.3;
         margin-top: 2px;
       }
-      .hp-card-expand-btn {
-        width: 40px;
-        height: 40px;
+      .hp-proj-stat {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #0f172a;
+        font-variant-numeric: tabular-nums;
+      }
+      .hp-proj-stat-label {
+        font-size: 0.68rem;
+        color: #94a3b8;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 1px;
+      }
+      .hp-proj-view-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #0284c7;
+        padding: 6px 14px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      .hp-proj-view-btn:hover {
+        background: #f0f9ff;
+      }
+
+      /* ── Expandable Card Body ── */
+      .hp-expand-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.15);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.15);
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        color: #94a3b8;
+      }
+      .hp-expand-btn:hover {
+        background: #f0f9ff;
+        border-color: #0ea5e9;
+        color: #0284c7;
+      }
+      .hp-expand-icon {
+        display: inline-block;
+        font-size: 0.7rem;
+        line-height: 1;
+        transition: transform 0.35s ease;
+      }
+      .hp-expand-icon.open {
+        transform: rotate(180deg);
+      }
+      .hp-card-body {
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.45s ease, opacity 0.35s ease, padding 0.35s ease;
+        padding: 0 4px;
+      }
+      .hp-card-body.open {
+        max-height: 2000px;
+        opacity: 1;
+        padding: 4px;
+      }
+      .hp-card-map {
+        height: 340px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        background: #f8fafc;
+      }
+      .hp-map-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+        justify-content: center;
+      }
+      .hp-map-filter-btn {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 14px;
+        border-radius: 9999px;
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #475467;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .hp-map-filter-btn:hover {
+        background: #f0fdf4;
+        border-color: #86cfa0;
+        color: #166534;
+      }
+      .hp-map-filter-btn.active {
+        background: #dcfce7;
+        border-color: #4ade80;
+        color: #166534;
+      }
+
+      /* ── Stawisha-style Focus Cards ── */
+      .hp-stawisha-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      @media (max-width: 768px) {
+        .hp-stawisha-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .hp-stawisha-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 14px;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+      }
+      .hp-stawisha-card:hover {
+        border-color: var(--accent, #0ea5e9);
+        box-shadow: 0 4px 16px rgba(14,165,233,0.08);
+        transform: translateY(-1px);
+      }
+      .hp-stawisha-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-size: 0.9rem;
-        transition: all 0.35s ease;
+        font-size: 1.2rem;
         flex-shrink: 0;
+        transition: transform 0.3s ease;
       }
-      .hp-card-expand-btn.open {
-        transform: rotate(180deg);
-        background: rgba(255,255,255,0.25);
+      .hp-stawisha-card:hover .hp-stawisha-icon {
+        transform: scale(1.1);
       }
-
-      /* Big numbers row (hero-style counters) */
-      .hp-card-numbers {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-top: 24px;
+      .hp-stawisha-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
       }
-      .hp-card-num-item {
-        text-align: center;
-      }
-      .hp-card-num-value {
-        font-size: 2.8rem;
-        line-height: 1;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-variant-numeric: tabular-nums;
-      }
-      .hp-card-num-label {
-        font-size: 0.78rem;
-        font-weight: 500;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.65);
-        margin-top: 4px;
-      }
-
-      /* Glass chips row */
-      .hp-card-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 18px;
-      }
-      .hp-glass-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        border-radius: 9999px;
+      .hp-stawisha-desc {
         font-size: 0.72rem;
-        font-weight: 600;
-        background: rgba(255,255,255,0.12);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.10);
-        color: rgba(255,255,255,0.85);
-        transition: all 0.25s ease;
-      }
-      .hp-glass-chip:hover {
-        background: rgba(255,255,255,0.20);
-        transform: scale(1.04);
-      }
-
-      /* Collapsible body */
-      .hp-card-body {
-        overflow: hidden;
-        transition: max-height 0.5s ease, opacity 0.4s ease;
-        max-height: 0;
-        opacity: 0;
-        position: relative;
-        z-index: 2;
-      }
-      .hp-card-body.open {
-        max-height: 2400px;
-        opacity: 1;
-      }
-      .hp-card-body-inner {
-        padding: 24px 32px 32px;
-        background: rgba(0,0,0,0.25);
-        backdrop-filter: blur(4px);
-        border-top: 1px solid rgba(255,255,255,0.08);
-      }
-
-      /* Rolling number shimmer on cards */
-      .hp-card-num-value.shimmer {
-        background: linear-gradient(90deg, #ffffff 20%, rgba(255,255,255,0.5) 50%, #ffffff 80%);
-        background-size: 200% 100%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: hpCardShimmer 2.5s ease-in-out infinite;
-      }
-      @keyframes hpCardShimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
+        color: #64748b;
+        line-height: 1.4;
       }
 
       /* ── County Cards ── */
@@ -518,9 +635,17 @@
         border-radius: 14px;
         background: #fff;
         padding: 16px;
-        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+      }
+      .hp-county-card:hover {
+        box-shadow: 0 8px 24px rgba(14,165,233,0.08);
+        border-color: #b9d8f8;
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      }
+      .hp-county-card:hover > * {
+        transform: translateY(-2px);
+        transition: transform 0.3s ease;
       }
       .hp-county-card::before {
         content: '';
@@ -528,52 +653,408 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #0ea5e9, #10b981);
+        height: 3px;
+        background: #0ea5e9;
         opacity: 0;
         transition: opacity 0.3s ease;
       }
       .hp-county-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 28px rgba(10,102,194,0.10);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(14,165,233,0.08);
         border-color: #b9d8f8;
       }
       .hp-county-card:hover::before {
         opacity: 1;
       }
 
-      /* ── Quick Stats Row ── */
-      .hp-stat-box {
-        border-radius: 14px;
-        padding: 16px 20px;
-        text-align: center;
-        transition: all 0.3s ease;
-      }
-      .hp-stat-box:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(10,102,194,0.12);
-      }
-
-      /* ── Tab Bar ── */
-      .hp-tab-btn-v2 {
-        padding: 10px 24px;
+      /* ── Tab Bar (clean underline) ── */
+      .hp-tab-btn {
+        padding: 8px 20px;
         font-size: 0.85rem;
         font-weight: 600;
-        border-radius: 12px 12px 0 0;
-        transition: all 0.25s ease;
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
         cursor: pointer;
       }
-      .hp-tab-btn-v2.active {
-        background: #fff;
-        color: #0369a1;
-        box-shadow: 0 -2px 8px rgba(10,102,194,0.06);
+      .hp-tab-btn.active {
+        color: #0284c7;
+        border-bottom-color: #0284c7;
       }
-      .hp-tab-btn-v2:not(.active) {
-        color: #64748b;
-      }
-      .hp-tab-btn-v2:not(.active):hover {
+      .hp-tab-btn:hover {
         color: #334155;
-        background: #f1f8fe;
+      }
+
+      /* ── Featured Project Cards (full-width, open by default) ── */
+      .hp-featured-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 28px 30px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      }
+      .hp-featured-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 5px;
+        background: var(--accent, #0ea5e9);
+        border-radius: 0 3px 3px 0;
+      }
+      .hp-featured-card:hover {
+        box-shadow: 0 8px 32px rgba(14,165,233,0.10);
+        border-color: #b9d8f8;
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      }
+      .hp-featured-card:hover .hp-featured-top,
+      .hp-featured-card:hover .hp-featured-stats {
+        transform: translateY(-2px);
+      }
+      .hp-featured-top,
+      .hp-featured-stats {
+        transition: transform 0.3s ease;
+      }
+      .hp-featured-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      .hp-featured-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        background: #f0f9ff;
+        color: #0284c7;
+      }
+      .hp-featured-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .hp-featured-name {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.3;
+      }
+      .hp-featured-desc {
+        font-size: 0.82rem;
+        color: #64748b;
+        line-height: 1.4;
+        margin-top: 2px;
+      }
+      .hp-featured-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .hp-featured-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #0284c7;
+        background: #f0f9ff;
+        padding: 4px 10px;
+        border-radius: 20px;
+        border: 1px solid #b9d8f8;
+        white-space: nowrap;
+      }
+
+      /* ── Carousel Styles ── */
+      .hp-carousel-wrapper {
+        position: relative;
+        padding: 4px 0;
+      }
+      .hp-carousel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .hp-carousel-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .hp-carousel-controls {
+        display: flex;
+        gap: 6px;
+      }
+      .hp-carousel-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #64748b;
+        font-size: 1.2rem;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 0;
+      }
+      .hp-carousel-btn:hover {
+        background: #f0f9ff;
+        border-color: #0ea5e9;
+        color: #0284c7;
+      }
+      .hp-carousel-viewport {
+        overflow: hidden;
+        border-radius: 12px;
+        margin: 0 -4px;
+        padding: 4px;
+      }
+      .hp-carousel-track {
+        display: flex;
+        gap: 16px;
+        width: max-content;
+        animation: hp-carousel-scroll 45s linear infinite;
+        padding: 4px 0;
+      }
+      .hp-carousel-wrapper:hover .hp-carousel-track {
+        animation-play-state: paused;
+      }
+      @keyframes hp-carousel-scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      .hp-carousel-card {
+        width: 290px;
+        flex-shrink: 0;
+        background: #fff;
+        border: 1px solid #eef2f6;
+        border-radius: 14px;
+        padding: 20px 18px;
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      }
+      .hp-carousel-card:hover {
+        border-color: #b9d8f8;
+        box-shadow: 0 6px 20px rgba(14,165,233,0.08);
+      }
+      .hp-carousel-card:hover .hp-carousel-card-top,
+      .hp-carousel-card:hover .hp-carousel-card-desc,
+      .hp-carousel-card:hover .hp-carousel-card-stats {
+        transform: translateY(-3px);
+      }
+      .hp-carousel-card-top,
+      .hp-carousel-card-desc,
+      .hp-carousel-card-stats {
+        transition: transform 0.3s ease;
+      }
+      .hp-carousel-card-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .hp-carousel-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+      }
+      .hp-carousel-card-name {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .hp-carousel-card-desc {
+        font-size: 0.72rem;
+        color: #94a3b8;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 10px;
+        min-height: 2.7em;
+      }
+      .hp-carousel-card-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        margin-bottom: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+      }
+      .hp-carousel-stat {
+        text-align: center;
+      }
+      .hp-carousel-stat-num {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        font-variant-numeric: tabular-nums;
+      }
+      .hp-carousel-stat-label {
+        font-size: 0.6rem;
+        color: #94a3b8;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        line-height: 1.2;
+      }
+      .hp-carousel-card-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent, #0ea5e9);
+        padding: 7px 14px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        margin-top: auto;
+        border: none;
+        width: 100%;
+      }
+      .hp-carousel-card-action:hover {
+        filter: brightness(1.1);
+        transform: scale(1.02);
+      }
+
+      /* ── Carousel Performance Badge ── */
+      .hp-carousel-perf-badge {
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-left: auto;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .hp-carousel-card-perf-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        background: #fff;
+        padding: 4px 10px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        margin-top: 4px;
+        border: 1.5px solid;
+        width: 100%;
+      }
+      .hp-carousel-card-perf-btn:hover {
+        background: #f8fafc;
+        transform: scale(1.02);
+      }
+      .hp-carousel-card.selected {
+        border-color: var(--accent, #0ea5e9);
+        box-shadow: 0 0 0 2px rgba(14,165,233,0.15), 0 6px 20px rgba(14,165,233,0.1);
+        transform: translateY(-3px);
+      }
+
+      /* ── Carousel Detail Panel ── */
+      #carousel-detail-panel {
+        transition: all 0.3s ease;
+      }
+      #carousel-detail-panel.hidden {
+        display: none;
+      }
+      #carousel-detail-panel:not(.hidden) {
+        animation: hpFadeIn 0.35s ease both;
+      }
+
+      /* ── Narrative expandable text ── */
+      .hp-narrative-text {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        line-clamp: 5;
+      }
+      .hp-narrative-text.hp-narrative-expanded {
+        -webkit-line-clamp: unset;
+        line-clamp: unset;
+      }
+      .hp-narrative-toggle {
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
+        font-family: inherit;
+      }
+      .hp-narrative-toggle:hover {
+        text-decoration: underline;
+      }
+
+      /* ── Map column ── */
+      .hp-map-col {
+        min-height: 300px;
+      }
+
+      /* ── Donut panel ── */
+      .hp-donut-panel {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 14px;
+        height: 100%;
+        min-height: 340px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      }
+      .hp-donut-item {
+        transition-property: box-shadow, border-color;
+        transition-duration: 0.2s;
+        transition-timing-function: ease;
+      }
+      .hp-donut-scroll::-webkit-scrollbar {
+        width: 3px;
+      }
+      .hp-donut-scroll::-webkit-scrollbar-thumb {
+        background: #d0d5dd;
+        border-radius: 99px;
+      }
+      .hp-donut-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* ── Performance section styles ── */
+      .hp-perf-section {
+        animation: hpFadeIn 0.4s ease both;
+      }
+      @keyframes hpFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
       }
     </style>
   <body class="font-sans text-slate-900 antialiased">
@@ -746,6 +1227,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/main.js?v=20260715a"></script>
+    <script src="/main.js?v=20260721a"></script>
   </body>
 </html>

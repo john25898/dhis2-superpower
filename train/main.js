@@ -5650,17 +5650,34 @@ function observeHpFadeIns() {
         }
       });
     },
-    { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
+    { threshold: 0.05, rootMargin: "0px 0px 0px 0px" },
   );
   document
-    .querySelectorAll(".hp-fade-in")
-    .forEach((el) => _hpObserver.observe(el));
-  // Fallback: reveal all after 3s in case IntersectionObserver doesn't fire
-  setTimeout(() => {
-    document.querySelectorAll(".hp-fade-in:not(.visible)").forEach((el) => {
-      el.classList.add("visible");
+    .querySelectorAll(".hp-fade-in, .hp-slide-left, .hp-slide-right")
+    .forEach((el) => {
+      // Immediately reveal if already in viewport
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 50 && rect.bottom > -50) {
+        el.classList.add("visible");
+      } else {
+        _hpObserver.observe(el);
+      }
     });
-  }, 3000);
+  // Reveal hero content immediately (always visible on load)
+  document.querySelectorAll(".hp-hero .hp-fade-in").forEach((el) => {
+    el.classList.add("visible");
+  });
+
+  // ── Scroll cue: fade out when user scrolls down ──
+  const scrollCue = document.querySelector(".hp-scroll-cue");
+  if (scrollCue) {
+    const onScroll = () => {
+      if (window.scrollY > 80) scrollCue.classList.add("faded");
+      else scrollCue.classList.remove("faded");
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
 }
 
 // ── Animated rolling stat chips on project cards ──
@@ -5718,22 +5735,202 @@ async function renderHomepageDashboard() {
   // Fetch project & facility data
   let facilityData = {};
   let projectData = {};
+  let portfolioData = {};
+  let narrativesData = {};
   try {
-    const [facResp, projResp] = await Promise.all([
+    const [facResp, projResp, portResp, narrResp] = await Promise.all([
       fetch("/api/khis/facility-locations"),
       fetch("/api/projects/facility-mapping"),
+      fetch("/api/project-portfolio"),
+      fetch("/api/project-portfolio/narratives"),
     ]);
     const facJson = await facResp.json();
     const projJson = await projResp.json();
+    const portJson = await portResp.json();
+    const narrJson = await narrResp.json();
     if (facJson.ok) facilityData = facJson.facilities || {};
     if (projJson.ok) projectData = projJson.projects || {};
+    if (portJson.ok) portfolioData = portJson.projects || {};
+    if (narrJson.ok) narrativesData = narrJson.narratives || {};
   } catch (e) {
     root.innerHTML = `<div class="text-red-500 text-sm py-8 text-center">Failed to load project data: ${escapeHtml(e.message)}</div>`;
     return;
   }
 
+  // ── Helper: get indicators for a project slug from portfolio data ──
+  function _getProjectIndicators(slug) {
+    const portfolioSlug = slug.replace(/_/g, "-");
+    const proj = portfolioData[portfolioSlug] || {};
+    return (proj.section_b && proj.section_b.indicators) || [];
+  }
+
+  // ── Helper: get narrative data for a project slug ──
+  function _getProjectNarrative(slug) {
+    const portfolioSlug = slug.replace(/_/g, "-");
+    return narrativesData[portfolioSlug] || null;
+  }
+
+  // ── Helper: compute indicator summary stats for a project ──
+  function _computeIndStats(indicators) {
+    if (!indicators.length) return null;
+    const total = indicators.length;
+    const onTrack = indicators.filter((i) => i.rag === "On Track").length;
+    const watch = indicators.filter((i) => i.rag === "Watch").length;
+    const offTrack = indicators.filter((i) => i.rag === "Off Track").length;
+    const avgAchievement =
+      indicators.reduce((s, i) => s + _parsePct(i.achievement_pct), 0) / total;
+    return { total, onTrack, watch, offTrack, avgAchievement };
+  }
+
+  // ── Helper: parse achievement percentage (may be number, "85.0%", null, etc.) ──
+  function _parsePct(val) {
+    if (val === null || val === undefined || val === "N/A" || val === "")
+      return 0;
+    if (typeof val === "number") return Math.min(val, 100);
+    const str = String(val).replace(/[^0-9.\-]/g, "");
+    const n = parseFloat(str);
+    return isNaN(n) ? 0 : Math.min(n, 100);
+  }
+
+  // ── Real indicator names (replaces "Tracer Indicator N" across all projects) ──
+  // Comes from key-indicators API (HIV indicators)
+  const _REAL_INDICATOR_NAMES = [
+    "HTS Positive",
+    "Linkage",
+    "% VL Suppression",
+    "% VL Uptake",
+    "%IIT",
+    "TX_NEW",
+    "TPT",
+    "TPT Uptake",
+  ];
+
+  function _getIndicatorDisplayName(indicatorName) {
+    const match = indicatorName.match(/Tracer Indicator (\d+)/i);
+    if (!match) return indicatorName;
+    const idx = parseInt(match[1], 10) - 1;
+    return _REAL_INDICATOR_NAMES[idx] || indicatorName;
+  }
+
+  // ── Helper: render Key Achievements card (top of JT section) ──
+  function _renderKeyAchievements(slug) {
+    const narrative = _getProjectNarrative(slug);
+    if (!narrative?.key_achievements) return "";
+    return `
+      <div class="relative bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition-shadow duration-200">
+        <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-emerald-400 to-emerald-500"></div>
+        <div class="p-4 pl-5">
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-sm flex-shrink-0 ring-1 ring-emerald-200/50">🏆</div>
+            <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Key Achievements</span>
+            <span class="text-[10px] font-medium text-emerald-400 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 ml-auto">${escapeHtml(narrative?.reporting_month || "")}</span>
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed">${escapeHtml(narrative.key_achievements)}</p>
+        </div>
+      </div>`;
+  }
+
+  // ── Helper: render Programme Manager's Narrative (bottom) ──
+  function _renderNarrative(slug) {
+    const narrative = _getProjectNarrative(slug);
+    if (!narrative?.narrative) return "";
+    return `
+      <div class="relative bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition-shadow duration-200">
+        <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-sky-400 to-sky-500"></div>
+        <div class="p-4 pl-5">
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sm flex-shrink-0 ring-1 ring-sky-200/50">📝</div>
+            <span class="text-xs font-semibold text-sky-700 uppercase tracking-wider">Programme Manager's Narrative</span>
+          </div>
+          <div class="hp-narrative-container">
+            <p class="text-sm text-slate-600 leading-relaxed hp-narrative-text">${escapeHtml(narrative.narrative)}</p>
+            ${
+              narrative.narrative && narrative.narrative.length > 250
+                ? `<button class="hp-narrative-toggle mt-2 text-xs font-medium text-sky-600 hover:text-sky-700 transition-colors" onclick="this.previousElementSibling.classList.toggle('hp-narrative-expanded');this.textContent=this.previousElementSibling.classList.contains('hp-narrative-expanded')?'Show less ↑':'Read more →'">Read more →</button>`
+                : ""
+            }
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── Helper: render indicator donut charts (beside the map) ──
+  function _renderIndicatorDonuts(slug) {
+    const indicators = _getProjectIndicators(slug);
+    if (!indicators.length) return "";
+    const indStats = _computeIndStats(indicators);
+    const avgPct = indStats ? indStats.avgAchievement : 0;
+
+    const donuts = indicators
+      .map((ind) => {
+        const pct = _parsePct(ind.achievement_pct);
+        const r = 28;
+        const circumference = 2 * Math.PI * r;
+        const offset = circumference - (pct / 100) * circumference;
+        const color = pct >= 90 ? "#10b981" : pct >= 75 ? "#f59e0b" : "#ef4444";
+        return `
+        <div class="hp-donut-item flex items-center gap-3 bg-white rounded-lg border border-slate-100 p-2.5 hover:shadow-sm hover:border-slate-200 transition-all">
+          <div class="flex-shrink-0 relative" style="width:68px;height:68px;">
+            <svg width="68" height="68" viewBox="0 0 68 68">
+              <circle cx="34" cy="34" r="${r}" fill="none" stroke="#f1f5f9" stroke-width="6"/>
+              <circle cx="34" cy="34" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+                stroke-dasharray="${circumference}"
+                stroke-dashoffset="${offset}"
+                stroke-linecap="round"
+                transform="rotate(-90 34 34)"
+                style="transition: stroke-dashoffset 1s ease"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <span class="text-[10px] font-bold" style="color:${color}">${pct.toFixed(0)}%</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] font-medium text-slate-700 leading-tight truncate">${escapeHtml(_getIndicatorDisplayName(ind.indicator))}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">
+              T: <span class="font-medium text-slate-500">${fmtNum(ind.annual_target)}</span>
+              &middot; A: <span class="font-medium text-slate-500">${fmtNum(ind.actual_cumulative)}</span>
+            </div>
+            <span class="inline-block mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+              pct >= 90
+                ? "bg-emerald-50 text-emerald-600"
+                : pct >= 75
+                  ? "bg-amber-50 text-amber-600"
+                  : "bg-red-50 text-red-600"
+            }">${ind.rag || "—"}</span>
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    return `
+      <div class="hp-donut-panel">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-700">📊 Performance Summary</span>
+            <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${indStats.total} indicators</span>
+          </div>
+          <div class="flex items-center gap-2 text-[10px]">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> ${indStats.onTrack}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> ${indStats.watch}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span> ${indStats.offTrack}</span>
+          </div>
+        </div>
+        <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1 hp-donut-scroll">
+          ${donuts}
+        </div>
+      </div>`;
+  }
+
+  // ── Wrapper: full performance panel for carousel detail ──
+  function _renderProjectPerformanceSection(slug) {
+    const ach = _renderKeyAchievements(slug);
+    const donuts = _renderIndicatorDonuts(slug);
+    const narr = _renderNarrative(slug);
+    if (!ach && !donuts && !narr) return "";
+    return `<div class="hp-perf-section space-y-4">${ach}${donuts}${narr}</div>`;
+  }
+
   const projectIds = Object.keys(projectData);
-  // Jamii Tekelezi first
   const jamiiIdx = projectIds.indexOf("jamii_tekelezi");
   if (jamiiIdx > 0) {
     projectIds.splice(jamiiIdx, 1);
@@ -5744,14 +5941,12 @@ async function renderHomepageDashboard() {
     return;
   }
 
-  // Build set of MHU facility IDs
   const mhuFacilityIds = new Set();
   try {
     const mhuResp = await fetch("/api/mhu/config");
     const mhuConfig = await mhuResp.json();
-    if (mhuConfig.facilities) {
+    if (mhuConfig.facilities)
       Object.keys(mhuConfig.facilities).forEach((id) => mhuFacilityIds.add(id));
-    }
   } catch (_) {}
 
   // ── Compute overall stats ──
@@ -5762,17 +5957,18 @@ async function renderHomepageDashboard() {
     (proj.counties || []).forEach((c) => allCounties.add(c));
     totalFacilities += proj.facility_count || 0;
   });
-  const totalMhus = projectIds.reduce((s, pid) => {
-    const m = projectData[pid]?.mhu_count || 0;
-    return s + m;
-  }, 0);
+  const totalMhus = projectIds.reduce(
+    (s, pid) => s + (projectData[pid]?.mhu_count || 0),
+    0,
+  );
 
   // ── Build HTML ──
-  let html = '<div class="space-y-6">';
+  let html = '<div class="hp-scroll-cue"></div>';
+  html += '<div class="space-y-6">';
 
-  // ═══════════════════════════════════════════
-  // HERO SECTION
-  // ═══════════════════════════════════════════
+  // ═══════════════════════════════════
+  // HERO SECTION (keep the same)
+  // ═══════════════════════════════════
   html += `
     <div class="hp-hero rounded-3xl p-8 md:p-12 relative">
       <div class="hp-hero-pattern"></div>
@@ -5784,28 +5980,12 @@ async function renderHomepageDashboard() {
             <p class="text-blue-200 text-sm md:text-base font-medium mt-0.5">Real-time health analytics across Kenya</p>
           </div>
         </div>
-
-        <!-- Hero animated stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 hp-fade-in hp-stagger-1">
-          <div class="text-center">
-            <div class="hp-hero-count" id="hero-count-mhus">0</div>
-            <div class="hp-hero-label">🏥 MHUs</div>
-          </div>
-          <div class="text-center">
-            <div class="hp-hero-count" id="hero-count-counties">0</div>
-            <div class="hp-hero-label">🗺️ Counties</div>
-          </div>
-          <div class="text-center">
-            <div class="hp-hero-count" id="hero-count-facilities">0</div>
-            <div class="hp-hero-label">🏛️ Facilities</div>
-          </div>
-          <div class="text-center">
-            <div class="hp-hero-count" id="hero-count-projects">0</div>
-            <div class="hp-hero-label">📋 Projects</div>
-          </div>
+          <div class="text-center"><div class="hp-hero-count" id="hero-count-mhus">0</div><div class="hp-hero-label">🏥 MHUs</div></div>
+          <div class="text-center"><div class="hp-hero-count" id="hero-count-counties">0</div><div class="hp-hero-label">🗺️ Counties</div></div>
+          <div class="text-center"><div class="hp-hero-count" id="hero-count-facilities">0</div><div class="hp-hero-label">🏛️ Facilities</div></div>
+          <div class="text-center"><div class="hp-hero-count" id="hero-count-projects">0</div><div class="hp-hero-label">📋 Projects</div></div>
         </div>
-
-        <!-- Quick insight chips -->
         <div class="flex flex-wrap gap-2 mt-6 hp-fade-in hp-stagger-2">
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">📊 Last 12 months</span>
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">📍 Kenya-wide coverage</span>
@@ -5813,60 +5993,31 @@ async function renderHomepageDashboard() {
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">📱 MOH 717 · MOH 740</span>
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
 
-  // ═══════════════════════════════════════════
-  // QUICK STATS ROW
-  // ═══════════════════════════════════════════
-  const qColors = [
-    "from-sky-500 to-blue-600",
-    "from-emerald-500 to-teal-600",
-    "from-violet-500 to-purple-600",
-    "from-amber-500 to-orange-600",
-  ];
-  const qIcons = ["🏥", "🗺️", "🏛️", "📋"];
-  const qLabels = ["Total MHUs", "Counties", "Facilities", "Projects"];
-  const qVals = [
-    totalMhus,
-    allCounties.size,
-    totalFacilities,
-    projectIds.length,
-  ];
-
-  html +=
-    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 hp-fade-in hp-stagger-3">';
-  qLabels.forEach((label, i) => {
-    const c = qColors[i % qColors.length];
-    html += `
-      <div class="hp-stat-box bg-white border border-slate-200 shadow-sm hover:shadow-md" style="cursor:default;">
-        <div class="text-2xl font-extrabold text-slate-800">${qVals[i].toLocaleString()}</div>
-        <div class="text-xs text-slate-500 font-medium mt-0.5">${qIcons[i]} ${label}</div>
-      </div>`;
-  });
-  html += "</div>";
-
-  // ═══════════════════════════════════════════
+  // ═══════════════════════════════════
   // TAB BAR: Projects | Counties
-  // ═══════════════════════════════════════════
+  // ═══════════════════════════════════
   html += `
     <div class="flex gap-0 border-b border-slate-200 hp-fade-in hp-stagger-4">
-      <button id="hp-tab-projects" class="hp-tab-btn-v2 ${!_homepageCountyMode ? "active" : ""}" data-mode="projects">📋 Projects</button>
-      <button id="hp-tab-counties" class="hp-tab-btn-v2 ${_homepageCountyMode ? "active" : ""}" data-mode="counties">🗺️ Counties</button>
+      <button id="hp-tab-projects" class="hp-tab-btn active" data-mode="projects">📋 Projects</button>
+      <button id="hp-tab-counties" class="hp-tab-btn" data-mode="counties">🗺️ Counties</button>
     </div>
-    <div id="hp-content" class="space-y-5">
-  `;
+    <div id="hp-content" class="space-y-5">`;
 
-  // ═══════════════════════════════════════════
-  // PROJECTS VIEW — Collapsible Cards
-  // ═══════════════════════════════════════════
-  html += `<div id="hp-projects-view" class="${_homepageCountyMode ? "hidden" : ""}"><div class="space-y-4">`;
+  // ═══════════════════════════════════
+  // PROJECTS VIEW — Featured + Carousel
+  // ═══════════════════════════════════
+  html += `<div id="hp-projects-view"><div class="space-y-5">`;
 
-  let _projIdx = 0;
-  for (const pid of projectIds) {
-    _projIdx++;
+  // Separate featured projects (JT, Stawisha) from carousel projects
+  const featuredPids = ["jamii_tekelezi", "chap_stawisha"];
+  const carouselPids = projectIds.filter((pid) => !featuredPids.includes(pid));
+
+  // ── Featured Project Rows ──
+  for (const pid of featuredPids) {
     const proj = projectData[pid] || {};
-    const facs = proj.facilities || {};
+    if (!proj.name) continue;
     const facCount = proj.facility_count || 0;
     const mhuCount = proj.mhu_count || 0;
     const projCounties = proj.counties || [];
@@ -5874,135 +6025,159 @@ async function renderHomepageDashboard() {
     const projIcon = proj.icon || "📋";
     const projDesc = proj.description || "";
     const mapId = `map-${pid}`;
-    const filterId = `filter-${pid}`;
     const col = _projColor(pid);
-    const stagger = Math.min(_projIdx, 5);
-
-    // Per-project hero gradient colors
-    const cardGrad =
-      pid === "jamii_tekelezi"
-        ? "linear-gradient(135deg, #4c1d95 0%, #6d28d9 40%, #a78bfa 100%)"
-        : "linear-gradient(135deg, #0a2540 0%, #1a4a7a 40%, #0ea5e9 100%)";
-    const cardIconBg =
-      pid === "jamii_tekelezi"
-        ? "rgba(167,139,250,0.25)"
-        : "rgba(14,165,233,0.25)";
+    const accentColor = col.border;
+    const iconBg = col.bg;
 
     html += `
-      <div class="hp-project-card hp-fade-in hp-stagger-${stagger}">
-        <!-- Hero-like gradient background -->
-        <div class="hp-card-hero-bg" style="background:${cardGrad};">
-          <div class="hp-card-pattern"></div>
-
-          <!-- Always-visible hero header -->
-          <div class="hp-card-hero" data-target="body-${pid}">
-            <!-- Top row: icon + name + expand -->
-            <div class="hp-card-top-row">
-              <div class="hp-card-icon-wrap" style="background:${cardIconBg};">
-                ${projIcon}
-              </div>
-              <div class="hp-card-name">
-                <div class="hp-card-name-main">${escapeHtml(projName)}</div>
-                <div class="hp-card-name-sub">${escapeHtml(projDesc)}</div>
-              </div>
-              <div class="hp-card-expand-btn">▼</div>
-            </div>
-
-            <!-- Big hero-style numbers -->
-            <div class="hp-card-numbers">
-              <div class="hp-card-num-item">
-                <div class="hp-card-num-value" data-target="${mhuCount}">0</div>
-                <div class="hp-card-num-label">🏥 MHUs</div>
-              </div>
-              <div class="hp-card-num-item">
-                <div class="hp-card-num-value" data-target="${projCounties.length}">0</div>
-                <div class="hp-card-num-label">🗺️ Counties</div>
-              </div>
-              <div class="hp-card-num-item">
-                <div class="hp-card-num-value" data-target="${facCount}">0</div>
-                <div class="hp-card-num-label">🏛️ Facilities</div>
-              </div>
-            </div>
-
-            <!-- Glass chips -->
-            <div class="hp-card-chips">
-              <span class="hp-glass-chip">📊 Last 12 months</span>
-              <span class="hp-glass-chip">📍 Kenya-wide</span>
-              <span class="hp-glass-chip">🎯 Goal: 85%</span>
-            </div>
+      <div class="hp-featured-card hp-slide-left hp-stagger-4" style="--accent:${accentColor};">
+        <!-- Featured top: icon + info + actions -->
+        <div class="hp-featured-top">
+          <div class="hp-featured-icon" style="background:${iconBg};color:${accentColor};">${projIcon}</div>
+          <div class="hp-featured-info">
+            <div class="hp-featured-name">${escapeHtml(projName)}</div>
+            <div class="hp-featured-desc">${escapeHtml(projDesc)}</div>
           </div>
+          <div class="hp-featured-actions">
+            <span class="hp-featured-badge">⭐ Featured</span>
+            <div class="hp-view-project-btn" data-project="${pid}" style="display:inline-flex;align-items:center;gap:3px;font-size:0.8rem;font-weight:600;color:${accentColor};cursor:pointer;padding:6px 14px;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='${iconBg}'" onmouseout="this.style.background='transparent'">View →</div>
+            <div class="hp-expand-btn open" data-target="body-${pid}"><span class="hp-expand-icon open">▼</span></div>
+          </div>
+        </div>
 
-        <!-- Collapsible body: map + filters -->
-        <div id="body-${pid}" class="hp-card-body">
-          <div class="hp-card-body-inner">
-            <div class="flex flex-col lg:flex-row gap-4">
-              <!-- Filters sidebar -->
-              <div class="w-full lg:w-64 shrink-0 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 p-3 text-xs space-y-2">
-                <div class="font-medium text-white/70 text-[10px] uppercase tracking-wide">VL Indicator <span class="text-white/30 font-normal">(select to show county map)</span></div>
-                <label class="flex items-center gap-2 text-white cursor-pointer bg-white/10 rounded-lg border border-white/10 px-2 py-1.5 hover:bg-white/20 transition"><input type="radio" name="vl-metric-${pid}" class="vl-metric-radio accent-sky-400" value="tested"> <span class="font-medium">Tested</span></label>
-                <label class="flex items-center gap-2 text-white cursor-pointer bg-white/10 rounded-lg border border-white/10 px-2 py-1.5 hover:bg-white/20 transition"><input type="radio" name="vl-metric-${pid}" class="vl-metric-radio accent-rose-400" value="positive"> <span class="font-medium">Positive</span></label>
-                <label class="flex items-center gap-2 text-white cursor-pointer bg-white/10 rounded-lg border border-white/10 px-2 py-1.5 hover:bg-white/20 transition"><input type="radio" name="vl-metric-${pid}" class="vl-metric-radio accent-emerald-400" value="suppression"> <span class="font-medium">VL Suppression</span></label>
-                <div class="border-t border-white/10 pt-2 space-y-1.5">
-                  <div class="font-medium text-white/70 text-[10px] uppercase tracking-wide">Date Range</div>
-                  <input type="text" class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70" placeholder="Select date range" readonly>
-                </div>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select County (0)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Sub County (0)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Facility (0)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Sex (2)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Age Category (15)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Agency (7)</option></select>
-                <select class="w-full rounded-lg bg-white/10 border border-white/10 px-2 py-1.5 text-xs text-white/70"><option class="bg-slate-800">Select Partner (37)</option></select>
-                <div class="flex gap-2 pt-1">
-                  <button class="flex-1 rounded-lg bg-white/20 text-white py-1.5 text-xs font-medium hover:bg-white/30 transition">Filter</button>
-                  <button class="flex-1 rounded-lg bg-white/10 border border-white/10 text-white/70 py-1.5 text-xs font-medium hover:bg-white/20 transition">Reset</button>
-                </div>
-                <div class="flex gap-2 pt-1">
-                  <button class="flex-1 rounded-lg bg-white/10 border border-white/10 text-white/70 py-1.5 text-xs font-medium hover:bg-white/20 transition">⬇ Download</button>
-                  <button class="flex-1 rounded-lg bg-white/10 border border-white/10 text-white/70 py-1.5 text-xs font-medium hover:bg-white/20 transition">📊 View Data</button>
-                </div>
-              </div>
-              <!-- Map area -->
-              <div class="flex-1 min-w-0">
+        <!-- Stats row (green gradient KPI cards) -->
+        <div class="grid grid-cols-3 gap-3 mt-5">
+          <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏥</div><div class="hp-stat-number">${mhuCount.toLocaleString()}</div><div class="hp-stat-label">MHUs</div></div>
+          <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🗺️</div><div class="hp-stat-number">${projCounties.length.toLocaleString()}</div><div class="hp-stat-label">Counties</div></div>
+          <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏛️</div><div class="hp-stat-number">${facCount.toLocaleString()}</div><div class="hp-stat-label">Facilities</div></div>
+        </div>
+
+        <!-- Expandable body: open by default -->
+        <div id="body-${pid}" class="hp-card-body open">
+          <div class="border-t border-slate-100 pt-4 mt-4">
+            ${_renderKeyAchievements(pid)}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+              <div class="hp-map-col">
                 <div class="flex items-center gap-2 mb-2">
-                  <button id="${filterId}-mhu" class="map-filter-btn text-xs px-3 py-1.5 rounded-full border font-medium transition bg-white/20 text-white border-white/20 hover:bg-white/30" data-project="${pid}" data-mode="mhu" data-map="${mapId}">🏥 MHU</button>
-                  <button id="${filterId}-county" class="map-filter-btn text-xs px-3 py-1.5 rounded-full border font-medium transition bg-white/10 text-white/70 border-white/10 hover:bg-white/20" data-project="${pid}" data-mode="county" data-map="${mapId}">🗺️ County</button>
-                  <span class="text-[10px] text-white/50 ml-auto"><span class="font-medium" id="${filterId}-count">${facCount}</span> shown</span>
+                  <span class="text-xs font-semibold text-slate-600">🗺️ Facility Coverage</span>
                 </div>
-                <div id="${mapId}" class="project-map" style="height:380px;width:100%;border-radius:12px;overflow:hidden;position:relative;">
-                  <div id="${mapId}-legend" class="map-legend" style="display:none;"></div>
+                <div id="${mapId}" class="hp-card-map"></div>
+                <div class="hp-map-filters" id="${mapId}-filters">
+                  <button class="hp-map-filter-btn active" data-map="${mapId}" data-mode="mhu">🏥 MHUs</button>
+                  <button class="hp-map-filter-btn" data-map="${mapId}" data-mode="county">🗺️ Counties</button>
+                  <button class="hp-map-filter-btn" data-map="${mapId}" data-mode="facility">📍 Facilities</button>
                 </div>
               </div>
+              <div class="hp-donut-col">
+                ${_renderIndicatorDonuts(pid)}
+              </div>
             </div>
+            ${_renderNarrative(pid)}
+        </div>
+        ${
+          pid === "jamii_tekelezi"
+            ? `
+        <div id="key-indicators-root" class="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm hp-slide-right hp-stagger-4 mt-5">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-lg">📊</span>
+            <span class="font-semibold text-sm text-slate-800">Key Indicators Drill Down</span>
+            <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Facility-level summary</span>
           </div>
-        </div>
-      </div>
-    `;
-
-    // ── Key Indicators Drill down — below JTP card ──
-    if (_projIdx === 1) {
-      html += `
-      <div id="key-indicators-root" class="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm hp-fade-in hp-stagger-${stagger}">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="text-lg">📊</span>
-          <span class="font-semibold text-sm text-slate-800">Key Indicators Drill Down</span>
-          <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Facility-level summary</span>
-        </div>
-        <div id="ki-loading" class="text-xs text-slate-400 py-6 text-center">Loading key indicators…</div>
-        <div id="ki-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 hidden"></div>
-        <div id="ki-error" class="text-xs text-red-500 hidden"></div>
+          <div id="ki-loading" class="text-xs text-slate-400 py-6 text-center">Loading key indicators…</div>
+          <div id="ki-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 hidden"></div>
+          <div id="ki-error" class="text-xs text-red-500 hidden"></div>
+        </div>`
+            : ""
+        }
       </div>`;
-    }
   }
 
-  html += `</div></div>`;
+  // ── Key Indicators are now rendered inside Jamii Tekelezi card body ──
 
-  // ═══════════════════════════════════════════
-  // COUNTIES VIEW — Enhanced Grid
-  // ═══════════════════════════════════════════
-  html += `<div id="hp-counties-view" class="${_homepageCountyMode ? "" : "hidden"}"><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+  // ── Carousel: Other Projects (auto-scrolling conveyor belt) ──
+  if (carouselPids.length) {
+    html += `
+    <div class="hp-carousel-wrapper hp-slide-right hp-stagger-5">
+      <div class="hp-carousel-header">
+        <span class="hp-carousel-title">📋 Other Projects <span class="text-xs font-normal text-slate-400">(${carouselPids.length} projects)</span></span>
+        <div class="hp-carousel-controls">
+          <button class="hp-carousel-btn" id="carousel-prev" title="Scroll left">‹</button>
+          <button class="hp-carousel-btn" id="carousel-next" title="Scroll right">›</button>
+        </div>
+      </div>
+      <div class="hp-carousel-viewport">
+        <div class="hp-carousel-track" id="carousel-track">`;
 
-  // Build a map of county -> project list
+    // Build carousel card set
+    function _renderCarouselCard(pid, proj) {
+      const cFacCount = proj.facility_count || 0;
+      const cMhuCount = proj.mhu_count || 0;
+      const cCounties = proj.counties || [];
+      const cName = proj.name || pid;
+      const cIcon = proj.icon || "📋";
+      const cDesc = proj.description || "";
+      const cCol = _projColor(pid);
+      // Performance mini badge
+      const cIndicators = _getProjectIndicators(pid);
+      const cIndStats = _computeIndStats(cIndicators);
+      let perfBadge = "";
+      if (cIndStats) {
+        const pct = cIndStats.avgAchievement;
+        const pctCls =
+          pct >= 90
+            ? "bg-emerald-100 text-emerald-700"
+            : pct >= 75
+              ? "bg-amber-100 text-amber-700"
+              : "bg-red-100 text-red-700";
+        perfBadge = `<div class="hp-carousel-perf-badge ${pctCls}">📊 ${pct.toFixed(0)}%</div>`;
+      }
+      return `
+        <div class="hp-carousel-card" style="--accent:${cCol.border};" data-project="${pid}">
+          <div class="hp-carousel-card-top">
+            <div class="hp-carousel-card-icon" style="background:${cCol.bg};color:${cCol.border};">${cIcon}</div>
+            <div class="hp-carousel-card-name">${escapeHtml(cName)}</div>
+            ${perfBadge}
+          </div>
+          <div class="hp-carousel-card-desc">${escapeHtml(cDesc)}</div>
+          <div class="hp-carousel-card-stats">
+            <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cMhuCount.toLocaleString()}</div><div class="hp-carousel-stat-label">MHUs</div></div>
+            <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cCounties.length.toLocaleString()}</div><div class="hp-carousel-stat-label">Counties</div></div>
+            <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cFacCount.toLocaleString()}</div><div class="hp-carousel-stat-label">Facilities</div></div>
+          </div>
+          <button class="hp-carousel-card-action" data-project="${pid}" style="background:${cCol.border};">View Project →</button>
+          <button class="hp-carousel-card-perf-btn" data-project="${pid}" style="border-color:${cCol.border};color:${cCol.border};">📈 Performance</button>
+        </div>`;
+    }
+
+    // First set
+    for (const pid of carouselPids) {
+      const proj = projectData[pid] || {};
+      html += _renderCarouselCard(pid, proj);
+    }
+    // Duplicate set for seamless infinite scroll
+    for (const pid of carouselPids) {
+      const proj = projectData[pid] || {};
+      html += _renderCarouselCard(pid, proj);
+    }
+
+    html += `
+        </div>
+      </div>
+      <!-- Carousel detail panel -->
+      <div id="carousel-detail-panel" class="hidden"></div>
+    </div>`;
+  }
+
+  html += `</div></div>`; // close carousel track/wrapper, projects-view
+
+  // ── Counties View (hidden by default, shown via tab) ──
+  html += `<div id="hp-counties-view" class="hidden"><div class="space-y-5">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-lg">🗺️</span>
+      <span class="font-semibold text-sm text-slate-800">County Coverage</span>
+      <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${allCounties.size} counties</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
   const countyToProjects = {};
   for (const pid of projectIds) {
     const proj = projectData[pid] || {};
@@ -6015,7 +6190,6 @@ async function renderHomepageDashboard() {
       });
     }
   }
-
   const sortedCounties = Array.from(allCounties).sort();
   sortedCounties.forEach((county, ci) => {
     const projs = countyToProjects[county] || [];
@@ -6024,30 +6198,19 @@ async function renderHomepageDashboard() {
       0,
     );
     html += `
-      <div class="hp-county-card hp-fade-in hp-stagger-${(ci % 5) + 1}">
+      <div class="hp-county-card hp-slide-left hp-stagger-${(ci % 5) + 1}">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-50 to-blue-100 border border-sky-200 flex items-center justify-center text-lg shrink-0">🗺️</div>
           <div class="flex-1 min-w-0">
             <div class="font-semibold text-sm text-slate-800">${escapeHtml(county)}</div>
-            <div class="text-[11px] text-slate-400">
-              ${projs.length} project${projs.length !== 1 ? "s" : ""} · ${countyMhus.toLocaleString()} MHUs
-            </div>
+            <div class="text-[11px] text-slate-400">${projs.length} project${projs.length !== 1 ? "s" : ""} · ${countyMhus.toLocaleString()} MHUs</div>
           </div>
         </div>
-        <div class="flex flex-wrap gap-1.5 mt-3">
-          ${projs
-            .map(
-              (p) =>
-                `<span class="inline-flex items-center gap-1 text-[11px] bg-slate-50 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200 hover:border-sky-300 hover:bg-sky-50 transition">${p.icon} ${escapeHtml(p.name)}</span>`,
-            )
-            .join("")}
-        </div>
-      </div>
-    `;
+        <div class="flex flex-wrap gap-1.5 mt-3">${projs.map((p) => `<span class="inline-flex items-center gap-1 text-[11px] bg-slate-50 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200 hover:border-sky-300 hover:bg-sky-50 transition">${p.icon} ${escapeHtml(p.name)}</span>`).join("")}</div>
+      </div>`;
   });
-
-  html += `</div></div>`;
-  html += `</div></div>`; // close hp-content, homepageRoot
+  html += `</div></div></div>`; // close counties grid, counties-view, hp-content
+  html += `</div>`; // close homepageRoot
   root.innerHTML = html;
 
   // ── Animate hero counters ──
@@ -6071,90 +6234,94 @@ async function renderHomepageDashboard() {
   // ── Initialize maps ──
   initProjectMaps(projectData, mhuFacilityIds);
 
-  // ── Collapsible card toggle ──
-  document.querySelectorAll(".hp-card-hero").forEach((header) => {
-    header.addEventListener("click", function () {
+  // ── Map filter button clicks ──
+  document.querySelectorAll(".hp-map-filter-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const mapId = this.dataset.map;
+      const mode = this.dataset.mode;
+      if (!mapId || !mode) return;
+      // Update active state
+      const parent = this.closest(".hp-map-filters");
+      if (parent) {
+        parent
+          .querySelectorAll(".hp-map-filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+      }
+      this.classList.add("active");
+      // Update map entry mode
+      const entry = _projectMaps[mapId];
+      if (entry) {
+        entry.currentMode = mode;
+        updateProjectMapMarkerLayer(mapId, mode);
+      }
+    });
+  });
+
+  // ── Collapsible card toggle (expand button) ──
+  document.querySelectorAll(".hp-expand-btn").forEach((btn) => {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
       const targetId = this.dataset.target;
       const body = document.getElementById(targetId);
-      const icon = this.querySelector(".hp-card-expand-btn");
+      const icon = this.querySelector(".hp-expand-icon");
       if (!body) return;
       const isOpen = body.classList.contains("open");
-      if (isOpen) {
-        body.classList.remove("open");
-        body.style.maxHeight = "0";
-        icon.classList.remove("open");
-      } else {
-        body.classList.add("open");
-        body.style.maxHeight = body.scrollHeight + "px";
-        icon.classList.add("open");
-        // Trigger map resize after expand
-        const mapId = targetId.replace("body-", "map-");
-        const entry = _projectMaps[mapId];
-        if (entry && entry.map) {
-          setTimeout(() => entry.map.invalidateSize(), 400);
+      body.classList.toggle("open");
+      if (icon) icon.classList.toggle("open");
+      // Trigger map resize
+      if (!isOpen) {
+        const mapEl = body.querySelector(".hp-card-map");
+        if (mapEl) {
+          const mapId = mapEl.id;
+          const entry = _projectMaps[mapId];
+          if (entry && entry.map)
+            setTimeout(() => entry.map.invalidateSize(), 400);
         }
       }
     });
   });
 
-  // ── Map filter toggle (MHU / County) ──
-  document.querySelectorAll(".map-filter-btn").forEach((btn) => {
-    btn.addEventListener("click", function () {
-      const projectId = this.dataset.project;
-      const mode = this.dataset.mode;
-      const mapId = this.dataset.map;
-      const entry = _projectMaps[mapId];
-
-      if (mode === "county" && entry) {
-        const metricSelected = document.querySelector(
-          `input[name="vl-metric-${projectId}"]:checked`,
-        );
-        if (!metricSelected) {
-          entry.currentMode = "county";
-          entry.currentMetric = "none";
-          document
-            .querySelectorAll(`[data-project="${projectId}"].map-filter-btn`)
-            .forEach((b) => {
-              b.className =
-                "map-filter-btn text-xs px-3 py-1 rounded-full border font-medium transition bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200";
-            });
-          this.className =
-            "map-filter-btn text-xs px-3 py-1 rounded-full border font-medium transition bg-sky-500 text-white border-sky-500";
-          updateProjectMapMarkerLayer(mapId, "county");
-          return;
-        }
-      }
-
-      document
-        .querySelectorAll(`[data-project="${projectId}"].map-filter-btn`)
-        .forEach((b) => {
-          b.className =
-            "map-filter-btn text-xs px-3 py-1 rounded-full border font-medium transition bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200";
-        });
-      this.className =
-        "map-filter-btn text-xs px-3 py-1 rounded-full border font-medium transition bg-sky-500 text-white border-sky-500";
-      updateProjectMap(mapId, projectId, mode, projectData, mhuFacilityIds);
-    });
-  });
+  // ── Carousel Prev/Next Buttons ──
+  const carouselTrack = document.getElementById("carousel-track");
+  const prevBtn = document.getElementById("carousel-prev");
+  const nextBtn = document.getElementById("carousel-next");
+  if (carouselTrack && (prevBtn || nextBtn)) {
+    const scrollAmount = 306; // card width (290) + gap (16)
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        carouselTrack.style.animation = "none";
+        carouselTrack.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+        // Resume animation after scroll
+        setTimeout(() => {
+          carouselTrack.style.animation = "";
+        }, 800);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        carouselTrack.style.animation = "none";
+        carouselTrack.scrollBy({ left: scrollAmount, behavior: "smooth" });
+        setTimeout(() => {
+          carouselTrack.style.animation = "";
+        }, 800);
+      });
+    }
+  }
 
   // ── Tab toggle (Projects / Counties) ──
-  document.querySelectorAll(".hp-tab-btn-v2").forEach((btn) => {
+  document.querySelectorAll(".hp-tab-btn").forEach((btn) => {
     btn.addEventListener("click", function () {
       const mode = this.dataset.mode;
-      _homepageCountyMode = mode === "counties";
-
-      document.querySelectorAll(".hp-tab-btn-v2").forEach((b) => {
-        b.classList.remove("active");
-      });
+      const isCounties = mode === "counties";
+      document
+        .querySelectorAll(".hp-tab-btn")
+        .forEach((b) => b.classList.remove("active"));
       this.classList.add("active");
-
       const pv = document.getElementById("hp-projects-view");
       const cv = document.getElementById("hp-counties-view");
-      if (pv) pv.classList.toggle("hidden", _homepageCountyMode);
-      if (cv) cv.classList.toggle("hidden", !_homepageCountyMode);
-
-      // Trigger map resize for expanded cards
-      if (!_homepageCountyMode) {
+      if (pv) pv.classList.toggle("hidden", isCounties);
+      if (cv) cv.classList.toggle("hidden", !isCounties);
+      if (!isCounties) {
         setTimeout(() => {
           Object.values(_projectMaps).forEach((entry) => {
             if (entry.map) entry.map.invalidateSize();
@@ -6164,40 +6331,88 @@ async function renderHomepageDashboard() {
     });
   });
 
-  // ── VL metric radio buttons ──
-  document.querySelectorAll(".vl-metric-radio").forEach((radio) => {
-    radio.addEventListener("change", function () {
-      if (!this.checked) return;
-      const metric = this.value;
-      const name = this.getAttribute("name");
-      const pid = name.replace("vl-metric-", "");
-      const mapId = `map-${pid}`;
-      const entry = _projectMaps[mapId];
-      if (!entry) return;
-      entry.currentMetric = metric;
-      entry.currentMode = "county";
+  // ── Homepage Project Navigation ──
+  document
+    .querySelectorAll(
+      ".hp-view-project-btn, .hp-carousel-card-action, .hp-carousel-card",
+    )
+    .forEach((el) => {
+      el.addEventListener("click", function (e) {
+        if (
+          e.target.closest(".hp-expand-btn") ||
+          e.target.closest(".hp-carousel-btn")
+        )
+          return;
+        const pid =
+          this.dataset.project ||
+          (this.closest
+            ? this.closest("[data-project]")?.dataset.project
+            : null);
+        if (!pid) return;
+        if (pid === "jamii_tekelezi") {
+          state.activeProject = "jamii_tekelezi";
+          if (elements.projectFilter)
+            elements.projectFilter.value = "jamii-tekelezi";
+          state.activePage = "overview";
+          setPageHash("overview");
+          renderCurrentView();
+        } else {
+          state.activeProject = "";
+          state.activePage = "profile";
+          setPageHash("profile");
+          renderCurrentView();
+        }
+      });
+    });
 
-      const filterId = `filter-${pid}`;
+  // ── Fade-in + chip animations ──
+  observeHpFadeIns();
+  setTimeout(animateCardChips, 300);
+
+  // ── Carousel Performance Detail Panel ──
+  function _showCarouselDetail(slug) {
+    const panel = document.getElementById("carousel-detail-panel");
+    if (!panel) return;
+
+    // Toggle off if same project clicked
+    const isVisible = !panel.classList.contains("hidden");
+    const currentSlug = panel.dataset.slug;
+    if (isVisible && currentSlug === slug) {
+      panel.classList.add("hidden");
+      panel.innerHTML = "";
+      panel.dataset.slug = "";
+      // Remove highlight from all carousel cards
       document
-        .querySelectorAll(`[data-project="${pid}"].map-filter-btn`)
-        .forEach((b) => {
-          b.className =
-            "map-filter-btn text-xs px-3 py-1.5 rounded-full border font-medium transition bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200";
-        });
-      const countyBtn = document.getElementById(`${filterId}-county`);
-      if (countyBtn) {
-        countyBtn.className =
-          "map-filter-btn text-xs px-3 py-1.5 rounded-full border font-medium transition bg-sky-500 text-white border-sky-500";
-      }
-      updateProjectMapMarkerLayer(mapId, "county");
+        .querySelectorAll(".hp-carousel-card")
+        .forEach((c) => c.classList.remove("selected"));
+      return;
+    }
+
+    // Remove highlight from all, highlight selected
+    document
+      .querySelectorAll(".hp-carousel-card")
+      .forEach((c) => c.classList.remove("selected"));
+    document
+      .querySelectorAll(`.hp-carousel-card[data-project="${slug}"]`)
+      .forEach((c) => c.classList.add("selected"));
+
+    const perfHtml = _renderProjectPerformanceSection(slug);
+    if (!perfHtml) {
+      panel.innerHTML = `<div class="p-8 text-center text-sm text-slate-400">No performance data available for this project.</div>`;
+    } else {
+      panel.innerHTML = perfHtml;
+    }
+    panel.dataset.slug = slug;
+    panel.classList.remove("hidden");
+  }
+
+  document.querySelectorAll(".hp-carousel-card-perf-btn").forEach((btn) => {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const slug = this.dataset.project;
+      if (slug) _showCarouselDetail(slug);
     });
   });
-
-  // ── Scroll-triggered fade-in animations ──
-  observeHpFadeIns();
-
-  // ── Animate stat chips (rolling numbers) ──
-  setTimeout(animateCardChips, 300);
 
   // ── Load key indicators ──
   loadKeyIndicators();
@@ -6318,6 +6533,14 @@ const _projectMaps = {};
 let _kenyaCountyGeoJSON = null; // cached Kenya county boundaries
 
 async function initProjectMaps(projectData, mhuFacilityIds) {
+  // Destroy any existing maps before re-initializing
+  Object.keys(_projectMaps).forEach((key) => {
+    try {
+      _projectMaps[key].map.remove();
+    } catch (_) {}
+    delete _projectMaps[key];
+  });
+
   // Fetch Kenya county boundaries once (for choropleth)
   if (!_kenyaCountyGeoJSON) {
     try {
@@ -6359,6 +6582,7 @@ async function initProjectMaps(projectData, mhuFacilityIds) {
       minZoom: 5,
       attribution: "© OpenStreetMap",
       bounds: kb,
+      noWrap: true,
     }).addTo(map);
 
     // Fit to Kenya bounds
