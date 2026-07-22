@@ -12,6 +12,8 @@ const state = {
   projectFilter: "all",
   periodFilter: "all",
   activeSubtabs: {},
+  activeDatasetId: "",
+  activeDashboardId: "",
   activeMhuSubtab: "WORKLOAD",
   playgroundMode: "finance",
   playgroundChart: null,
@@ -24,6 +26,263 @@ const state = {
   jtFacilityIdNameMap: {},
   jtFacilitiesBySubcounty: {},
 };
+
+// ── CHAK DHIS2 Project Configuration ──
+const CHAK_PROJECTS = {
+  chap_stawisha: {
+    id: "chap_stawisha",
+    code: "cs",
+    name: "CHAP Stawisha",
+    icon: "🌱",
+    color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
+    desc: "Community Health and Adolescent Program — HIV care, FHTS, PrEP, TB, Lab, and more.",
+    datasets: [
+      { id: "HZA5EOq0Hlu", name: "C&T Reports", elements: 617 },
+      { id: "oCeMgSmXBtE", name: "FHTS Reports", elements: 727 },
+      { id: "TVoCddvXzIN", name: "PrEP Report", elements: 530 },
+      { id: "RiTf6N3VUfq", name: "Commodities Reports", elements: 475 },
+      { id: "rSNiMlIp2FY", name: "Laboratory Reports", elements: 347 },
+      { id: "caJ4S2uo7vK", name: "POST_RESP Report", elements: 179 },
+      { id: "xGYwTcfvEH5", name: "TB Reports", elements: 135 },
+      { id: "cu4cBIZrdnV", name: "OTZ Report", elements: 118 },
+      { id: "xgiBQ2crniA", name: "OVC Report", elements: 0 },
+    ],
+    dashboards: [
+      {
+        id: "YcoF4RBMSEJ",
+        name: "Chap Stawisha HTS",
+        visualizations: [
+          { id: "WK14sieajnb", name: "IPD Graph" },
+          { id: "GZACoqMmQfM", name: "PNS Graph" },
+          { id: "kbQsKaCUB8x", name: "Family Testing Graph" },
+          { id: "TCTsasEoMbE", name: "WRA Children Contacts" },
+          { id: "wrzPq8CvT2S", name: "Prevention services Graph" },
+          { id: "PlHUA5Z4wSi", name: "FHTS - Tested, Pos and Linked" },
+        ],
+      },
+      {
+        id: "K85HrESt61m",
+        name: "Chap Stawisha Care and Treatment",
+        visualizations: [
+          { id: "SBJ03MaMPH9", name: "TX_Curr Regimens" },
+          { id: "hO3ijJSNo84", name: "TX_Curr" },
+          { id: "oafmgURYxFH", name: "TX_Curr vs MMD" },
+          { id: "dukFp0VOsyS", name: "TX Gains" },
+          { id: "fO2Ct8L0UOB", name: "Hypertension" },
+          { id: "OLHFrDG9QlR", name: "Diabetes" },
+          { id: "xvfWI1MrXSo", name: "VL Suppression" },
+          { id: "LyfH66uSJoM", name: "TX Losses" },
+          { id: "bvVA1KXPCgN", name: "TX_New Trend" },
+          { id: "ZiHnhDd7ubz", name: "% Suppression by age groups" },
+          { id: "sl8NEuWeSPo", name: "TX_Curr Trend" },
+          { id: "u6vpiRG382d", name: "VL Coverage" },
+          { id: "Spq8yd9m8BJ", name: "MMD Trend" },
+        ],
+      },
+      {
+        id: "EOdHXXKsPAg",
+        name: "CHAP Stawisha AHD",
+        visualizations: [
+          { id: "S9urIcWBYrA", name: "TX_New CD4" },
+          { id: "Chw3T5JYf9g", name: "AHD IIT CD4" },
+          { id: "kZiutIDKJs1", name: "AHD TF CD4" },
+          { id: "Sg0gflvgwv2", name: "Crag screens" },
+          { id: "o5eawra3BxK", name: "TB screens" },
+          { id: "qv6K0Knj5jK", name: "AHD Totals" },
+          { id: "RMmXuhp0ypQ", name: "AHD IIT" },
+          { id: "mUxz5MaAbqM", name: "Crag Positive" },
+          { id: "impeenCtA7a", name: "TB Positive" },
+        ],
+      },
+      {
+        id: "meA5kLnL4VF",
+        name: "CHAP Stawisha CaCX",
+        visualizations: [
+          { id: "rDvEtcYGFyc", name: "CaCX Screen due vs Screen done" },
+        ],
+      },
+      {
+        id: "KBRAcvrH3At",
+        name: "CHAP Stawisha PrEP",
+        visualizations: [
+          { id: "ZueQ1hho4L9", name: "PrEP_CURR" },
+          { id: "rYX3wsMKKmD", name: "PrEP Month 1 Refill" },
+          { id: "DZCPuzu0t0w", name: "PrEP Month 3 Refill" },
+          { id: "ZFOFBrlSq2f", name: "PrEP New by Population" },
+        ],
+      },
+      {
+        id: "P6U6sWbjSOG",
+        name: "CHAP Stawisha PMTCT Dashboard",
+        visualizations: [
+          { id: "Cdn0W5KFgrg", name: "PMTCT_STAT Cascade" },
+          { id: "V7kZUsTLWK8", name: "EID 0-8wks" },
+          { id: "ivyV1uBvQLY", name: "EID 2-12mnths" },
+          { id: "bPkonCDqbb2", name: "VL for Known Positives" },
+          { id: "N2tMAnePHhZ", name: "VL for New Positives" },
+          { id: "w4cp7XyybRI", name: "Pregnant Women" },
+          { id: "ouDmMtQBil6", name: "Breastfeeding Women" },
+          { id: "ub3WspEZ1mE", name: "HEI PCR" },
+          { id: "KyQQ6qYDUtu", name: "HEI Final Outcomes" },
+        ],
+      },
+    ],
+  },
+  moh_forms: {
+    id: "moh_forms",
+    code: "mh",
+    name: "MOH Forms",
+    icon: "📋",
+    color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
+    desc: "Kenya Ministry of Health — MOH 717, 711, 731, 740 standard reporting forms.",
+    datasets: [
+      { id: "jvDNKSO5hn8", name: "MOH 717 Workload", elements: 338 },
+      { id: "oVwsUocVTod", name: "MOH 711 Integrated", elements: 303 },
+      { id: "ASCksPk7uR4", name: "MOH 711 Report", elements: 303 },
+      { id: "oFWWPn2nSqU", name: "MOH 731 HIV/AIDS", elements: 175 },
+      { id: "bbJK9pBEhuS", name: "MOH 740 Diabetes & HTN", elements: 103 },
+    ],
+    dashboards: [],
+  },
+  gates_foundation: {
+    id: "gates_foundation",
+    code: "gf",
+    name: "Gates Foundation",
+    icon: "💉",
+    color: "bg-rose-50 border-rose-200 hover:bg-rose-100",
+    desc: "Gates Foundation — Maternal & child health and commodity monitoring.",
+    datasets: [
+      { id: "KLipwKfzvir", name: "Monthly Report", elements: 240 },
+      { id: "k6Vi8VxJuue", name: "Commodity Report", elements: 77 },
+    ],
+    dashboards: [
+      {
+        id: "WxPPfMc1lV1",
+        name: "GF - RMNCH Dashboard",
+        visualizations: [
+          { id: "HBXJTWJ7Klt", name: "GF - ANC Clients" },
+          { id: "zGFVZohMuWO", name: "Iron/Folic" },
+          { id: "SidkJaoOzLf", name: "Deliveries" },
+          { id: "YARTtPVeBZm", name: "Uterotonics" },
+          { id: "UBPdoZ6lj6C", name: "Maternal Complications" },
+          { id: "iir7qvfzy7o", name: "Maternal Deaths" },
+          { id: "F0vQuLxncrJ", name: "Neonatal Deaths" },
+          { id: "YAExTmrN15O", name: "PNC" },
+        ],
+      },
+    ],
+  },
+  acsp_optical: {
+    id: "acsp_optical",
+    code: "ao",
+    name: "ACSP Optical",
+    icon: "👁️",
+    color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
+    desc: "ACSP (AIDS Crisis Support Program) — Optical/Eye Health monthly reporting.",
+    datasets: [
+      { id: "xWm3V8jG6cm", name: "ACSP Monthly Report", elements: 103 },
+    ],
+    dashboards: [
+      {
+        id: "eXQKlgUONaR",
+        name: "ACSP Dashboard",
+        visualizations: [
+          { id: "KVxmV8xKRKC", name: "Screened/Issued Glasses" },
+          { id: "Q8iuQESMdM0", name: "Screening by age/sex" },
+          { id: "VmqJCcT6m0M", name: "Issued Glasses by age/sex" },
+          { id: "xF7SF60ZQ95", name: "Issued Glasses by power" },
+          { id: "cyK34wo7qXg", name: "Trend of Reading Glasses" },
+        ],
+      },
+    ],
+  },
+  gitlab_vision: {
+    id: "gitlab_vision",
+    code: "gl",
+    name: "GitLab Vision",
+    icon: "🔭",
+    color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
+    desc: "GitLab Vision — monthly reporting and monitoring.",
+    datasets: [
+      { id: "ukgJnnK6Wtc", name: "GitLab Monthly Report", elements: 21 },
+    ],
+    dashboards: [],
+  },
+  bfw_outreach: {
+    id: "bfw_outreach",
+    code: "bw",
+    name: "BfW Outreach",
+    icon: "🤝",
+    color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
+    desc: "Bread for Women — outreach form for community-based support.",
+    datasets: [{ id: "sjIKmfKAZUh", name: "BfW Outreach Form", elements: 57 }],
+    dashboards: [],
+  },
+  cxca_pmtct: {
+    id: "cxca_pmtct",
+    code: "cp",
+    name: "CXCA/PMTCT",
+    icon: "🩺",
+    color: "bg-pink-50 border-pink-200 hover:bg-pink-100",
+    desc: "Cervical Cancer Screening & PMTCT — EID and final outcomes tracking.",
+    datasets: [{ id: "JxlbE8ReOUt", name: "CXCA/PMTCT EID/FO", elements: 48 }],
+    dashboards: [],
+  },
+  jmw_monthly: {
+    id: "jmw_monthly",
+    code: "jw",
+    name: "JMW Monthly",
+    icon: "👶",
+    color: "bg-teal-50 border-teal-200 hover:bg-teal-100",
+    desc: "Jua Mtoto Wako — monthly child health and welfare reporting.",
+    datasets: [{ id: "OY2qr2iDmWn", name: "JMW Monthly Report", elements: 22 }],
+    dashboards: [],
+  },
+  prep_tool: {
+    id: "prep_tool",
+    code: "pt",
+    name: "PrEP Tool",
+    icon: "💊",
+    color: "bg-lime-50 border-lime-200 hover:bg-lime-100",
+    desc: "PrEP Data Tool — pre-exposure prophylaxis data collection and monitoring.",
+    datasets: [{ id: "SHT0AgJPgQw", name: "Prep Data Tool", elements: 43 }],
+    dashboards: [],
+  },
+  test_dataset: {
+    id: "test_dataset",
+    code: "ts",
+    name: "Test Dataset",
+    icon: "🧪",
+    color: "bg-slate-50 border-slate-300 hover:bg-slate-100",
+    desc: "Test dataset for development and validation purposes.",
+    datasets: [{ id: "IawiFUdikHP", name: "Test Dataset", elements: 777 }],
+    dashboards: [],
+  },
+};
+
+// Flatten: get all chak project codes and ids for quick lookup
+const CHAK_PROJECT_CODES = {};
+const CHAK_PROJECT_IDS = {};
+Object.values(CHAK_PROJECTS).forEach(function (p) {
+  CHAK_PROJECT_CODES[p.code] = p.id;
+  CHAK_PROJECT_IDS[p.id] = p;
+});
+
+// Build dataset-id → project lookup
+const CHAK_DATASET_TO_PROJECT = {};
+Object.values(CHAK_PROJECTS).forEach(function (p) {
+  p.datasets.forEach(function (ds) {
+    CHAK_DATASET_TO_PROJECT[ds.id] = p.id;
+  });
+});
+
+function isChakProject() {
+  return state.activeProject && !!CHAK_PROJECT_IDS[state.activeProject];
+}
+
+function getActiveChakProject() {
+  return CHAK_PROJECT_IDS[state.activeProject] || null;
+}
 
 const tailwindConfig = {
   theme: {
@@ -65,9 +324,11 @@ function applyHashRoute() {
   const parts = hash.split("/").filter(Boolean);
   if (!parts.length) return;
 
-  // Check for project context: #/p/{projectCode}/{page}/{subtab}
-  // projectCode: jm = jamii_tekelezi
+  // Build project map: jamii_tekelezi + all CHAK projects
   const projectMap = { jm: "jamii_tekelezi" };
+  Object.keys(CHAK_PROJECT_CODES).forEach(function (code) {
+    projectMap[code] = CHAK_PROJECT_CODES[code];
+  });
   let pageId, subtabSlug;
 
   if (parts[0] === "p" && parts.length >= 2 && projectMap[parts[1]]) {
@@ -104,10 +365,24 @@ function applyHashRoute() {
     "indicators",
     "jamii",
     "all",
+    // CHAK dataset detail pages
+    "chak_dataset",
+    // CHAK dashboard detail pages
+    "chak_dashboard",
   ]);
   if (!validPages.has(pageId)) return;
 
   state.activePage = pageId;
+
+  // If navigating to CHAK dataset page, treat subtabSlug as dataset ID (URI-decoded)
+  if (pageId === "chak_dataset" && subtabSlug) {
+    state.activeDatasetId = decodeURIComponent(subtabSlug);
+  }
+  // If navigating to CHAK dashboard page, treat subtabSlug as dashboard ID (URI-decoded)
+  if (pageId === "chak_dashboard" && subtabSlug) {
+    state.activeDashboardId = decodeURIComponent(subtabSlug);
+  }
+
   const meta = getPageMeta(pageId);
   if (subtabSlug) {
     state.activeSubtabs[pageId] = subtabSlug;
@@ -125,10 +400,16 @@ function toSlug(value) {
     .replace(/(^-|-$)/g, "");
 }
 
+function getProjectHashPrefix() {
+  if (state.activeProject === "jamii_tekelezi") return "p/jm/";
+  var chakProj = getActiveChakProject();
+  if (chakProj) return "p/" + chakProj.code + "/";
+  return "";
+}
+
 function setPageHash(pageId, subtabLabel = "") {
   const sub = subtabLabel ? `/${toSlug(subtabLabel)}` : "";
-  // Include project context in hash if active
-  const projectPrefix = state.activeProject === "jamii_tekelezi" ? "p/jm/" : "";
+  const projectPrefix = getProjectHashPrefix();
   const next = `#/${projectPrefix}${pageId}${sub}`;
   if (window.location.hash !== next) {
     window.location.hash = next;
@@ -717,6 +998,77 @@ function renderPageTabs() {
       { id: "post_rape", label: "Post ResP" },
       { id: "cacx", label: "CACX" },
     ];
+  } else if (isChakProject()) {
+    // Within a CHAK project — show overview, dashboard tabs, then dataset tabs
+    var chakProj = getActiveChakProject();
+    tabs = [{ id: "overview", label: "Overview" }];
+    // Add dashboard tabs
+    (chakProj.dashboards || []).forEach(function (db) {
+      var dbId = typeof db === "string" ? db : db.id;
+      var dbName = typeof db === "string" ? db : db.name;
+      tabs.push({ id: "chak_dashboard", label: dbName, dbId: dbId });
+    });
+    // Add dataset tabs
+    chakProj.datasets.forEach(function (ds) {
+      tabs.push({ id: "chak_dataset", label: ds.name, dsId: ds.id });
+    });
+    // Mark the current tab
+    elements.pageTabs.innerHTML = tabs
+      .map(function (tab) {
+        var active = state.activePage === tab.id;
+        if (tab.id === "chak_dataset" && state.activeDatasetId === tab.dsId)
+          active = true;
+        if (tab.id === "chak_dashboard" && state.activeDashboardId === tab.dbId)
+          active = true;
+        return (
+          '<div data-page-tab="' +
+          tab.id +
+          '" data-ds-id="' +
+          (tab.dsId || "") +
+          '" data-db-id="' +
+          (tab.dbId || "") +
+          '" class="nav-item ' +
+          (active ? "active" : "") +
+          '">' +
+          '<div class="text-[14px] font-semibold tracking-tight">' +
+          escapeHtml(tab.label) +
+          "</div></div>"
+        );
+      })
+      .join("");
+
+    elements.pageTabs
+      .querySelectorAll("[data-page-tab]")
+      .forEach(function (el) {
+        el.addEventListener("click", function () {
+          var pid = el.getAttribute("data-page-tab") || "overview";
+          var dsId = el.getAttribute("data-ds-id") || "";
+          var dbId = el.getAttribute("data-db-id") || "";
+          if (pid === "overview") {
+            state.activePage = "overview";
+            state.activeDatasetId = "";
+            state.activeDashboardId = "";
+            setPageHash("overview");
+          } else if (pid === "chak_dataset" && dsId) {
+            state.activePage = "chak_dataset";
+            state.activeDatasetId = dsId;
+            state.activeDashboardId = "";
+            var prefix = getProjectHashPrefix();
+            window.location.hash =
+              "#/" + prefix + "chak_dataset/" + encodeURIComponent(dsId);
+          } else if (pid === "chak_dashboard" && dbId) {
+            state.activePage = "chak_dashboard";
+            state.activeDashboardId = dbId;
+            state.activeDatasetId = "";
+            var prefix = getProjectHashPrefix();
+            window.location.hash =
+              "#/" + prefix + "chak_dashboard/" + encodeURIComponent(dbId);
+          }
+          scrollToPageTop();
+          renderCurrentView();
+        });
+      });
+    return;
   } else {
     // Global navigation
     tabs = [
@@ -3679,7 +4031,8 @@ function renderMhuGenericTable(
 }
 
 function renderProjectSelection() {
-  const projects = [
+  // Static projects (non-CHAK)
+  var staticProjects = [
     {
       id: "jamii_tekelezi",
       name: "Jamii Tekelezi",
@@ -3687,108 +4040,84 @@ function renderProjectSelection() {
       icon: "📊",
       color: "bg-sky-50 border-sky-200 hover:bg-sky-100",
     },
-    {
-      id: "chap_stawisha",
-      name: "CHAP Stawisha",
-      desc: "Community Health and Adolescent Program — Stawisha initiative.",
-      icon: "🌱",
-      color: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
-    },
-    {
-      id: "eye_health",
-      name: "Eye Health — ACSP & GitLab",
-      desc: "Eye Health program — ACSP and GitLab partnership.",
-      icon: "👁️",
-      color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-    },
-    {
-      id: "eis",
-      name: "EIS",
-      desc: "Enhanced Infection Surveillance program.",
-      icon: "🔬",
-      color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-    },
-    {
-      id: "bftw_hss",
-      name: "BFTW HSS",
-      desc: "Bread for the World — Health Systems Strengthening.",
-      icon: "🏗️",
-      color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
-    },
-    {
-      id: "bftw_rmncah",
-      name: "BFTW RMNCAH",
-      desc: "Bread for the World — Reproductive, Maternal, Newborn, Child and Adolescent Health.",
-      icon: "👶",
-      color: "bg-rose-50 border-rose-200 hover:bg-rose-100",
-    },
-    {
-      id: "pep",
-      name: "PEP",
-      desc: "Post-Exposure Prophylaxis program tracking.",
-      icon: "💊",
-      color: "bg-cyan-50 border-cyan-200 hover:bg-cyan-100",
-    },
-    {
-      id: "gf_mnch",
-      name: "GF-MNCH",
-      desc: "Global Fund — Maternal, Newborn and Child Health.",
-      icon: "🤱",
-      color: "bg-pink-50 border-pink-200 hover:bg-pink-100",
-    },
-    {
-      id: "impact",
-      name: "IMPACT",
-      desc: "Integrated Monitoring and Program Analysis for Comprehensive Tracking.",
-      icon: "🎯",
-      color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
-    },
-    {
-      id: "cdic_icare",
-      name: "CDIC-iCARE",
-      desc: "Comprehensive Data Integration for Community AIDS Response Enhancement.",
-      icon: "💻",
-      color: "bg-teal-50 border-teal-200 hover:bg-teal-100",
-    },
   ];
 
-  elements.chartRoot.innerHTML = `
-    <div class="space-y-6">
-      <div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="text-2xl">📋</div>
-          <div>
-            <h2 class="text-lg font-bold text-slate-800">Select a Project</h2>
-            <p class="text-xs text-slate-500">Choose a project to view its dashboards and reports.</p>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          ${projects
-            .map(
-              (p) => `
-            <button data-project="${escapeHtml(p.id)}" class="flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition ${p.color}">
-              <div class="text-3xl shrink-0">${p.icon}</div>
-              <div class="min-w-0">
-                <div class="text-[14px] font-bold text-slate-800">${escapeHtml(p.name)}</div>
-                <div class="text-[12px] text-slate-500 mt-0.5 leading-snug">${escapeHtml(p.desc)}</div>
-              </div>
-            </button>
-          `,
-            )
-            .join("")}
-        </div>
-      </div>
-    </div>
-  `;
+  // Build CHAK project cards from config
+  var chakCards = Object.keys(CHAK_PROJECTS).map(function (key) {
+    var p = CHAK_PROJECTS[key];
+    return {
+      id: p.id,
+      name: p.name,
+      desc: p.desc,
+      icon: p.icon,
+      color: p.color,
+      isChak: true,
+    };
+  });
 
-  elements.chartRoot.querySelectorAll("[data-project]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const projectId = btn.getAttribute("data-project") || "";
+  var allProjects = staticProjects.concat(chakCards);
+
+  elements.chartRoot.innerHTML =
+    '<div class="space-y-6">' +
+    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+    '<div class="flex items-center gap-3 mb-5">' +
+    '<div class="text-2xl">📋</div>' +
+    "<div>" +
+    '<h2 class="text-lg font-bold text-slate-800">Select a Project</h2>' +
+    '<p class="text-xs text-slate-500">Choose a project to view its dashboards, datasets, and reports.</p>' +
+    "</div>" +
+    "</div>" +
+    '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">' +
+    allProjects
+      .map(function (p) {
+        return (
+          '<button data-project="' +
+          escapeHtml(p.id) +
+          '" class="flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition ' +
+          p.color +
+          '">' +
+          '<div class="text-3xl shrink-0">' +
+          p.icon +
+          "</div>" +
+          '<div class="min-w-0">' +
+          '<div class="text-[14px] font-bold text-slate-800">' +
+          escapeHtml(p.name) +
+          "</div>" +
+          '<div class="text-[12px] text-slate-500 mt-0.5 leading-snug">' +
+          escapeHtml(p.desc) +
+          "</div>" +
+          "</div>" +
+          "</button>"
+        );
+      })
+      .join("") +
+    "</div>" +
+    "</div>" +
+    "</div>";
+
+  elements.chartRoot.querySelectorAll("[data-project]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var projectId = btn.getAttribute("data-project") || "";
+
+      // Jamii Tekelezi — existing behavior
       if (projectId === "jamii_tekelezi") {
         state.activeProject = "jamii_tekelezi";
         if (elements.projectFilter)
           elements.projectFilter.value = "jamii-tekelezi";
         state.activePage = "overview";
+        state.activeDatasetId = "";
+        setPageHash("overview");
+        renderCurrentView();
+        return;
+      }
+
+      // CHAK project — check if it's a known CHAK project
+      var chakProj = CHAK_PROJECT_IDS[projectId];
+      if (chakProj) {
+        state.activeProject = projectId;
+        state.activeDatasetId = "";
+        state.activePage = "overview";
+        if (elements.projectFilter) elements.projectFilter.value = projectId;
         setPageHash("overview");
         renderCurrentView();
       }
@@ -4164,6 +4493,14 @@ function renderCurrentView() {
   const pageId = state.activePage || "overview";
 
   if (pageId === "overview") {
+    if (isChakProject()) {
+      // CHAK project overview — show datasets grid, summary, dashboards
+      hidePageContext();
+      elements.chartRoot.innerHTML =
+        '<div id="chakProjectRoot" class="space-y-6"></div>';
+      renderChakProjectOverview();
+      return;
+    }
     if (state.activeProject !== "jamii_tekelezi") {
       hidePageContext();
       elements.chartRoot.innerHTML = `
@@ -4183,6 +4520,20 @@ function renderCurrentView() {
     elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6"><div id="jamiiContent" class="space-y-6"></div></div>`;
     const jamiiContainer = document.getElementById("jamiiContent");
     renderJamiiOverview(jamiiContainer);
+    return;
+  }
+
+  // ── CHAK Dataset Detail Page ──
+  if (pageId === "chak_dataset" && state.activeDatasetId) {
+    hidePageContext();
+    renderChakDatasetDetail();
+    return;
+  }
+
+  // ── CHAK Dashboard Detail Page ──
+  if (pageId === "chak_dashboard" && state.activeDashboardId) {
+    hidePageContext();
+    renderChakDashboardDetail();
     return;
   }
 
@@ -18996,4 +19347,398 @@ async function renderNarrativesSubtab(container) {
         <button onclick="renderNarrativesSubtab(container)" class="mt-3 px-4 py-2 bg-sky-600 text-white text-xs rounded-lg hover:bg-sky-700">Retry</button>
       </div>`;
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// CHAK Project UI – Overview & Dataset Detail
+// ═════════════════════════════════════════════════════════════════════
+
+function renderChakProjectOverview() {
+  var proj = getActiveChakProject();
+  if (!proj) {
+    elements.chartRoot.innerHTML =
+      '<div class="p-8 text-center text-slate-400">Project not found.</div>';
+    return;
+  }
+
+  var datasetCards = (proj.datasets || [])
+    .map(function (ds) {
+      return (
+        '<button data-chak-dataset="' +
+        escapeHtml(ds.id) +
+        '" class="flex flex-col items-start gap-1 rounded-2xl border-2 border-slate-200 bg-white p-4 text-left hover:border-sky-300 hover:bg-sky-50 transition">' +
+        '<div class="text-[14px] font-bold text-slate-800">' +
+        escapeHtml(ds.name) +
+        "</div>" +
+        '<div class="text-[11px] text-slate-400">' +
+        (ds.elements || "?") +
+        " data elements</div>" +
+        "</div>"
+      );
+    })
+    .join("");
+
+  var dashboardItems = (proj.dashboards || [])
+    .map(function (db) {
+      var dbId = typeof db === "string" ? db : db.id;
+      var dbName = typeof db === "string" ? db : db.name;
+      var vizCount =
+        typeof db === "string"
+          ? 0
+          : db.visualizations
+            ? db.visualizations.length
+            : 0;
+      return (
+        '<button data-chak-dashboard="' +
+        escapeHtml(dbId) +
+        '" class="flex flex-col items-start gap-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-left hover:border-sky-300 hover:bg-sky-50 transition w-full">' +
+        '<div class="text-[13px] font-semibold text-slate-700">' +
+        escapeHtml(dbName) +
+        "</div>" +
+        (vizCount > 0
+          ? '<div class="text-[11px] text-slate-400">' +
+            vizCount +
+            " visualizations</div>"
+          : "") +
+        "</div>"
+      );
+    })
+    .join("");
+
+  elements.chartRoot.innerHTML =
+    '<div class="space-y-6">' +
+    // Header
+    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+    '<div class="flex items-center justify-between mb-4">' +
+    '<div class="flex items-center gap-3">' +
+    '<div class="text-3xl">' +
+    proj.icon +
+    "</div>" +
+    "<div>" +
+    '<h2 class="text-lg font-bold text-slate-800">' +
+    escapeHtml(proj.name) +
+    "</h2>" +
+    '<p class="text-xs text-slate-500">' +
+    escapeHtml(proj.desc || "") +
+    "</p>" +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    // Info badges
+    '<div class="flex flex-wrap gap-3 text-xs text-slate-500">' +
+    '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📦 ' +
+    (proj.datasets ? proj.datasets.length : 0) +
+    " datasets</span>" +
+    '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📊 ' +
+    (proj.dashboards ? proj.dashboards.length : 0) +
+    " dashboards</span>" +
+    "</div>" +
+    "</div>" +
+    // Datasets grid
+    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+    '<h3 class="text-sm font-bold text-slate-700 mb-3">📦 Datasets</h3>' +
+    '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">' +
+    datasetCards +
+    "</div>" +
+    "</div>" +
+    // Dashboards list
+    (dashboardItems
+      ? '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+        '<h3 class="text-sm font-bold text-slate-700 mb-3">📊 Dashboards</h3>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+        dashboardItems +
+        "</div>" +
+        "</div>"
+      : "") +
+    "</div>";
+
+  // Attach dataset click handlers
+  elements.chartRoot
+    .querySelectorAll("[data-chak-dataset]")
+    .forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var dsId = btn.getAttribute("data-chak-dataset") || "";
+        state.activeDatasetId = dsId;
+        state.activeDashboardId = "";
+        state.activePage = "chak_dataset";
+        // Set hash directly without slugify to preserve case-sensitive ID
+        var prefix = getProjectHashPrefix();
+        var next = "#/" + prefix + "chak_dataset/" + encodeURIComponent(dsId);
+        if (window.location.hash !== next) {
+          window.location.hash = next;
+        }
+        renderCurrentView();
+      });
+    });
+
+  // Attach dashboard click handlers
+  elements.chartRoot
+    .querySelectorAll("[data-chak-dashboard]")
+    .forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var dbId = btn.getAttribute("data-chak-dashboard") || "";
+        state.activeDashboardId = dbId;
+        state.activeDatasetId = "";
+        state.activePage = "chak_dashboard";
+        var prefix = getProjectHashPrefix();
+        var next = "#/" + prefix + "chak_dashboard/" + encodeURIComponent(dbId);
+        if (window.location.hash !== next) {
+          window.location.hash = next;
+        }
+        renderCurrentView();
+      });
+    });
+}
+
+async function renderChakDatasetDetail() {
+  var dsId = state.activeDatasetId;
+  if (!dsId) {
+    renderChakProjectOverview();
+    return;
+  }
+
+  var proj = getActiveChakProject();
+
+  // Find dataset name from config
+  var dsName = dsId;
+  if (proj) {
+    var found = (proj.datasets || []).find(function (d) {
+      return d.id === dsId;
+    });
+    if (found) dsName = found.name;
+  }
+
+  // Show loading
+  elements.chartRoot.innerHTML =
+    '<div class="space-y-6">' +
+    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+    '<div class="flex items-center gap-3">' +
+    '<div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>' +
+    '<span class="text-sm text-slate-500">Loading dataset: ' +
+    escapeHtml(dsName) +
+    "…</span>" +
+    "</div>" +
+    "</div>" +
+    "</div>";
+
+  try {
+    var resp = await fetch(
+      "/api/chak-explore/dataset/" + encodeURIComponent(dsId),
+    );
+    var result = await resp.json();
+
+    if (!result.ok) throw new Error(result.error || "Failed to load");
+
+    var ds = result.dataset || {};
+    var dataElements = ds.dataElements || [];
+
+    // Build table rows
+    var tableRows = dataElements
+      .map(function (de, idx) {
+        return (
+          "<tr>" +
+          '<td class="px-3 py-2 text-[12px] text-slate-400">' +
+          (idx + 1) +
+          "</td>" +
+          '<td class="px-3 py-2 text-[13px] font-medium text-slate-700 max-w-[260px] truncate" title="' +
+          escapeHtml(de.name || "") +
+          '">' +
+          escapeHtml(de.name || "") +
+          "</td>" +
+          '<td class="px-3 py-2 text-[12px] text-slate-500">' +
+          escapeHtml(de.id || "") +
+          "</td>" +
+          '<td class="px-3 py-2 text-[12px]"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">' +
+          escapeHtml(de.valueType || de.value_type || "") +
+          "</span></td>" +
+          (de.categoryCombo
+            ? '<td class="px-3 py-2 text-[12px] text-slate-500">' +
+              escapeHtml(de.categoryCombo.name || de.categoryCombo || "") +
+              "</td>"
+            : '<td class="px-3 py-2 text-[12px] text-slate-400">—</td>') +
+          "</tr>"
+        );
+      })
+      .join("");
+
+    var totalElements = ds.totalElements || dataElements.length;
+
+    elements.chartRoot.innerHTML =
+      '<div class="space-y-6">' +
+      // Header with back button
+      '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+      '<div class="flex items-center justify-between mb-3">' +
+      "<div>" +
+      '<h2 class="text-lg font-bold text-slate-800">' +
+      escapeHtml(dsName) +
+      "</h2>" +
+      '<p class="text-xs text-slate-400">Dataset ID: ' +
+      escapeHtml(dsId) +
+      "</p>" +
+      "</div>" +
+      '<button onclick="renderChakProjectOverview()" class="text-xs text-slate-400 hover:text-slate-600 underline">← Back</button>' +
+      "</div>" +
+      // Metadata badges
+      '<div class="flex flex-wrap gap-2 text-xs text-slate-500">' +
+      '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📦 ' +
+      totalElements +
+      " data elements</span>" +
+      (ds.periodType
+        ? '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📅 ' +
+          escapeHtml(ds.periodType) +
+          "</span>"
+        : "") +
+      "</div>" +
+      "</div>" +
+      // Data elements table
+      '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm overflow-x-auto">' +
+      '<h3 class="text-sm font-bold text-slate-700 mb-3">📋 Data Elements</h3>' +
+      '<table class="w-full text-left border-collapse">' +
+      "<thead>" +
+      '<tr class="border-b border-slate-200">' +
+      '<th class="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase">#</th>' +
+      '<th class="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase">Name</th>' +
+      '<th class="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase">ID</th>' +
+      '<th class="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase">Value Type</th>' +
+      '<th class="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase">Category</th>' +
+      "</tr>" +
+      "</thead>" +
+      "<tbody>" +
+      tableRows +
+      "</tbody>" +
+      "</table>" +
+      "</div>" +
+      "</div>";
+  } catch (err) {
+    elements.chartRoot.innerHTML =
+      '<div class="space-y-6">' +
+      '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+      '<div class="flex items-center justify-between mb-3">' +
+      "<div>" +
+      '<h2 class="text-lg font-bold text-slate-800">' +
+      escapeHtml(dsName) +
+      "</h2>" +
+      '<p class="text-xs text-slate-400">Dataset ID: ' +
+      escapeHtml(dsId) +
+      "</p>" +
+      "</div>" +
+      '<button onclick="renderChakProjectOverview()" class="text-xs text-slate-400 hover:text-slate-600 underline">← Back</button>' +
+      "</div>" +
+      '<div class="p-8 text-center">' +
+      '<div class="text-4xl mb-2">⚠️</div>' +
+      '<p class="text-sm font-medium text-slate-700">Failed to load dataset</p>' +
+      '<p class="text-xs text-slate-400 mt-1">' +
+      escapeHtml(err.message) +
+      "</p>" +
+      '<button onclick="renderChakDatasetDetail()" class="mt-3 px-4 py-2 bg-sky-600 text-white text-xs rounded-lg hover:bg-sky-700">Retry</button>' +
+      "</div>" +
+      "</div>" +
+      "</div>";
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// CHAK Dashboard Detail — shows visualizations for a dashboard
+// ═════════════════════════════════════════════════════════════════════
+
+function renderChakDashboardDetail() {
+  var dbId = state.activeDashboardId;
+  if (!dbId) {
+    renderChakProjectOverview();
+    return;
+  }
+
+  var proj = getActiveChakProject();
+  var dbName = dbId;
+  var visualizations = [];
+
+  // Find dashboard config
+  if (proj) {
+    var found = (proj.dashboards || []).find(function (d) {
+      return (typeof d === "string" ? d : d.id) === dbId;
+    });
+    if (found) {
+      dbName = typeof found === "string" ? found : found.name;
+      visualizations =
+        typeof found === "string" ? [] : found.visualizations || [];
+    }
+  }
+
+  // Build visualization cards
+  var vizCards = visualizations
+    .map(function (viz, idx) {
+      return (
+        '<div class="rounded-xl border border-slate-200 bg-white p-4 hover:border-sky-300 hover:bg-sky-50 transition">' +
+        '<div class="flex items-center justify-between">' +
+        '<div class="flex items-center gap-3">' +
+        '<div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-bold">' +
+        (idx + 1) +
+        "</div>" +
+        "<div>" +
+        '<div class="text-[14px] font-semibold text-slate-800">' +
+        escapeHtml(viz.name || "Unknown") +
+        "</div>" +
+        '<div class="text-[11px] text-slate-400 font-mono">' +
+        escapeHtml(viz.id || "") +
+        "</div>" +
+        "</div>" +
+        "</div>" +
+        '<a href="http://ereporting.chak.or.ke:8500/dhis-web-data-visualizer/?type=CHART&id=' +
+        encodeURIComponent(viz.id) +
+        '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline whitespace-nowrap">Open →</a>' +
+        "</div>" +
+        "</div>"
+      );
+    })
+    .join("");
+
+  elements.chartRoot.innerHTML =
+    '<div class="space-y-6">' +
+    // Header with back button
+    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+    '<div class="flex items-center justify-between mb-3">' +
+    "<div>" +
+    '<h2 class="text-lg font-bold text-slate-800">' +
+    escapeHtml(dbName) +
+    "</h2>" +
+    '<p class="text-xs text-slate-400">Dashboard ID: ' +
+    escapeHtml(dbId) +
+    " | " +
+    visualizations.length +
+    " visualizations</p>" +
+    "</div>" +
+    '<button onclick="renderChakProjectOverview()" class="text-xs text-slate-400 hover:text-slate-600 underline">← Back</button>' +
+    "</div>" +
+    // Metadata badges
+    '<div class="flex flex-wrap gap-2 text-xs text-slate-500">' +
+    '<span class="bg-sky-100 px-3 py-1.5 rounded-full">📊 ' +
+    visualizations.length +
+    " visualizations</span>" +
+    (proj
+      ? '<span class="bg-sky-100 px-3 py-1.5 rounded-full">🏷️ ' +
+        escapeHtml(proj.name) +
+        "</span>"
+      : "") +
+    "</div>" +
+    // Link to full dashboard
+    '<div class="mt-2">' +
+    '<a href="http://ereporting.chak.or.ke:8500/dhis-web-dashboard/#/' +
+    escapeHtml(dbId) +
+    '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline">🔗 Open full dashboard in CHAK DHIS2 →</a>' +
+    "</div>" +
+    "</div>" +
+    // Visualizations grid
+    (vizCards
+      ? '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+        '<h3 class="text-sm font-bold text-slate-700 mb-3">📈 Visualizations</h3>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+        vizCards +
+        "</div>" +
+        "</div>"
+      : '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm text-center py-10">' +
+        '<div class="text-4xl mb-2">📭</div>' +
+        '<p class="text-sm text-slate-500">No visualizations found for this dashboard.</p>' +
+        '<p class="text-xs text-slate-400 mt-1">Visualization data may need to be refreshed from CHAK DHIS2.</p>' +
+        "</div>") +
+    "</div>";
 }
