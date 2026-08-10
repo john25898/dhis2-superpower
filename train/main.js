@@ -14,6 +14,7 @@ const state = {
   activeSubtabs: {},
   activeDatasetId: "",
   activeDashboardId: "",
+  activeChakSubproject: "",
   activeMhuSubtab: "WORKLOAD",
   playgroundMode: "finance",
   playgroundChart: null,
@@ -128,22 +129,6 @@ const CHAK_PROJECTS = {
       },
     ],
   },
-  moh_forms: {
-    id: "moh_forms",
-    code: "mh",
-    name: "MOH Forms",
-    icon: "📋",
-    color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-    desc: "Kenya Ministry of Health — MOH 717, 711, 731, 740 standard reporting forms.",
-    datasets: [
-      { id: "jvDNKSO5hn8", name: "MOH 717 Workload", elements: 338 },
-      { id: "oVwsUocVTod", name: "MOH 711 Integrated", elements: 303 },
-      { id: "ASCksPk7uR4", name: "MOH 711 Report", elements: 303 },
-      { id: "oFWWPn2nSqU", name: "MOH 731 HIV/AIDS", elements: 175 },
-      { id: "bbJK9pBEhuS", name: "MOH 740 Diabetes & HTN", elements: 103 },
-    ],
-    dashboards: [],
-  },
   gates_foundation: {
     id: "gates_foundation",
     code: "gf",
@@ -175,10 +160,10 @@ const CHAK_PROJECTS = {
   acsp_optical: {
     id: "acsp_optical",
     code: "ao",
-    name: "ACSP Optical",
+    name: "ACSP",
     icon: "👁️",
     color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-    desc: "ACSP (AIDS Crisis Support Program) — Optical/Eye Health monthly reporting.",
+    desc: "Africa Clear Sight Partnership Project — increasing awareness and education on presbyopia, its risk factors, associated impairment, and effects on quality of life; alleviating the effects of near-vision impairment.",
     datasets: [
       { id: "xWm3V8jG6cm", name: "ACSP Monthly Report", elements: 103 },
     ],
@@ -196,6 +181,16 @@ const CHAK_PROJECTS = {
       },
     ],
   },
+  impact: {
+    id: "impact",
+    code: "im",
+    name: "IMPACT",
+    icon: "🎯",
+    color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
+    desc: "Improving Pharmaceutical Access Through Continuous Training (IMPACT) Project — strengthening access to pharmaceuticals through continuous training.",
+    datasets: [],
+    dashboards: [],
+  },
   gitlab_vision: {
     id: "gitlab_vision",
     code: "gl",
@@ -208,25 +203,35 @@ const CHAK_PROJECTS = {
     ],
     dashboards: [],
   },
-  bfw_outreach: {
-    id: "bfw_outreach",
-    code: "bw",
-    name: "BfW Outreach",
-    icon: "🤝",
+  rmncah_projects: {
+    id: "rmncah_projects",
+    code: "rn",
+    name: "RMNCAH Projects",
+    icon: "🤱",
     color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-    desc: "Bread for Women — outreach form for community-based support.",
-    datasets: [{ id: "sjIKmfKAZUh", name: "BfW Outreach Form", elements: 57 }],
+    desc: "Reproductive, Maternal, Neonatal, Child and Adolescent Health (RMNCAH) Projects.",
+    datasets: [],
     dashboards: [],
-  },
-  cxca_pmtct: {
-    id: "cxca_pmtct",
-    code: "cp",
-    name: "CXCA/PMTCT",
-    icon: "🩺",
-    color: "bg-pink-50 border-pink-200 hover:bg-pink-100",
-    desc: "Cervical Cancer Screening & PMTCT — EID and final outcomes tracking.",
-    datasets: [{ id: "JxlbE8ReOUt", name: "CXCA/PMTCT EID/FO", elements: 48 }],
-    dashboards: [],
+    subprojects: [
+      {
+        id: "chak_bfw_rmncah",
+        name: "CHAK Bread for the World RMNCAH Project",
+        icon: "🤝",
+        desc: "Improving universal access to RMNCAH and nutrition services through gender-responsive, inclusive, sustainable healthcare; strengthening health systems and scaling up access to FP/RMNCAH services across 60 CHAK member health units in 15 counties (2023–2026).",
+        datasets: [
+          { id: "sjIKmfKAZUh", name: "BfW Outreach Form", elements: 57 },
+        ],
+        dashboards: [],
+      },
+      {
+        id: "mnch_accelerator",
+        name: "MNCH Accelerator Project",
+        icon: "👶",
+        desc: "Maternal, Neonatal and Child Health (MNCH) Accelerator — capacity building for quality MNCH care, advocacy for MNCH investment in faith-based health services, and improving access to essential MNCH commodities.",
+        datasets: [],
+        dashboards: [],
+      },
+    ],
   },
   jmw_monthly: {
     id: "jmw_monthly",
@@ -241,21 +246,11 @@ const CHAK_PROJECTS = {
   prep_tool: {
     id: "prep_tool",
     code: "pt",
-    name: "PrEP Tool",
+    name: "PEP",
     icon: "💊",
     color: "bg-lime-50 border-lime-200 hover:bg-lime-100",
-    desc: "PrEP Data Tool — pre-exposure prophylaxis data collection and monitoring.",
+    desc: "Partnership for Education and Health Professionals",
     datasets: [{ id: "SHT0AgJPgQw", name: "Prep Data Tool", elements: 43 }],
-    dashboards: [],
-  },
-  test_dataset: {
-    id: "test_dataset",
-    code: "ts",
-    name: "Test Dataset",
-    icon: "🧪",
-    color: "bg-slate-50 border-slate-300 hover:bg-slate-100",
-    desc: "Test dataset for development and validation purposes.",
-    datasets: [{ id: "IawiFUdikHP", name: "Test Dataset", elements: 777 }],
     dashboards: [],
   },
 };
@@ -273,6 +268,11 @@ const CHAK_DATASET_TO_PROJECT = {};
 Object.values(CHAK_PROJECTS).forEach(function (p) {
   p.datasets.forEach(function (ds) {
     CHAK_DATASET_TO_PROJECT[ds.id] = p.id;
+  });
+  (p.subprojects || []).forEach(function (sp) {
+    (sp.datasets || []).forEach(function (ds) {
+      CHAK_DATASET_TO_PROJECT[ds.id] = p.id;
+    });
   });
 });
 
@@ -329,6 +329,8 @@ function applyHashRoute() {
   Object.keys(CHAK_PROJECT_CODES).forEach(function (code) {
     projectMap[code] = CHAK_PROJECT_CODES[code];
   });
+  // Backward-compatible alias: old BfW code "bw" → RMNCAH Projects
+  projectMap["bw"] = "rmncah_projects";
   let pageId, subtabSlug;
 
   if (parts[0] === "p" && parts.length >= 2 && projectMap[parts[1]]) {
@@ -19353,6 +19355,47 @@ async function renderNarrativesSubtab(container) {
 // CHAK Project UI – Overview & Dataset Detail
 // ═════════════════════════════════════════════════════════════════════
 
+function getActiveChakSubproject() {
+  var proj = getActiveChakProject();
+  if (!proj || !proj.subprojects || !proj.subprojects.length) return null;
+  var spId = state.activeChakSubproject;
+  var found = (proj.subprojects || []).find(function (s) {
+    return s.id === spId;
+  });
+  if (!found) found = proj.subprojects[0];
+  return found;
+}
+
+function findChakDatasetInProject(proj, dsId) {
+  var found = (proj.datasets || []).find(function (d) {
+    return d.id === dsId;
+  });
+  if (found) return found;
+  var sps = proj.subprojects || [];
+  for (var i = 0; i < sps.length; i++) {
+    found = (sps[i].datasets || []).find(function (d) {
+      return d.id === dsId;
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
+function findChakDashboardInProject(proj, dbId) {
+  var found = (proj.dashboards || []).find(function (d) {
+    return (typeof d === "string" ? d : d.id) === dbId;
+  });
+  if (found) return found;
+  var sps = proj.subprojects || [];
+  for (var i = 0; i < sps.length; i++) {
+    found = (sps[i].dashboards || []).find(function (d) {
+      return (typeof d === "string" ? d : d.id) === dbId;
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
 function renderChakProjectOverview() {
   var proj = getActiveChakProject();
   if (!proj) {
@@ -19361,7 +19404,12 @@ function renderChakProjectOverview() {
     return;
   }
 
-  var datasetCards = (proj.datasets || [])
+  var hasSubs = !!(proj.subprojects && proj.subprojects.length);
+  var sub = hasSubs ? getActiveChakSubproject() : null;
+  var datasets = sub ? sub.datasets || [] : proj.datasets || [];
+  var dashboards = sub ? sub.dashboards || [] : proj.dashboards || [];
+
+  var datasetCards = datasets
     .map(function (ds) {
       return (
         '<button data-chak-dataset="' +
@@ -19378,7 +19426,7 @@ function renderChakProjectOverview() {
     })
     .join("");
 
-  var dashboardItems = (proj.dashboards || [])
+  var dashboardItems = dashboards
     .map(function (db) {
       var dbId = typeof db === "string" ? db : db.id;
       var dbName = typeof db === "string" ? db : db.name;
@@ -19405,6 +19453,40 @@ function renderChakProjectOverview() {
     })
     .join("");
 
+  // Subproject tabs (if this project groups multiple sub-projects)
+  var subTabsHtml = "";
+  if (hasSubs) {
+    subTabsHtml =
+      '<div class="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">' +
+      '<div class="flex flex-wrap gap-2">' +
+      proj.subprojects
+        .map(function (sp) {
+          var isActive = sub && sub.id === sp.id;
+          return (
+            '<button data-chak-subproject="' +
+            escapeHtml(sp.id) +
+            '" class="flex items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold transition ' +
+            (isActive
+              ? "bg-sky-600 text-white shadow-sm"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200") +
+            '">' +
+            "<span>" +
+            escapeHtml(sp.icon || "📁") +
+            "</span>" +
+            escapeHtml(sp.name) +
+            "</button>"
+          );
+        })
+        .join("") +
+      "</div>" +
+      (sub
+        ? '<p class="mt-3 text-xs text-slate-500 leading-relaxed">' +
+          escapeHtml(sub.desc || "") +
+          "</p>"
+        : "") +
+      "</div>";
+  }
+
   elements.chartRoot.innerHTML =
     '<div class="space-y-6">' +
     // Header
@@ -19412,35 +19494,39 @@ function renderChakProjectOverview() {
     '<div class="flex items-center justify-between mb-4">' +
     '<div class="flex items-center gap-3">' +
     '<div class="text-3xl">' +
-    proj.icon +
+    (sub ? escapeHtml(sub.icon || proj.icon) : proj.icon) +
     "</div>" +
     "<div>" +
     '<h2 class="text-lg font-bold text-slate-800">' +
-    escapeHtml(proj.name) +
+    escapeHtml(sub ? sub.name : proj.name) +
     "</h2>" +
     '<p class="text-xs text-slate-500">' +
-    escapeHtml(proj.desc || "") +
+    escapeHtml(sub ? proj.name + " — " + (sub.desc || "") : proj.desc || "") +
     "</p>" +
     "</div>" +
     "</div>" +
     "</div>" +
+    // Subproject tabs
+    subTabsHtml +
     // Info badges
     '<div class="flex flex-wrap gap-3 text-xs text-slate-500">' +
     '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📦 ' +
-    (proj.datasets ? proj.datasets.length : 0) +
+    datasets.length +
     " datasets</span>" +
     '<span class="bg-slate-100 px-3 py-1.5 rounded-full">📊 ' +
-    (proj.dashboards ? proj.dashboards.length : 0) +
+    dashboards.length +
     " dashboards</span>" +
     "</div>" +
     "</div>" +
     // Datasets grid
-    '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
-    '<h3 class="text-sm font-bold text-slate-700 mb-3">📦 Datasets</h3>' +
-    '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">' +
-    datasetCards +
-    "</div>" +
-    "</div>" +
+    (datasetCards
+      ? '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
+        '<h3 class="text-sm font-bold text-slate-700 mb-3">📦 Datasets</h3>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">' +
+        datasetCards +
+        "</div>" +
+        "</div>"
+      : "") +
     // Dashboards list
     (dashboardItems
       ? '<div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">' +
@@ -19451,6 +19537,19 @@ function renderChakProjectOverview() {
         "</div>"
       : "") +
     "</div>";
+
+  // Attach subproject tab click handlers
+  elements.chartRoot
+    .querySelectorAll("[data-chak-subproject]")
+    .forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.activeChakSubproject =
+          btn.getAttribute("data-chak-subproject") || "";
+        state.activeDatasetId = "";
+        state.activeDashboardId = "";
+        renderChakProjectOverview();
+      });
+    });
 
   // Attach dataset click handlers
   elements.chartRoot
@@ -19499,12 +19598,10 @@ async function renderChakDatasetDetail() {
 
   var proj = getActiveChakProject();
 
-  // Find dataset name from config
+  // Find dataset name from config (including subprojects)
   var dsName = dsId;
   if (proj) {
-    var found = (proj.datasets || []).find(function (d) {
-      return d.id === dsId;
-    });
+    var found = findChakDatasetInProject(proj, dsId);
     if (found) dsName = found.name;
   }
 
@@ -19652,11 +19749,9 @@ function renderChakDashboardDetail() {
   var dbName = dbId;
   var visualizations = [];
 
-  // Find dashboard config
+  // Find dashboard config (including subprojects)
   if (proj) {
-    var found = (proj.dashboards || []).find(function (d) {
-      return (typeof d === "string" ? d : d.id) === dbId;
-    });
+    var found = findChakDashboardInProject(proj, dbId);
     if (found) {
       dbName = typeof found === "string" ? found : found.name;
       visualizations =
