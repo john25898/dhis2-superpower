@@ -6396,7 +6396,7 @@ async function renderHomepageDashboard() {
           </div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8 hp-fade-in hp-stagger-1">
-          <div class="text-center"><div class="hp-hero-count" id="hero-count-mhus">0</div><div class="hp-hero-label">🏥 MHUs</div></div>
+          <div class="text-center cursor-pointer hp-mhu-stat" data-mhu-list="all" title="View the full MHU list" role="button"><div class="hp-hero-count" id="hero-count-mhus">0</div><div class="hp-hero-label">🏥 MHUs</div></div>
           <div class="text-center"><div class="hp-hero-count" id="hero-count-counties">0</div><div class="hp-hero-label">🗺️ Counties</div></div>
           <div class="text-center"><div class="hp-hero-count" id="hero-count-projects">0</div><div class="hp-hero-label">📋 Projects</div></div>
         </div>
@@ -6405,6 +6405,10 @@ async function renderHomepageDashboard() {
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">📍 Kenya-wide coverage</span>
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">🔬 KHIS Integration</span>
           <span class="inline-flex items-center gap-1.5 text-xs bg-white/15 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">📱 MOH 717 · MOH 740</span>
+        </div>
+        <div class="flex flex-wrap gap-2.5 mt-5 hp-fade-in hp-stagger-3">
+          <button type="button" class="hp-hero-mhu-btn" data-mhu-list="all">📋 View MHUs</button>
+          <button type="button" class="hp-hero-mhu-btn" data-mhu-csv="all">⬇️ Download CSV</button>
         </div>
       </div>
     </div>`;
@@ -6460,8 +6464,12 @@ async function renderHomepageDashboard() {
 
         <!-- Stats row (green gradient KPI cards) -->
         <div class="grid grid-cols-2 gap-3 mt-5">
-          <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏥</div><div class="hp-stat-number">${mhuCount.toLocaleString()}</div><div class="hp-stat-label">MHUs</div></div>
+          <div class="hp-stat-card hp-mhu-stat" data-mhu-list="${pid}" title="View MHU list" style="cursor:pointer;background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏥</div><div class="hp-stat-number">${mhuCount.toLocaleString()}</div><div class="hp-stat-label">MHUs</div></div>
           <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🗺️</div><div class="hp-stat-number">${projCounties.length.toLocaleString()}</div><div class="hp-stat-label">Counties</div></div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button type="button" class="hp-card-mhu-btn" data-mhu-list="${pid}" style="color:${accentColor};border-color:${accentColor};background:${iconBg};">📋 View MHUs</button>
+          <button type="button" class="hp-card-mhu-btn" data-mhu-csv="${pid}" style="color:${accentColor};border-color:${accentColor};">⬇️ CSV</button>
         </div>
 
         <!-- Expandable body: open by default -->
@@ -6551,8 +6559,12 @@ async function renderHomepageDashboard() {
           </div>
           <div class="hp-carousel-card-desc">${escapeHtml(cDesc)}</div>
           <div class="hp-carousel-card-stats">
-            <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cMhuCount.toLocaleString()}</div><div class="hp-carousel-stat-label">MHUs</div></div>
+            <div class="hp-carousel-stat cursor-pointer hp-mhu-stat" data-mhu-list="${pid}" title="View MHU list"><div class="hp-carousel-stat-num">${cMhuCount.toLocaleString()}</div><div class="hp-carousel-stat-label">MHUs</div></div>
             <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cCounties.length.toLocaleString()}</div><div class="hp-carousel-stat-label">Counties</div></div>
+          </div>
+          <div class="hp-carousel-card-mhu-actions">
+            <button type="button" class="hp-carousel-card-mhu-btn" data-mhu-list="${pid}">🏥 MHUs</button>
+            <button type="button" class="hp-carousel-card-mhu-csv" data-mhu-csv="${pid}">⬇️ CSV</button>
           </div>
           <button class="hp-carousel-card-action" data-project="${pid}" style="background:${cCol.border};">View Project →</button>
           <button class="hp-carousel-card-perf-btn" data-project="${pid}" style="border-color:${cCol.border};color:${cCol.border};">📈 Performance</button>
@@ -6840,8 +6852,192 @@ async function renderHomepageDashboard() {
     });
   });
 
+  // ── MHU list modal / CSV download buttons ──
+  document.querySelectorAll("[data-mhu-list]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pid = el.dataset.mhuList;
+      const label =
+        pid === "all" ? "All CHAK MHUs" : projectData[pid]?.name || pid;
+      openMhuListModal(pid, label);
+    });
+  });
+  document.querySelectorAll("[data-mhu-csv]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      downloadMhuCsv(el.dataset.mhuCsv);
+    });
+  });
+
   // ── Load key indicators ──
   loadKeyIndicators();
+}
+
+// ── MHU list modal + CSV download ────────────────────────────────────
+function _csvCell(val) {
+  const s = String(val ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function _downloadCsv(filename, rows, columns) {
+  const header = columns.map((c) => _csvCell(c.label)).join(",");
+  const body = rows
+    .map((r) => columns.map((c) => _csvCell(r[c.key])).join(","))
+    .join("\r\n");
+  // BOM so Excel opens UTF-8 names correctly
+  const csv = "\ufeff" + header + "\r\n" + body;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadMhuCsv(projectId) {
+  fetch(`/api/projects/mhus?project=${encodeURIComponent(projectId)}`)
+    .then((r) => r.json())
+    .then((d) => {
+      if (!d.ok) throw new Error("API error");
+      const rows = d.rows || [];
+      const slug = projectId === "all" ? "all_mhus" : projectId;
+      const columns =
+        projectId === "all"
+          ? [
+              { key: "no", label: "No." },
+              { key: "mfl", label: "MFL Code" },
+              { key: "name", label: "Facility Name" },
+              { key: "county", label: "County" },
+              { key: "subcounty", label: "Sub County" },
+              { key: "category", label: "Category" },
+              { key: "region", label: "Region" },
+            ]
+          : [
+              { key: "no", label: "No." },
+              { key: "mfl", label: "MFL Code" },
+              { key: "name", label: "Facility Name" },
+              { key: "county", label: "County" },
+              { key: "subcounty", label: "Sub County" },
+              { key: "category", label: "Category" },
+            ];
+      _downloadCsv(`chak_mhus_${slug}_${rows.length}.csv`, rows, columns);
+    })
+    .catch((e) => alert("Failed to download CSV: " + e.message));
+}
+
+function openMhuListModal(projectId, title) {
+  const modal = document.createElement("div");
+  modal.className =
+    "mhu-modal fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm";
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-5xl max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div>
+          <div class="text-lg font-bold text-slate-800">🏥 ${escapeHtml(title)}</div>
+          <div class="text-xs text-slate-400"><span id="mhuModalCount">…</span> MHUs</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="mhuModalCsv" type="button" class="mhu-btn mhu-btn-primary">⬇️ Download CSV</button>
+          <button id="mhuModalClose" type="button" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition text-slate-400">&times;</button>
+        </div>
+      </div>
+      <div class="px-6 py-3 border-b border-slate-100">
+        <input id="mhuModalSearch" type="text" placeholder="Search facility name, MFL code, county, sub county…" class="w-full md:w-96 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-200" />
+      </div>
+      <div class="flex-1 overflow-auto p-4">
+        <div id="mhuModalLoading" class="text-sm text-slate-400 py-10 text-center">Loading MHU list…</div>
+        <div id="mhuModalBody" class="hidden">
+          <table class="w-full border-collapse text-sm">
+            <thead class="sticky top-0 bg-slate-50"><tr class="border-b border-slate-200">
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">No.</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">MFL Code</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Facility Name</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">County</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Sub County</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500">Category</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 ${projectId === "all" ? "" : "hidden"}">Region</th>
+            </tr></thead>
+            <tbody id="mhuModalRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  let allRows = [];
+  const tbody = modal.querySelector("#mhuModalRows");
+  const countEl = modal.querySelector("#mhuModalCount");
+  const loadingEl = modal.querySelector("#mhuModalLoading");
+  const bodyEl = modal.querySelector("#mhuModalBody");
+  const regionCol = projectId === "all";
+
+  const renderRows = (rows) => {
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-sm text-slate-400">No matching MHUs.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows
+      .map(
+        (r) => `<tr class="border-b border-slate-100 hover:bg-sky-50/50">
+          <td class="px-3 py-1.5 text-xs text-slate-400">${escapeHtml(r.no ?? "")}</td>
+          <td class="px-3 py-1.5 font-mono text-xs font-semibold text-slate-600">${escapeHtml(r.mfl)}</td>
+          <td class="px-3 py-1.5 font-medium text-slate-800">${escapeHtml(r.name)}</td>
+          <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.county)}</td>
+          <td class="px-3 py-1.5 text-slate-600">${escapeHtml(r.subcounty || "")}</td>
+          <td class="px-3 py-1.5 text-xs"><span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">${escapeHtml(r.category || "")}</span></td>
+          <td class="px-3 py-1.5 text-slate-600 ${regionCol ? "" : "hidden"}">${escapeHtml(r.region || "")}</td>
+        </tr>`,
+      )
+      .join("");
+  };
+
+  modal.querySelector("#mhuModalSearch").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) return renderRows(allRows);
+    const filtered = allRows.filter((r) =>
+      [r.name, r.mfl, r.county, r.subcounty, r.category, r.region]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+    renderRows(filtered);
+  });
+
+  modal
+    .querySelector("#mhuModalClose")
+    .addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") {
+      modal.remove();
+      document.removeEventListener("keydown", esc);
+    }
+  });
+
+  modal
+    .querySelector("#mhuModalCsv")
+    .addEventListener("click", () => downloadMhuCsv(projectId));
+
+  fetch(`/api/projects/mhus?project=${encodeURIComponent(projectId)}`)
+    .then((r) => r.json())
+    .then((d) => {
+      if (!d.ok) throw new Error(d.error || "API error");
+      allRows = d.rows || [];
+      countEl.textContent = allRows.length;
+      loadingEl.classList.add("hidden");
+      bodyEl.classList.remove("hidden");
+      renderRows(allRows);
+    })
+    .catch((e) => {
+      loadingEl.textContent = "Failed to load MHU list: " + e.message;
+    });
 }
 
 // ── Key Indicators Drill Down ──

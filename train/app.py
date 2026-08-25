@@ -1356,9 +1356,79 @@ def create_app() -> Flask:
                 "facilities": matched_facilities,
                 "mhu_count": mhu_count,
                 "counties": counties,
+                "mhu_list": fac_list,
             }
 
-        return jsonify({"ok": True, "projects": result})
+        # ── Full confirmed MHU list (586 rows) for the "All MHUs" hero card ──
+        all_mhus = []
+        try:
+            master_path = BASE_DIR / "data" / "chak_mhus_master.json"
+            if master_path.exists():
+                with open(master_path, "r", encoding="utf-8") as f:
+                    all_mhus = json.load(f).get("rows", [])
+        except Exception:
+            pass
+
+        return jsonify(
+            {
+                "ok": True,
+                "projects": result,
+                "all_mhu_count": len(all_mhus),
+                "all_mhus": all_mhus,
+            }
+        )
+
+    @app.get("/api/projects/mhus")
+    def project_mhu_list():
+        """Return the MHU list for one project (or 'all' for the full 586).
+        Query param: ?project=<home slug or 'all'>
+        """
+        project_id = request.args.get("project", "all").strip()
+        if project_id == "all":
+            master_path = BASE_DIR / "data" / "chak_mhus_master.json"
+            try:
+                with open(master_path, "r", encoding="utf-8") as f:
+                    rows = json.load(f).get("rows", [])
+            except Exception:
+                rows = []
+            return jsonify(
+                {
+                    "ok": True,
+                    "project": "all",
+                    "name": "All CHAK MHUs",
+                    "count": len(rows),
+                    "rows": rows,
+                }
+            )
+
+        confirmed_path = BASE_DIR / "data" / "project_mhus_confirmed.json"
+        try:
+            with open(confirmed_path, "r", encoding="utf-8") as f:
+                confirmed = json.load(f).get("projects", {})
+        except Exception:
+            confirmed = {}
+        conf = confirmed.get(project_id, {})
+        rows = conf.get("facilities", [])
+        # The facilities list can contain the same MFL code multiple times
+        # (a facility appears in several datasets). Dedupe by MFL code so the
+        # visible list matches the card's MHU count.
+        seen = set()
+        unique_rows = []
+        for r in rows:
+            mfl = str(r.get("mfl", "")).strip()
+            if not mfl or mfl in seen:
+                continue
+            seen.add(mfl)
+            unique_rows.append(r)
+        return jsonify(
+            {
+                "ok": True,
+                "project": project_id,
+                "name": conf.get("name") or project_id,
+                "count": len(unique_rows),
+                "rows": unique_rows,
+            }
+        )
 
     @app.get("/api/kenya-counties")
     def kenya_counties_geojson():

@@ -13,7 +13,7 @@
           "no": 49,
           "mfl": "11964",
           "county": "Embu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "CCS Mayori Dispensary (Kiritiri)",
           "category": "Dispensary"
         },
@@ -21,7 +21,7 @@
           "no": 50,
           "mfl": "11964",
           "county": "Embu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "CCS Mayori-Kiritiri Dispensary",
           "category": "Dispensary"
         },
@@ -69,7 +69,7 @@
           "no": 525,
           "mfl": "12297",
           "county": "Tharaka Nithi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Kieni Dispensary",
           "category": "Dispensary"
         },
@@ -125,7 +125,7 @@
           "no": 362,
           "mfl": "16233",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "PCEA School of Health Sciences Rubate",
           "category": "Clinic / Medical Centre"
         },
@@ -133,7 +133,7 @@
           "no": 541,
           "mfl": "16233",
           "county": "Tharaka Nithi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Presbyterian Teachers Trining College- Rubate Health Centre",
           "category": "Health Centre"
         },
@@ -180,7 +180,7 @@
           "no": 128,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kiajbe hospital",
           "category": "Hospital"
         },
@@ -188,7 +188,7 @@
           "no": 129,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kijabe College of Health Sciences",
           "category": "Medical Training College"
         },
@@ -348,7 +348,7 @@
           "no": 274,
           "mfl": "12492",
           "county": "Meru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Maua Methodist MTC",
           "category": "Clinic / Medical Centre"
         },
@@ -396,7 +396,7 @@
           "no": 373,
           "mfl": "15282",
           "county": "Nakuru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC KIJABE HOSPITAL-NAIVASHA MEDICAL CENTRE",
           "category": "Hospital"
         },
@@ -412,7 +412,7 @@
           "no": 445,
           "mfl": "15411",
           "county": "Narok",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Oljorai Dispensary",
           "category": "Dispensary"
         },
@@ -428,7 +428,7 @@
           "no": 233,
           "mfl": "17431",
           "county": "Makueni",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kalamba Dispensary",
           "category": "Dispensary"
         }
@@ -497,7 +497,7 @@
           "no": 178,
           "mfl": "10738",
           "county": "Kirinyaga",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "ACK Mt. Kenya Hospital Kerugoya",
           "category": "Hospital"
         },
@@ -585,7 +585,7 @@
           "no": 274,
           "mfl": "12492",
           "county": "Meru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Maua Methodist MTC",
           "category": "Clinic / Medical Centre"
         },
@@ -601,7 +601,7 @@
           "no": 220,
           "mfl": "12789",
           "county": "Kitui",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "TEI WA YESU FAMILY CARE CENTRE",
           "category": "Clinic / Medical Centre"
         },
@@ -633,7 +633,7 @@
           "no": 342,
           "mfl": "12889",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Cana Family Clinic and Resource Centre",
           "category": "Clinic / Medical Centre"
         },
@@ -649,7 +649,7 @@
           "no": 367,
           "mfl": "13017",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "SOWETO KAYOLE PRIMARY HEALTH CENTRE",
           "category": "Health Centre"
         },
@@ -665,7 +665,7 @@
           "no": 492,
           "mfl": "13535",
           "county": "Siaya",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "DOPHIL NURSING & MATERNITY HOME NOMIYA FAITH BASE",
           "category": "Clinic / Medical Centre"
         },
@@ -729,7 +729,7 @@
           "no": 290,
           "mfl": "13718",
           "county": "Migori",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "KOPANGA METHODIST DISPENSARY",
           "category": "Dispensary"
         },
@@ -897,7 +897,7 @@
           "no": 301,
           "mfl": "14032",
           "county": "Migori",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Ranen SDA Conference",
           "category": "Clinic / Medical Centre"
         },
@@ -1009,7 +1009,7 @@
           "no": 16,
           "mfl": "14628",
           "county": "Bomet",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "TENWEK HOSPITAL-HEALTH CENTRE KABOSON",
           "category": "Hospital"
         },
@@ -1041,7 +1041,7 @@
           "no": 43,
           "mfl": "14767",
           "county": "Elgeyo Marakwet",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kapsowar School of Nursing",
           "category": "Medical Training College"
         },
@@ -1129,7 +1129,7 @@
           "no": 576,
           "mfl": "15464",
           "county": "Uasin Gishu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "RCEA Plateau Mission Hospital",
           "category": "Hospital"
         },
@@ -1137,7 +1137,7 @@
           "no": 592,
           "mfl": "15542",
           "county": "West Pokot",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Sekker ELCK Health Centre",
           "category": "Health Centre"
         },
@@ -1153,7 +1153,7 @@
           "no": 8,
           "mfl": "15719",
           "county": "Bomet",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AGC Tenwek CHS",
           "category": "Clinic / Medical Centre"
         },
@@ -1281,7 +1281,7 @@
           "no": 433,
           "mfl": "16020",
           "county": "Narok",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Mission Of Mercy Medical Clinic",
           "category": "Hospital"
         },
@@ -1297,7 +1297,7 @@
           "no": 96,
           "mfl": "16058",
           "county": "Kakamega",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "COG Mwihilia Mission Hospital",
           "category": "Hospital"
         },
@@ -1345,7 +1345,7 @@
           "no": 80,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope",
           "category": "Dispensary"
         },
@@ -1353,7 +1353,7 @@
           "no": 81,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope Hospital",
           "category": "Hospital"
         },
@@ -1409,7 +1409,7 @@
           "no": 32,
           "mfl": "17993",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Soteni Village of Hope Dispensary - Mbakalo",
           "category": "Dispensary"
         },
@@ -1425,7 +1425,7 @@
           "no": 21,
           "mfl": "20791",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AMI RUHAMA CHURCH WARABA MEDICAL CENTRE",
           "category": "Clinic / Medical Centre"
         },
@@ -1449,7 +1449,7 @@
           "no": 23,
           "mfl": "21896",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Christian Mission International Sambocho Health Centre",
           "category": "Health Centre"
         },
@@ -1465,7 +1465,7 @@
           "no": 306,
           "mfl": "24153",
           "county": "Mombasa",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "LIGHT HOUSE FOR CHRIST EYE CENTRE",
           "category": "Clinic / Medical Centre"
         },
@@ -1489,7 +1489,7 @@
           "no": 385,
           "mfl": "25111",
           "county": "Nakuru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "IMPACT HEALTHCARE ANNEX",
           "category": "Health Centre"
         },
@@ -1529,7 +1529,7 @@
           "no": 568,
           "mfl": "28890",
           "county": "Uasin Gishu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "IVC Mlimani Hospital",
           "category": "Hospital"
         }
@@ -1544,7 +1544,7 @@
           "no": 49,
           "mfl": "11964",
           "county": "Embu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "CCS Mayori Dispensary (Kiritiri)",
           "category": "Dispensary"
         },
@@ -1552,7 +1552,7 @@
           "no": 50,
           "mfl": "11964",
           "county": "Embu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "CCS Mayori-Kiritiri Dispensary",
           "category": "Dispensary"
         },
@@ -1592,7 +1592,7 @@
           "no": 250,
           "mfl": "12086",
           "county": "Marsabit",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Illaut Lutherand dispensary",
           "category": "Dispensary"
         },
@@ -1600,7 +1600,7 @@
           "no": 78,
           "mfl": "12093",
           "county": "Isiolo",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Isiolo Dispensary",
           "category": "Dispensary"
         },
@@ -1648,7 +1648,7 @@
           "no": 525,
           "mfl": "12297",
           "county": "Tharaka Nithi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Kieni Dispensary",
           "category": "Dispensary"
         },
@@ -1736,7 +1736,7 @@
           "no": 215,
           "mfl": "12780",
           "county": "Kitui",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "ACK Syongila Dispensary",
           "category": "Dispensary"
         },
@@ -1744,7 +1744,7 @@
           "no": 220,
           "mfl": "12789",
           "county": "Kitui",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "TEI WA YESU FAMILY CARE CENTRE",
           "category": "Clinic / Medical Centre"
         },
@@ -1800,7 +1800,7 @@
           "no": 63,
           "mfl": "13650",
           "county": "Homa Bay",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Kamasengere Baptist Dispensary",
           "category": "Dispensary"
         },
@@ -1904,7 +1904,7 @@
           "no": 301,
           "mfl": "14032",
           "county": "Migori",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Ranen SDA Conference",
           "category": "Clinic / Medical Centre"
         },
@@ -2112,7 +2112,7 @@
           "no": 96,
           "mfl": "16058",
           "county": "Kakamega",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "COG Mwihilia Mission Hospital",
           "category": "Hospital"
         },
@@ -2144,7 +2144,7 @@
           "no": 362,
           "mfl": "16233",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "PCEA School of Health Sciences Rubate",
           "category": "Clinic / Medical Centre"
         },
@@ -2152,7 +2152,7 @@
           "no": 541,
           "mfl": "16233",
           "county": "Tharaka Nithi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Presbyterian Teachers Trining College- Rubate Health Centre",
           "category": "Health Centre"
         },
@@ -2192,7 +2192,7 @@
           "no": 32,
           "mfl": "17993",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Soteni Village of Hope Dispensary - Mbakalo",
           "category": "Dispensary"
         },
@@ -2216,7 +2216,7 @@
           "no": 246,
           "mfl": "20997",
           "county": "Makueni",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Salavation Army Maiani Dispensary",
           "category": "Dispensary"
         },
@@ -2224,7 +2224,7 @@
           "no": 23,
           "mfl": "21896",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Christian Mission International Sambocho Health Centre",
           "category": "Health Centre"
         }
@@ -2267,7 +2267,7 @@
           "no": 128,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kiajbe hospital",
           "category": "Hospital"
         },
@@ -2275,7 +2275,7 @@
           "no": 129,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kijabe College of Health Sciences",
           "category": "Medical Training College"
         },
@@ -2347,7 +2347,7 @@
           "no": 41,
           "mfl": "11912",
           "county": "Kilifi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Oasis Medical Centre",
           "category": "Clinic / Medical Centre"
         },
@@ -2411,7 +2411,7 @@
           "no": 274,
           "mfl": "12492",
           "county": "Meru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Maua Methodist MTC",
           "category": "Clinic / Medical Centre"
         },
@@ -2427,7 +2427,7 @@
           "no": 215,
           "mfl": "12780",
           "county": "Kitui",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "ACK Syongila Dispensary",
           "category": "Dispensary"
         },
@@ -2459,7 +2459,7 @@
           "no": 492,
           "mfl": "13535",
           "county": "Siaya",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "DOPHIL NURSING & MATERNITY HOME NOMIYA FAITH BASE",
           "category": "Clinic / Medical Centre"
         },
@@ -2595,7 +2595,7 @@
           "no": 73,
           "mfl": "13962",
           "county": "Homa Bay",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "St. Lukes ACK Ogande Dispensary",
           "category": "Dispensary"
         },
@@ -2627,7 +2627,7 @@
           "no": 301,
           "mfl": "14032",
           "county": "Migori",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Ranen SDA Conference",
           "category": "Clinic / Medical Centre"
         },
@@ -2691,7 +2691,7 @@
           "no": 43,
           "mfl": "14767",
           "county": "Elgeyo Marakwet",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kapsowar School of Nursing",
           "category": "Medical Training College"
         },
@@ -2739,7 +2739,7 @@
           "no": 8,
           "mfl": "15719",
           "county": "Bomet",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AGC Tenwek CHS",
           "category": "Clinic / Medical Centre"
         },
@@ -2811,7 +2811,7 @@
           "no": 96,
           "mfl": "16058",
           "county": "Kakamega",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "COG Mwihilia Mission Hospital",
           "category": "Hospital"
         },
@@ -2851,7 +2851,7 @@
           "no": 578,
           "mfl": "16097",
           "county": "Vihiga",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "FRIENDS CHURCH SABATIA EYE HOSPITAL",
           "category": "Hospital"
         },
@@ -2875,7 +2875,7 @@
           "no": 80,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope",
           "category": "Dispensary"
         },
@@ -2883,7 +2883,7 @@
           "no": 81,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope Hospital",
           "category": "Hospital"
         },
@@ -2915,7 +2915,7 @@
           "no": 23,
           "mfl": "21896",
           "county": "Bungoma",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Christian Mission International Sambocho Health Centre",
           "category": "Health Centre"
         },
@@ -2974,7 +2974,7 @@
           "no": 128,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kiajbe hospital",
           "category": "Hospital"
         },
@@ -2982,7 +2982,7 @@
           "no": 129,
           "mfl": "10602",
           "county": "Kiambu",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC Kijabe College of Health Sciences",
           "category": "Medical Training College"
         },
@@ -3030,7 +3030,7 @@
           "no": 178,
           "mfl": "10738",
           "county": "Kirinyaga",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "ACK Mt. Kenya Hospital Kerugoya",
           "category": "Hospital"
         },
@@ -3118,7 +3118,7 @@
           "no": 274,
           "mfl": "12492",
           "county": "Meru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Maua Methodist MTC",
           "category": "Clinic / Medical Centre"
         },
@@ -3126,7 +3126,7 @@
           "no": 342,
           "mfl": "12889",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Cana Family Clinic and Resource Centre",
           "category": "Clinic / Medical Centre"
         },
@@ -3150,7 +3150,7 @@
           "no": 367,
           "mfl": "13017",
           "county": "Nairobi",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "SOWETO KAYOLE PRIMARY HEALTH CENTRE",
           "category": "Health Centre"
         },
@@ -3166,7 +3166,7 @@
           "no": 373,
           "mfl": "15282",
           "county": "Nakuru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "AIC KIJABE HOSPITAL-NAIVASHA MEDICAL CENTRE",
           "category": "Hospital"
         },
@@ -3214,7 +3214,7 @@
           "no": 231,
           "mfl": "16651",
           "county": "Machakos",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Tumaini Mission Hospital",
           "category": "Hospital"
         },
@@ -3222,7 +3222,7 @@
           "no": 80,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope",
           "category": "Dispensary"
         },
@@ -3230,7 +3230,7 @@
           "no": 81,
           "mfl": "16667",
           "county": "Kajiado",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "Beacon of Hope Hospital",
           "category": "Hospital"
         },
@@ -3326,7 +3326,7 @@
           "no": 385,
           "mfl": "25111",
           "county": "Nakuru",
-          "subcounty": NaN,
+          "subcounty": "",
           "name": "IMPACT HEALTHCARE ANNEX",
           "category": "Health Centre"
         },

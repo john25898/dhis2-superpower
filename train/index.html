@@ -977,6 +977,97 @@
         background: #f8fafc;
         transform: scale(1.02);
       }
+
+      /* ── MHU list buttons (home page cards) ── */
+      .hp-hero-mhu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 7px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+      }
+      .hp-hero-mhu-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+      .hp-card-mhu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1.5px solid;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .hp-card-mhu-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      .hp-mhu-stat {
+        transition: opacity 0.2s ease;
+      }
+      .hp-mhu-stat:hover {
+        opacity: 0.8;
+      }
+      .hp-carousel-card-mhu-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .hp-carousel-card-mhu-btn,
+      .hp-carousel-card-mhu-csv {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        background: #fff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1.5px solid var(--accent, #0ea5e9);
+        color: var(--accent, #0ea5e9);
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .hp-carousel-card-mhu-btn:hover,
+      .hp-carousel-card-mhu-csv:hover {
+        background: #f8fafc;
+        transform: scale(1.02);
+      }
+
+      /* ── MHU list modal ── */
+      .mhu-modal .mhu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .mhu-modal .mhu-btn-primary {
+        background: #0284c7;
+        color: #fff;
+        border: 1px solid #0284c7;
+      }
+      .mhu-modal .mhu-btn-primary:hover {
+        background: #0369a1;
+      }
       .hp-carousel-card.selected {
         border-color: var(--accent, #0ea5e9);
         box-shadow: 0 0 0 2px rgba(14,165,233,0.15), 0 6px 20px rgba(14,165,233,0.1);
