@@ -132,11 +132,12 @@ const CHAK_PROJECTS = {
   gates_foundation: {
     id: "gates_foundation",
     code: "gf",
-    name: "Gates Foundation",
+    name: "Gates Foundation MNCH",
     icon: "💉",
     color: "bg-rose-50 border-rose-200 hover:bg-rose-100",
-    desc: "Gates Foundation — Maternal & child health and commodity monitoring.",
+    desc: "Gates Foundation — Maternal, Newborn & Child Health (MNCH) service delivery and commodity monitoring.",
     datasets: [
+      { id: "g3hrJMXsRHD", name: "Service Delivery", elements: 240 },
       { id: "KLipwKfzvir", name: "Monthly Report", elements: 240 },
       { id: "k6Vi8VxJuue", name: "Commodity Report", elements: 77 },
     ],
@@ -160,10 +161,10 @@ const CHAK_PROJECTS = {
   acsp_optical: {
     id: "acsp_optical",
     code: "ao",
-    name: "ACSP",
+    name: "Eye Health (ACSP)",
     icon: "👁️",
     color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-    desc: "Africa Clear Sight Partnership Project — increasing awareness and education on presbyopia, its risk factors, associated impairment, and effects on quality of life; alleviating the effects of near-vision impairment.",
+    desc: "Eye Health (ACSP) — Africa Clear Sight Partnership Project — increasing awareness and education on presbyopia, its risk factors, associated impairment, and effects on quality of life; alleviating the effects of near-vision impairment.",
     datasets: [
       { id: "xWm3V8jG6cm", name: "ACSP Monthly Report", elements: 103 },
     ],
@@ -184,7 +185,7 @@ const CHAK_PROJECTS = {
   impact: {
     id: "impact",
     code: "im",
-    name: "IMPACT",
+    name: "IMPACT Project",
     icon: "🎯",
     color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
     desc: "Improving Pharmaceutical Access Through Continuous Training (IMPACT) Project — strengthening access to pharmaceuticals through continuous training.",
@@ -194,53 +195,57 @@ const CHAK_PROJECTS = {
   gitlab_vision: {
     id: "gitlab_vision",
     code: "gl",
-    name: "GitLab Vision",
+    name: "GitLab",
     icon: "🔭",
     color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
-    desc: "GitLab Vision — monthly reporting and monitoring.",
+    desc: "GitLab — monthly reporting and monitoring of GitLab project facilities.",
     datasets: [
+      { id: "SyYGmuySUU7", name: "GitLab Monitoring Reports", elements: 21 },
       { id: "ukgJnnK6Wtc", name: "GitLab Monthly Report", elements: 21 },
     ],
     dashboards: [],
   },
-  rmncah_projects: {
-    id: "rmncah_projects",
-    code: "rn",
-    name: "RMNCAH Projects",
-    icon: "🤱",
+  bftw_rmncah: {
+    id: "bftw_rmncah",
+    code: "bw",
+    name: "BFTW RMNCAH",
+    icon: "🤝",
     color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-    desc: "Reproductive, Maternal, Neonatal, Child and Adolescent Health (RMNCAH) Projects.",
+    desc: "Bread for the World RMNCAH — improving universal access to RMNCAH and nutrition services across CHAK member health units (2023–2026).",
+    datasets: [
+      { id: "sjIKmfKAZUh", name: "BfW Outreach Form", elements: 57 },
+      { id: "JxlbE8ReOUt", name: "CXCA/PMTCT Report", elements: 48 },
+    ],
+    dashboards: [],
+  },
+  eis: {
+    id: "eis",
+    code: "ei",
+    name: "EIS",
+    icon: "🔬",
+    color: "bg-cyan-50 border-cyan-200 hover:bg-cyan-100",
+    desc: "EIS — Evaluation of Integrated Services.",
     datasets: [],
     dashboards: [],
-    subprojects: [
-      {
-        id: "chak_bfw_rmncah",
-        name: "CHAK Bread for the World RMNCAH Project",
-        icon: "🤝",
-        desc: "Improving universal access to RMNCAH and nutrition services through gender-responsive, inclusive, sustainable healthcare; strengthening health systems and scaling up access to FP/RMNCAH services across 60 CHAK member health units in 15 counties (2023–2026).",
-        datasets: [
-          { id: "sjIKmfKAZUh", name: "BfW Outreach Form", elements: 57 },
-        ],
-        dashboards: [],
-      },
-      {
-        id: "mnch_accelerator",
-        name: "MNCH Accelerator Project",
-        icon: "👶",
-        desc: "Maternal, Neonatal and Child Health (MNCH) Accelerator — capacity building for quality MNCH care, advocacy for MNCH investment in faith-based health services, and improving access to essential MNCH commodities.",
-        datasets: [],
-        dashboards: [],
-      },
-    ],
   },
-  jmw_monthly: {
-    id: "jmw_monthly",
-    code: "jw",
-    name: "JMW Monthly",
-    icon: "👶",
-    color: "bg-teal-50 border-teal-200 hover:bg-teal-100",
-    desc: "Jua Mtoto Wako — monthly child health and welfare reporting.",
-    datasets: [{ id: "OY2qr2iDmWn", name: "JMW Monthly Report", elements: 22 }],
+  cdic_icare: {
+    id: "cdic_icare",
+    code: "ci",
+    name: "CDIC / iCARE",
+    icon: "💻",
+    color: "bg-slate-50 border-slate-200 hover:bg-slate-100",
+    desc: "CDIC / iCARE — Community Data Integration for Care and Response Evaluation.",
+    datasets: [],
+    dashboards: [],
+  },
+  internship: {
+    id: "internship",
+    code: "in",
+    name: "Internship Program",
+    icon: "🧑‍⚕️",
+    color: "bg-pink-50 border-pink-200 hover:bg-pink-100",
+    desc: "Internship Program — training and professional development placements.",
+    datasets: [],
     dashboards: [],
   },
   prep_tool: {
@@ -329,8 +334,8 @@ function applyHashRoute() {
   Object.keys(CHAK_PROJECT_CODES).forEach(function (code) {
     projectMap[code] = CHAK_PROJECT_CODES[code];
   });
-  // Backward-compatible alias: old BfW code "bw" → RMNCAH Projects
-  projectMap["bw"] = "rmncah_projects";
+  // Backward-compatible alias: old BfW code "bw" → BFTW RMNCAH
+  projectMap["bw"] = "bftw_rmncah";
   let pageId, subtabSlug;
 
   if (parts[0] === "p" && parts.length >= 2 && projectMap[parts[1]]) {
@@ -1147,20 +1152,21 @@ function populateFilterOptions() {
     }
   }
 
-  // Populate project filter with placeholder projects
+  // Populate project filter with the 11 real projects
   if (elements.projectFilter && !elements.projectFilter.dataset.populated) {
     const projects = [
       { value: "all", label: "All Projects" },
-      { value: "jamii-tekelezi", label: "Jamii Tekelezi" },
+      { value: "jamii-tekelezi", label: "Jamii Tekelezi (JTP)" },
       { value: "chap-stawisha", label: "CHAP Stawisha" },
-      { value: "eye-health", label: "Eye Health - ACSP & GitLab" },
       { value: "eis", label: "EIS" },
-      { value: "bftw-hss", label: "BFTW HSS" },
+      { value: "gf-mnch", label: "Gates Foundation MNCH" },
       { value: "bftw-rmncah", label: "BFTW RMNCAH" },
       { value: "pep", label: "PEP" },
-      { value: "gf-mnch", label: "GF-MNCH" },
-      { value: "impact", label: "IMPACT" },
-      { value: "cdic-icare", label: "CDIC-iCARE" },
+      { value: "impact", label: "IMPACT Project" },
+      { value: "eye-health", label: "Eye Health (ACSP)" },
+      { value: "cdic-icare", label: "CDIC / iCARE" },
+      { value: "internship", label: "Internship Program" },
+      { value: "gitlab", label: "GitLab" },
     ];
     renderSelectOptions(elements.projectFilter, "", projects);
     elements.projectFilter.dataset.populated = "true";
@@ -6069,6 +6075,66 @@ const _PROJ_COLORS = {
     accent: "#7c3aed",
     gradient: "from-violet-500 to-purple-600",
   },
+  chap_stawisha: {
+    border: "#10b981",
+    bg: "#ecfdf5",
+    accent: "#059669",
+    gradient: "from-emerald-500 to-green-600",
+  },
+  gf_mnch: {
+    border: "#f43f5e",
+    bg: "#fff1f2",
+    accent: "#e11d48",
+    gradient: "from-rose-500 to-pink-600",
+  },
+  eye_health: {
+    border: "#a855f7",
+    bg: "#faf5ff",
+    accent: "#9333ea",
+    gradient: "from-purple-500 to-fuchsia-600",
+  },
+  impact: {
+    border: "#f97316",
+    bg: "#fff7ed",
+    accent: "#ea580c",
+    gradient: "from-orange-500 to-amber-600",
+  },
+  gitlab: {
+    border: "#6366f1",
+    bg: "#eef2ff",
+    accent: "#4f46e5",
+    gradient: "from-indigo-500 to-blue-600",
+  },
+  bftw_rmncah: {
+    border: "#f59e0b",
+    bg: "#fffbeb",
+    accent: "#d97706",
+    gradient: "from-amber-500 to-yellow-600",
+  },
+  eis: {
+    border: "#06b6d4",
+    bg: "#ecfeff",
+    accent: "#0891b2",
+    gradient: "from-cyan-500 to-teal-600",
+  },
+  cdic_icare: {
+    border: "#64748b",
+    bg: "#f8fafc",
+    accent: "#475569",
+    gradient: "from-slate-500 to-slate-700",
+  },
+  internship: {
+    border: "#ec4899",
+    bg: "#fdf2f8",
+    accent: "#db2777",
+    gradient: "from-pink-500 to-rose-600",
+  },
+  pep: {
+    border: "#84cc16",
+    bg: "#f7fee7",
+    accent: "#65a30d",
+    gradient: "from-lime-500 to-green-600",
+  },
   default: {
     border: "#0ea5e9",
     bg: "#f0f9ff",
@@ -6304,16 +6370,12 @@ async function renderHomepageDashboard() {
 
   // ── Compute overall stats ──
   const allCounties = new Set();
-  let totalFacilities = 0;
   projectIds.forEach((pid) => {
     const proj = projectData[pid] || {};
     (proj.counties || []).forEach((c) => allCounties.add(c));
-    totalFacilities += proj.facility_count || 0;
   });
-  const totalMhus = projectIds.reduce(
-    (s, pid) => s + (projectData[pid]?.mhu_count || 0),
-    0,
-  );
+  // Confirmed CHAK MHU total (from the 586-row CONFIRMED MFL codes workbook)
+  const CONFIRMED_MHU_TOTAL = 586;
 
   // ── Build HTML ──
   let html = '<div class="hp-scroll-cue"></div>';
@@ -6333,10 +6395,9 @@ async function renderHomepageDashboard() {
             <p class="text-blue-200 text-sm md:text-base font-medium mt-0.5">Real-time health analytics across Kenya</p>
           </div>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 hp-fade-in hp-stagger-1">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8 hp-fade-in hp-stagger-1">
           <div class="text-center"><div class="hp-hero-count" id="hero-count-mhus">0</div><div class="hp-hero-label">🏥 MHUs</div></div>
           <div class="text-center"><div class="hp-hero-count" id="hero-count-counties">0</div><div class="hp-hero-label">🗺️ Counties</div></div>
-          <div class="text-center"><div class="hp-hero-count" id="hero-count-facilities">0</div><div class="hp-hero-label">🏛️ Facilities</div></div>
           <div class="text-center"><div class="hp-hero-count" id="hero-count-projects">0</div><div class="hp-hero-label">📋 Projects</div></div>
         </div>
         <div class="flex flex-wrap gap-2 mt-6 hp-fade-in hp-stagger-2">
@@ -6371,7 +6432,6 @@ async function renderHomepageDashboard() {
   for (const pid of featuredPids) {
     const proj = projectData[pid] || {};
     if (!proj.name) continue;
-    const facCount = proj.facility_count || 0;
     const mhuCount = proj.mhu_count || 0;
     const projCounties = proj.counties || [];
     const projName = proj.name || pid;
@@ -6399,10 +6459,9 @@ async function renderHomepageDashboard() {
         </div>
 
         <!-- Stats row (green gradient KPI cards) -->
-        <div class="grid grid-cols-3 gap-3 mt-5">
+        <div class="grid grid-cols-2 gap-3 mt-5">
           <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏥</div><div class="hp-stat-number">${mhuCount.toLocaleString()}</div><div class="hp-stat-label">MHUs</div></div>
           <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🗺️</div><div class="hp-stat-number">${projCounties.length.toLocaleString()}</div><div class="hp-stat-label">Counties</div></div>
-          <div class="hp-stat-card" style="background:linear-gradient(180deg, #8fc4a0 0%, #e0e5d5 100%)"><div class="hp-stat-icon">🏛️</div><div class="hp-stat-number">${facCount.toLocaleString()}</div><div class="hp-stat-label">Facilities</div></div>
         </div>
 
         <!-- Expandable body: open by default -->
@@ -6463,7 +6522,6 @@ async function renderHomepageDashboard() {
 
     // Build carousel card set
     function _renderCarouselCard(pid, proj) {
-      const cFacCount = proj.facility_count || 0;
       const cMhuCount = proj.mhu_count || 0;
       const cCounties = proj.counties || [];
       const cName = proj.name || pid;
@@ -6495,7 +6553,6 @@ async function renderHomepageDashboard() {
           <div class="hp-carousel-card-stats">
             <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cMhuCount.toLocaleString()}</div><div class="hp-carousel-stat-label">MHUs</div></div>
             <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cCounties.length.toLocaleString()}</div><div class="hp-carousel-stat-label">Counties</div></div>
-            <div class="hp-carousel-stat"><div class="hp-carousel-stat-num">${cFacCount.toLocaleString()}</div><div class="hp-carousel-stat-label">Facilities</div></div>
           </div>
           <button class="hp-carousel-card-action" data-project="${pid}" style="background:${cCol.border};">View Project →</button>
           <button class="hp-carousel-card-perf-btn" data-project="${pid}" style="border-color:${cCol.border};color:${cCol.border};">📈 Performance</button>
@@ -6567,15 +6624,14 @@ async function renderHomepageDashboard() {
   root.innerHTML = html;
 
   // ── Animate hero counters ──
-  animateCounter(document.getElementById("hero-count-mhus"), totalMhus, "");
   animateCounter(
-    document.getElementById("hero-count-counties"),
-    allCounties.size,
+    document.getElementById("hero-count-mhus"),
+    CONFIRMED_MHU_TOTAL,
     "",
   );
   animateCounter(
-    document.getElementById("hero-count-facilities"),
-    totalFacilities,
+    document.getElementById("hero-count-counties"),
+    allCounties.size,
     "",
   );
   animateCounter(
@@ -6710,10 +6766,27 @@ async function renderHomepageDashboard() {
           setPageHash("overview");
           renderCurrentView();
         } else {
-          state.activeProject = "";
-          state.activePage = "profile";
-          setPageHash("profile");
-          renderCurrentView();
+          // Map homepage project id → CHAK project id and open its overview
+          const homeToChak = {
+            gf_mnch: "gates_foundation",
+            eye_health: "acsp_optical",
+            gitlab: "gitlab_vision",
+            pep: "prep_tool",
+          };
+          const chakId = homeToChak[pid] || pid;
+          if (CHAK_PROJECT_IDS[chakId]) {
+            state.activeProject = chakId;
+            state.activeDatasetId = "";
+            state.activePage = "overview";
+            if (elements.projectFilter) elements.projectFilter.value = chakId;
+            setPageHash("overview");
+            renderCurrentView();
+          } else {
+            state.activeProject = "";
+            state.activePage = "profile";
+            setPageHash("profile");
+            renderCurrentView();
+          }
         }
       });
     });
@@ -18132,16 +18205,17 @@ function slugify(name) {
 
 function getProjectDisplayName(slug) {
   const names = {
-    "jamii-tekelezi": "Jamii Tekelezi",
+    "jamii-tekelezi": "Jamii Tekelezi (JTP)",
     "chap-stawisha": "CHAP Stawisha",
-    "eye-health": "Eye Health - ACSP & GitLab",
     eis: "EIS",
-    "bftw-hss": "BFTW HSS",
+    "gf-mnch": "Gates Foundation MNCH",
     "bftw-rmncah": "BFTW RMNCAH",
     pep: "PEP",
-    "gf-mnch": "GF-MNCH",
-    impact: "IMPACT",
+    impact: "IMPACT Project",
+    "eye-health": "Eye Health (ACSP)",
     "cdic-icare": "CDIC / iCARE",
+    internship: "Internship Program",
+    gitlab: "GitLab",
   };
   return names[slug] || slug;
 }

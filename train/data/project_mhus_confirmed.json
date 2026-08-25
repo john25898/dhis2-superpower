@@ -1,0 +1,5116 @@
+{
+  "generated": "2026-08-19",
+  "total_confirmed": 499,
+  "union_count": 145,
+  "leftover_count": 354,
+  "projects": {
+    "jamii_tekelezi": {
+      "name": "Jamii Tekelezi (JTP)",
+      "icon": "🩺",
+      "facility_count": 14,
+      "facilities": [
+        {
+          "no": 49,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": NaN,
+          "name": "CCS Mayori Dispensary (Kiritiri)",
+          "category": "Dispensary"
+        },
+        {
+          "no": 50,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": NaN,
+          "name": "CCS Mayori-Kiritiri Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 51,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": "Mbeere South",
+          "name": "CHRISTIAN COMMUNITY SERVICES MAYORI DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 52,
+          "mfl": "12005",
+          "county": "Embu",
+          "subcounty": "Embu North",
+          "name": "Emmanuel Kigari Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 516,
+          "mfl": "12119",
+          "county": "Tharaka Nithi",
+          "subcounty": "Igambangombe",
+          "name": "Kaanwa Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 265,
+          "mfl": "12232",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "Kathigu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 281,
+          "mfl": "12293",
+          "county": "Meru",
+          "subcounty": "Igembe Central",
+          "name": "PCEA Kiengu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 525,
+          "mfl": "12297",
+          "county": "Tharaka Nithi",
+          "subcounty": NaN,
+          "name": "Kieni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 526,
+          "mfl": "12297",
+          "county": "Tharaka Nithi",
+          "subcounty": "Chuka",
+          "name": "Kiereni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 270,
+          "mfl": "12337",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "Kirogine Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 531,
+          "mfl": "12528",
+          "county": "Tharaka Nithi",
+          "subcounty": "Muthambi",
+          "name": "Minugu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 257,
+          "mfl": "12533",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "CCS Mitunguu Medical Clinic",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 532,
+          "mfl": "12563",
+          "county": "Tharaka Nithi",
+          "subcounty": "Chuka",
+          "name": "Mukuuni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 534,
+          "mfl": "12597",
+          "county": "Tharaka Nithi",
+          "subcounty": "Mwimbi",
+          "name": "Mutindwa Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 362,
+          "mfl": "16233",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "PCEA School of Health Sciences Rubate",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 541,
+          "mfl": "16233",
+          "county": "Tharaka Nithi",
+          "subcounty": NaN,
+          "name": "Presbyterian Teachers Trining College- Rubate Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 468,
+          "mfl": "16384",
+          "county": "Nyandarua",
+          "subcounty": "Kinangop",
+          "name": "Our Lady of Mercy (Magumu)",
+          "category": "Dispensary"
+        },
+        {
+          "no": 269,
+          "mfl": "17468",
+          "county": "Meru",
+          "subcounty": "Imenti North",
+          "name": "Kiamiriru Methodist Dispensary",
+          "category": "Dispensary"
+        }
+      ]
+    },
+    "chap_stawisha": {
+      "name": "CHAP Stawisha",
+      "icon": "🌱",
+      "facility_count": 19,
+      "facilities": [
+        {
+          "no": 319,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "AIC Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 322,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 128,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kiajbe hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 129,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kijabe College of Health Sciences",
+          "category": "Medical Training College"
+        },
+        {
+          "no": 139,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kijabe (AIC) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 141,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "Kikuyu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 157,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 158,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 130,
+          "mfl": "10693",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "AIC KIJABE HOSPITAL MARIRA DISPENSARY",
+          "category": "Hospital"
+        },
+        {
+          "no": 140,
+          "mfl": "10693",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kijabe (AIC) Hospital Marira Medical Clinic",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 480,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 481,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA TUMUTUMU MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 482,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 484,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "Tumutumu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 512,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "Chogoria PCEA Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 538,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 539,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA CHOGORIA MEDICAL CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 540,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 242,
+          "mfl": "12205",
+          "county": "Makueni",
+          "subcounty": "Kibwezi East",
+          "name": "PCEA Kasasule Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 243,
+          "mfl": "12205",
+          "county": "Makueni",
+          "subcounty": "Kibwezi East",
+          "name": "PCEA KASASULE HEALTH CLINIC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 216,
+          "mfl": "12213",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "AIC Katakani Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 524,
+          "mfl": "12277",
+          "county": "Tharaka Nithi",
+          "subcounty": "Chuka",
+          "name": "Kiang'ondu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 273,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": "Igembe South",
+          "name": "Maua Methodist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 274,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": NaN,
+          "name": "Maua Methodist MTC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 217,
+          "mfl": "12566",
+          "county": "Kitui",
+          "subcounty": "Kitui Central",
+          "name": "AIC Mulango HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 218,
+          "mfl": "12860",
+          "county": "Kitui",
+          "subcounty": "Kitui East",
+          "name": "AIC Zombe Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 417,
+          "mfl": "14394",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Aitong Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 421,
+          "mfl": "14485",
+          "county": "Narok",
+          "subcounty": "Narok South",
+          "name": "Ewaso Ngiro Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 431,
+          "mfl": "15128",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Mararianta Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 373,
+          "mfl": "15282",
+          "county": "Nakuru",
+          "subcounty": NaN,
+          "name": "AIC KIJABE HOSPITAL-NAIVASHA MEDICAL CENTRE",
+          "category": "Hospital"
+        },
+        {
+          "no": 389,
+          "mfl": "15282",
+          "county": "Nakuru",
+          "subcounty": "Naivasha",
+          "name": "Naivasha (AIC) Medical Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 445,
+          "mfl": "15411",
+          "county": "Narok",
+          "subcounty": NaN,
+          "name": "Oljorai Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 448,
+          "mfl": "15702",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Talek Health Centre",
+          "category": "Dispensary"
+        },
+        {
+          "no": 233,
+          "mfl": "17431",
+          "county": "Makueni",
+          "subcounty": NaN,
+          "name": "AIC Kalamba Dispensary",
+          "category": "Dispensary"
+        }
+      ]
+    },
+    "eis": {
+      "name": "EIS",
+      "icon": "🔬",
+      "facility_count": 0,
+      "facilities": []
+    },
+    "gf_mnch": {
+      "name": "Gates Foundation MNCH",
+      "icon": "🤱",
+      "facility_count": 97,
+      "facilities": [
+        {
+          "no": 319,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "AIC Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 322,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 141,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "Kikuyu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 157,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 158,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 142,
+          "mfl": "10610",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kimende Orthodox Mission Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 178,
+          "mfl": "10738",
+          "county": "Kirinyaga",
+          "subcounty": NaN,
+          "name": "ACK Mt. Kenya Hospital Kerugoya",
+          "category": "Hospital"
+        },
+        {
+          "no": 189,
+          "mfl": "10738",
+          "county": "Kirinyaga",
+          "subcounty": "Kirinyaga Central",
+          "name": "Mt Kenya (ACK) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 480,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 481,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA TUMUTUMU MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 482,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 484,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "Tumutumu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 512,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "Chogoria PCEA Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 538,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 539,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA CHOGORIA MEDICAL CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 540,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 273,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": "Igembe South",
+          "name": "Maua Methodist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 274,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": NaN,
+          "name": "Maua Methodist MTC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 217,
+          "mfl": "12566",
+          "county": "Kitui",
+          "subcounty": "Kitui Central",
+          "name": "AIC Mulango HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 220,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": NaN,
+          "name": "TEI WA YESU FAMILY CARE CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 221,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "Tei Wa Yesu Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 222,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "Tei Wa Yesu Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 218,
+          "mfl": "12860",
+          "county": "Kitui",
+          "subcounty": "Kitui East",
+          "name": "AIC Zombe Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 342,
+          "mfl": "12889",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "Cana Family Clinic and Resource Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 351,
+          "mfl": "12972",
+          "county": "Nairobi",
+          "subcounty": "Mathare",
+          "name": "Jumuia Huruma Hospital",
+          "category": "Dispensary"
+        },
+        {
+          "no": 367,
+          "mfl": "13017",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "SOWETO KAYOLE PRIMARY HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 490,
+          "mfl": "13535",
+          "county": "Siaya",
+          "subcounty": "Gem",
+          "name": "Dolphil Nursing & Maternity Home",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 492,
+          "mfl": "13535",
+          "county": "Siaya",
+          "subcounty": NaN,
+          "name": "DOPHIL NURSING & MATERNITY HOME NOMIYA FAITH BASE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 449,
+          "mfl": "13547",
+          "county": "Nyamira",
+          "subcounty": "Borabu",
+          "name": "Eronge Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 196,
+          "mfl": "13563",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Masaba",
+          "name": "GESUSU ADVENTIST MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 197,
+          "mfl": "13563",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Masaba",
+          "name": "Gesusu SDA Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 451,
+          "mfl": "13628",
+          "county": "Nyamira",
+          "subcounty": "Nyamira North",
+          "name": "Itibo Mission Adventist Hospital",
+          "category": "Health Centre"
+        },
+        {
+          "no": 64,
+          "mfl": "13667",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo North ",
+          "name": "Kendu Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 65,
+          "mfl": "13667",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo North ",
+          "name": "Kendu Adventist School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 289,
+          "mfl": "13718",
+          "county": "Migori",
+          "subcounty": "Suna West",
+          "name": "Kopanga Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 290,
+          "mfl": "13718",
+          "county": "Migori",
+          "subcounty": NaN,
+          "name": "KOPANGA METHODIST DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 211,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "ACK Maseno School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 213,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "Maseno Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 497,
+          "mfl": "13787",
+          "county": "Siaya",
+          "subcounty": "Bondo",
+          "name": "MATANGWE COMMUNITY HEALTH & DEV PROGRAM",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 291,
+          "mfl": "13788",
+          "county": "Migori",
+          "subcounty": "Kuria East",
+          "name": "Matare SDA Mission Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 69,
+          "mfl": "13789",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Matata Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 454,
+          "mfl": "13791",
+          "county": "Nyamira",
+          "subcounty": "Nyamira North",
+          "name": "Matongo Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 200,
+          "mfl": "13821",
+          "county": "Kisii",
+          "subcounty": "South Mugirango",
+          "name": "Monianku Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 498,
+          "mfl": "13852",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "NG'IYA HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 70,
+          "mfl": "13873",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Nyagowa Elck Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 212,
+          "mfl": "13881",
+          "county": "Kisumu",
+          "subcounty": "Nyakach",
+          "name": "AIC Nyakach Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 493,
+          "mfl": "13904",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "FPFK Nyambare Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 494,
+          "mfl": "13904",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "FPFK NYAMBARE MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 459,
+          "mfl": "13911",
+          "county": "Nyamira",
+          "subcounty": "Nyamira",
+          "name": "Nyamira Adventist Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 204,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "NYANCHWA ADVENTIST MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 205,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "Nyanchwa Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 206,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "Nyanchwa School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 297,
+          "mfl": "14008",
+          "county": "Migori",
+          "subcounty": "Uriri",
+          "name": "Oyani (SDA) Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 298,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen (SDA) Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 299,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen Adventist Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 300,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "RANEN S.D.A HEALTH CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 301,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": NaN,
+          "name": "Ranen SDA Conference",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 209,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "Riokindo Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 210,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "RIOKINDO S.D.A DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 499,
+          "mfl": "14064",
+          "county": "Siaya",
+          "subcounty": "Gem",
+          "name": "Sagam C. Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 500,
+          "mfl": "14123",
+          "county": "Siaya",
+          "subcounty": "Ugunja",
+          "name": "St. Paul's Methodist Health Centre - Ugunja",
+          "category": "Health Centre"
+        },
+        {
+          "no": 113,
+          "mfl": "14178",
+          "county": "Kericho",
+          "subcounty": "Bureti",
+          "name": "AIC LITEIN HOSPITAL",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 586,
+          "mfl": "14196",
+          "county": "West Pokot",
+          "subcounty": "Pokot North",
+          "name": "Alale AIC Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 112,
+          "mfl": "14234",
+          "county": "Kericho",
+          "subcounty": "Kipkelion East",
+          "name": "AIC Barotion Dispensary",
+          "category": "Health Centre"
+        },
+        {
+          "no": 588,
+          "mfl": "14356",
+          "county": "West Pokot",
+          "subcounty": "West Pokot",
+          "name": "Chepnyal AGC Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 589,
+          "mfl": "14387",
+          "county": "West Pokot",
+          "subcounty": "Pokot Central",
+          "name": "Chesta ELCK Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 1,
+          "mfl": "14392",
+          "county": "Baringo",
+          "subcounty": "Tiaty East",
+          "name": "AIC Churo Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 417,
+          "mfl": "14394",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Aitong Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 421,
+          "mfl": "14485",
+          "county": "Narok",
+          "subcounty": "Narok South",
+          "name": "Ewaso Ngiro Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 13,
+          "mfl": "14628",
+          "county": "Bomet",
+          "subcounty": "Chepalungu",
+          "name": "Kaboson Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 16,
+          "mfl": "14628",
+          "county": "Bomet",
+          "subcounty": NaN,
+          "name": "TENWEK HOSPITAL-HEALTH CENTRE KABOSON",
+          "category": "Hospital"
+        },
+        {
+          "no": 409,
+          "mfl": "14642",
+          "county": "Nandi",
+          "subcounty": "Mosop",
+          "name": "Kaigat SDA Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 553,
+          "mfl": "14663",
+          "county": "Turkana",
+          "subcounty": "Turkana Central",
+          "name": "AIC Kalokol Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 42,
+          "mfl": "14767",
+          "county": "Elgeyo Marakwet",
+          "subcounty": "Marakwet West",
+          "name": "AIC Kapsowar Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 43,
+          "mfl": "14767",
+          "county": "Elgeyo Marakwet",
+          "subcounty": NaN,
+          "name": "AIC Kapsowar School of Nursing",
+          "category": "Medical Training College"
+        },
+        {
+          "no": 571,
+          "mfl": "15011",
+          "county": "Uasin Gishu",
+          "subcounty": "Kapseret",
+          "name": "Langas RCEA Health Center",
+          "category": "Health Centre"
+        },
+        {
+          "no": 562,
+          "mfl": "15057",
+          "county": "Turkana",
+          "subcounty": "Turkana South",
+          "name": "RCEA Lokichar Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 554,
+          "mfl": "15059",
+          "county": "Turkana",
+          "subcounty": "Lokichoggio",
+          "name": "AIC Lokichoggio health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 555,
+          "mfl": "15064",
+          "county": "Turkana",
+          "subcounty": "Turkana East",
+          "name": "AIC Lokori health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 431,
+          "mfl": "15128",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Mararianta Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 435,
+          "mfl": "15276",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "NAIKARRA HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 561,
+          "mfl": "15299",
+          "county": "Turkana",
+          "subcounty": "Lokiriama",
+          "name": "PAG Namoruputh Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 416,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "AIC Olasiti HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 439,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "Olasiti Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 574,
+          "mfl": "15464",
+          "county": "Uasin Gishu",
+          "subcounty": "Ainabkoi",
+          "name": "Plateau Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 576,
+          "mfl": "15464",
+          "county": "Uasin Gishu",
+          "subcounty": NaN,
+          "name": "RCEA Plateau Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 592,
+          "mfl": "15542",
+          "county": "West Pokot",
+          "subcounty": NaN,
+          "name": "Sekker ELCK Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 448,
+          "mfl": "15702",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Talek Health Centre",
+          "category": "Dispensary"
+        },
+        {
+          "no": 8,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": NaN,
+          "name": "AGC Tenwek CHS",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 9,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": "Bomet Central",
+          "name": "AGC Tenwek Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 14,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": "Bomet Central",
+          "name": "TENWEK HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 403,
+          "mfl": "15778",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Wesley Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 24,
+          "mfl": "15861",
+          "county": "Bungoma",
+          "subcounty": "Sirisia",
+          "name": "Friends Chwele Mission Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 26,
+          "mfl": "15864",
+          "county": "Bungoma",
+          "subcounty": "Kimilili",
+          "name": "IcFEM Dreamland Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 100,
+          "mfl": "15902",
+          "county": "Kakamega",
+          "subcounty": "Navakholo",
+          "name": "Ingotse Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 580,
+          "mfl": "15913",
+          "county": "Vihiga",
+          "subcounty": "Hamisi",
+          "name": "Jumuia Friends Hospita Kaimosi",
+          "category": "Hospital"
+        },
+        {
+          "no": 20,
+          "mfl": "15935",
+          "county": "Bungoma",
+          "subcounty": "Bumula",
+          "name": "ACK Khasoko Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 581,
+          "mfl": "15946",
+          "county": "Vihiga",
+          "subcounty": "Luanda",
+          "name": "Kima Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 37,
+          "mfl": "15953",
+          "county": "Busia",
+          "subcounty": "Teso North",
+          "name": "Kolanya Health Centre (Salvation Army)",
+          "category": "Health Centre"
+        },
+        {
+          "no": 38,
+          "mfl": "15953",
+          "county": "Busia",
+          "subcounty": "Teso North",
+          "name": "KOLANYA SALVATION ARMY HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 39,
+          "mfl": "15953",
+          "county": "Busia",
+          "subcounty": "Teso North",
+          "name": "Salvation Army Kolanya HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 25,
+          "mfl": "15965",
+          "county": "Bungoma",
+          "subcounty": "Webuye West",
+          "name": "Friends Lugulu Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 29,
+          "mfl": "15984",
+          "county": "Bungoma",
+          "subcounty": "Bumula",
+          "name": "Machwele Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 30,
+          "mfl": "16020",
+          "county": "Bungoma",
+          "subcounty": "Kanduyi",
+          "name": "Mission Of Mercy Hospital",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 433,
+          "mfl": "16020",
+          "county": "Narok",
+          "subcounty": NaN,
+          "name": "Mission Of Mercy Medical Clinic",
+          "category": "Hospital"
+        },
+        {
+          "no": 104,
+          "mfl": "16040",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "Mundoli Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 96,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": NaN,
+          "name": "COG Mwihilia Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 108,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "Mwihila Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 91,
+          "mfl": "16065",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "ACK Namasoli Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 34,
+          "mfl": "16067",
+          "county": "Busia",
+          "subcounty": "Samia",
+          "name": "ACK Namboboto HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 35,
+          "mfl": "16067",
+          "county": "Busia",
+          "subcounty": "Samia",
+          "name": "ACK NAMBOBOTO HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 382,
+          "mfl": "16392",
+          "county": "Nakuru",
+          "subcounty": "Molo",
+          "name": "FULL GOSPEL CHURCHES OF KENYA - MOLO MEDICAL CENT",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 80,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope",
+          "category": "Dispensary"
+        },
+        {
+          "no": 81,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 560,
+          "mfl": "16697",
+          "county": "Turkana",
+          "subcounty": "Lokiriama",
+          "name": "PAG Lokwatuba dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 160,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 161,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 495,
+          "mfl": "17522",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "FUTURE LIFE COMMUNITY NURSING HOME",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 348,
+          "mfl": "17685",
+          "county": "Nairobi",
+          "subcounty": "Embakasi South",
+          "name": "Imara Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 420,
+          "mfl": "17910",
+          "county": "Narok",
+          "subcounty": "Transmara South",
+          "name": "Engos Health Centre Africa Mission Services",
+          "category": "Health Centre"
+        },
+        {
+          "no": 32,
+          "mfl": "17993",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "Soteni Village of Hope Dispensary - Mbakalo",
+          "category": "Dispensary"
+        },
+        {
+          "no": 355,
+          "mfl": "20091",
+          "county": "Nairobi",
+          "subcounty": "Ruaraka",
+          "name": "Mwangaza Ulio na Tumaini Clinic Korogocho",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 21,
+          "mfl": "20791",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "AMI RUHAMA CHURCH WARABA MEDICAL CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 384,
+          "mfl": "20839",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Impact Health Care",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 72,
+          "mfl": "21648",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "RTC Medical Centre",
+          "category": "Hospital"
+        },
+        {
+          "no": 23,
+          "mfl": "21896",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "Christian Mission International Sambocho Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 350,
+          "mfl": "24073",
+          "county": "Nairobi",
+          "subcounty": "Roysambu",
+          "name": "Jesse Kay Childrens Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 306,
+          "mfl": "24153",
+          "county": "Mombasa",
+          "subcounty": NaN,
+          "name": "LIGHT HOUSE FOR CHRIST EYE CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 356,
+          "mfl": "24563",
+          "county": "Nairobi",
+          "subcounty": "Westlands",
+          "name": "Nairobi Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 572,
+          "mfl": "24724",
+          "county": "Uasin Gishu",
+          "subcounty": "Ainabkoi",
+          "name": "Living Room International",
+          "category": "Hospital"
+        },
+        {
+          "no": 385,
+          "mfl": "25111",
+          "county": "Nakuru",
+          "subcounty": NaN,
+          "name": "IMPACT HEALTHCARE ANNEX",
+          "category": "Health Centre"
+        },
+        {
+          "no": 343,
+          "mfl": "25152",
+          "county": "Nairobi",
+          "subcounty": "Kasarani",
+          "name": "Cascade of Hope Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 61,
+          "mfl": "26205",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "BERIL\\'S GWP MEDICAL CENTER",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 487,
+          "mfl": "27696",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "ACK Ngiya Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 567,
+          "mfl": "28890",
+          "county": "Uasin Gishu",
+          "subcounty": "Turbo",
+          "name": "Integrated Vision Centre Milimani Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 568,
+          "mfl": "28890",
+          "county": "Uasin Gishu",
+          "subcounty": NaN,
+          "name": "IVC Mlimani Hospital",
+          "category": "Hospital"
+        }
+      ]
+    },
+    "bftw_rmncah": {
+      "name": "BFTW RMNCAH",
+      "icon": "👶",
+      "facility_count": 68,
+      "facilities": [
+        {
+          "no": 49,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": NaN,
+          "name": "CCS Mayori Dispensary (Kiritiri)",
+          "category": "Dispensary"
+        },
+        {
+          "no": 50,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": NaN,
+          "name": "CCS Mayori-Kiritiri Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 51,
+          "mfl": "11964",
+          "county": "Embu",
+          "subcounty": "Mbeere South",
+          "name": "CHRISTIAN COMMUNITY SERVICES MAYORI DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 52,
+          "mfl": "12005",
+          "county": "Embu",
+          "subcounty": "Embu North",
+          "name": "Emmanuel Kigari Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 247,
+          "mfl": "12030",
+          "county": "Marsabit",
+          "subcounty": "Laisamis",
+          "name": "AIC Gatab Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 249,
+          "mfl": "12030",
+          "county": "Marsabit",
+          "subcounty": "Laisamis",
+          "name": "Gatab Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 250,
+          "mfl": "12086",
+          "county": "Marsabit",
+          "subcounty": NaN,
+          "name": "Illaut Lutherand dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 78,
+          "mfl": "12093",
+          "county": "Isiolo",
+          "subcounty": NaN,
+          "name": "AIC Isiolo Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 516,
+          "mfl": "12119",
+          "county": "Tharaka Nithi",
+          "subcounty": "Igambangombe",
+          "name": "Kaanwa Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 242,
+          "mfl": "12205",
+          "county": "Makueni",
+          "subcounty": "Kibwezi East",
+          "name": "PCEA Kasasule Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 243,
+          "mfl": "12205",
+          "county": "Makueni",
+          "subcounty": "Kibwezi East",
+          "name": "PCEA KASASULE HEALTH CLINIC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 265,
+          "mfl": "12232",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "Kathigu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 281,
+          "mfl": "12293",
+          "county": "Meru",
+          "subcounty": "Igembe Central",
+          "name": "PCEA Kiengu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 525,
+          "mfl": "12297",
+          "county": "Tharaka Nithi",
+          "subcounty": NaN,
+          "name": "Kieni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 526,
+          "mfl": "12297",
+          "county": "Tharaka Nithi",
+          "subcounty": "Chuka",
+          "name": "Kiereni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 270,
+          "mfl": "12337",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "Kirogine Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 234,
+          "mfl": "12507",
+          "county": "Makueni",
+          "subcounty": "Mbooni",
+          "name": "AIC Mbooni Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 240,
+          "mfl": "12507",
+          "county": "Makueni",
+          "subcounty": "Mbooni",
+          "name": "Mbooni AIC Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 531,
+          "mfl": "12528",
+          "county": "Tharaka Nithi",
+          "subcounty": "Muthambi",
+          "name": "Minugu Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 257,
+          "mfl": "12533",
+          "county": "Meru",
+          "subcounty": "Imenti South",
+          "name": "CCS Mitunguu Medical Clinic",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 532,
+          "mfl": "12563",
+          "county": "Tharaka Nithi",
+          "subcounty": "Chuka",
+          "name": "Mukuuni Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 217,
+          "mfl": "12566",
+          "county": "Kitui",
+          "subcounty": "Kitui Central",
+          "name": "AIC Mulango HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 534,
+          "mfl": "12597",
+          "county": "Tharaka Nithi",
+          "subcounty": "Mwimbi",
+          "name": "Mutindwa Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 245,
+          "mfl": "12724",
+          "county": "Makueni",
+          "subcounty": "Kilome",
+          "name": "Salama Baptist Nursing Home",
+          "category": "Dispensary"
+        },
+        {
+          "no": 215,
+          "mfl": "12780",
+          "county": "Kitui",
+          "subcounty": NaN,
+          "name": "ACK Syongila Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 220,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": NaN,
+          "name": "TEI WA YESU FAMILY CARE CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 221,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "Tei Wa Yesu Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 222,
+          "mfl": "12789",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "Tei Wa Yesu Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 218,
+          "mfl": "12860",
+          "county": "Kitui",
+          "subcounty": "Kitui East",
+          "name": "AIC Zombe Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 449,
+          "mfl": "13547",
+          "county": "Nyamira",
+          "subcounty": "Borabu",
+          "name": "Eronge Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 287,
+          "mfl": "13570",
+          "county": "Migori",
+          "subcounty": "Kuria East",
+          "name": "Getongoroma Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 451,
+          "mfl": "13628",
+          "county": "Nyamira",
+          "subcounty": "Nyamira North",
+          "name": "Itibo Mission Adventist Hospital",
+          "category": "Health Centre"
+        },
+        {
+          "no": 63,
+          "mfl": "13650",
+          "county": "Homa Bay",
+          "subcounty": NaN,
+          "name": "Kamasengere Baptist Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 67,
+          "mfl": "13769",
+          "county": "Homa Bay",
+          "subcounty": "Rangwe",
+          "name": "Manyatta (SDA) Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 68,
+          "mfl": "13769",
+          "county": "Homa Bay",
+          "subcounty": "Rangwe",
+          "name": "Manyatta SDA Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 211,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "ACK Maseno School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 213,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "Maseno Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 291,
+          "mfl": "13788",
+          "county": "Migori",
+          "subcounty": "Kuria East",
+          "name": "Matare SDA Mission Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 454,
+          "mfl": "13791",
+          "county": "Nyamira",
+          "subcounty": "Nyamira North",
+          "name": "Matongo Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 200,
+          "mfl": "13821",
+          "county": "Kisii",
+          "subcounty": "South Mugirango",
+          "name": "Monianku Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 212,
+          "mfl": "13881",
+          "county": "Kisumu",
+          "subcounty": "Nyakach",
+          "name": "AIC Nyakach Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 297,
+          "mfl": "14008",
+          "county": "Migori",
+          "subcounty": "Uriri",
+          "name": "Oyani (SDA) Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 298,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen (SDA) Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 299,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen Adventist Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 300,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "RANEN S.D.A HEALTH CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 301,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": NaN,
+          "name": "Ranen SDA Conference",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 302,
+          "mfl": "14043",
+          "county": "Migori",
+          "subcounty": "Suna East",
+          "name": "Reusse Troyer Mission Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 209,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "Riokindo Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 210,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "RIOKINDO S.D.A DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 74,
+          "mfl": "14174",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Wire Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 75,
+          "mfl": "14174",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Wire Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 586,
+          "mfl": "14196",
+          "county": "West Pokot",
+          "subcounty": "Pokot North",
+          "name": "Alale AIC Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 587,
+          "mfl": "14329",
+          "county": "West Pokot",
+          "subcounty": "KIPKOMO",
+          "name": "Chepareria SDA Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 588,
+          "mfl": "14356",
+          "county": "West Pokot",
+          "subcounty": "West Pokot",
+          "name": "Chepnyal AGC Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 589,
+          "mfl": "14387",
+          "county": "West Pokot",
+          "subcounty": "Pokot Central",
+          "name": "Chesta ELCK Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 417,
+          "mfl": "14394",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Aitong Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 553,
+          "mfl": "14663",
+          "county": "Turkana",
+          "subcounty": "Turkana Central",
+          "name": "AIC Kalokol Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 562,
+          "mfl": "15057",
+          "county": "Turkana",
+          "subcounty": "Turkana South",
+          "name": "RCEA Lokichar Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 554,
+          "mfl": "15059",
+          "county": "Turkana",
+          "subcounty": "Lokichoggio",
+          "name": "AIC Lokichoggio health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 555,
+          "mfl": "15064",
+          "county": "Turkana",
+          "subcounty": "Turkana East",
+          "name": "AIC Lokori health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 431,
+          "mfl": "15128",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Mararianta Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 435,
+          "mfl": "15276",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "NAIKARRA HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 561,
+          "mfl": "15299",
+          "county": "Turkana",
+          "subcounty": "Lokiriama",
+          "name": "PAG Namoruputh Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 416,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "AIC Olasiti HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 439,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "Olasiti Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 448,
+          "mfl": "15702",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Talek Health Centre",
+          "category": "Dispensary"
+        },
+        {
+          "no": 403,
+          "mfl": "15778",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Wesley Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 24,
+          "mfl": "15861",
+          "county": "Bungoma",
+          "subcounty": "Sirisia",
+          "name": "Friends Chwele Mission Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 100,
+          "mfl": "15902",
+          "county": "Kakamega",
+          "subcounty": "Navakholo",
+          "name": "Ingotse Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 20,
+          "mfl": "15935",
+          "county": "Bungoma",
+          "subcounty": "Bumula",
+          "name": "ACK Khasoko Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 104,
+          "mfl": "16040",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "Mundoli Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 96,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": NaN,
+          "name": "COG Mwihilia Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 108,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "Mwihila Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 91,
+          "mfl": "16065",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "ACK Namasoli Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 253,
+          "mfl": "16213",
+          "county": "Marsabit",
+          "subcounty": "Laisamis",
+          "name": "Logologo AIC Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 362,
+          "mfl": "16233",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "PCEA School of Health Sciences Rubate",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 541,
+          "mfl": "16233",
+          "county": "Tharaka Nithi",
+          "subcounty": NaN,
+          "name": "Presbyterian Teachers Trining College- Rubate Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 468,
+          "mfl": "16384",
+          "county": "Nyandarua",
+          "subcounty": "Kinangop",
+          "name": "Our Lady of Mercy (Magumu)",
+          "category": "Dispensary"
+        },
+        {
+          "no": 382,
+          "mfl": "16392",
+          "county": "Nakuru",
+          "subcounty": "Molo",
+          "name": "FULL GOSPEL CHURCHES OF KENYA - MOLO MEDICAL CENT",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 59,
+          "mfl": "16983",
+          "county": "Homa Bay",
+          "subcounty": "Homa Bay Town",
+          "name": "ACK Hope Compassionate Health Services",
+          "category": "Dispensary"
+        },
+        {
+          "no": 269,
+          "mfl": "17468",
+          "county": "Meru",
+          "subcounty": "Imenti North",
+          "name": "Kiamiriru Methodist Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 32,
+          "mfl": "17993",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "Soteni Village of Hope Dispensary - Mbakalo",
+          "category": "Dispensary"
+        },
+        {
+          "no": 254,
+          "mfl": "18930",
+          "county": "Marsabit",
+          "subcounty": "Laisamis",
+          "name": "Namarei Dispensary (Marsabit South)",
+          "category": "Dispensary"
+        },
+        {
+          "no": 384,
+          "mfl": "20839",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Impact Health Care",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 246,
+          "mfl": "20997",
+          "county": "Makueni",
+          "subcounty": NaN,
+          "name": "Salavation Army Maiani Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 23,
+          "mfl": "21896",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "Christian Mission International Sambocho Health Centre",
+          "category": "Health Centre"
+        }
+      ]
+    },
+    "pep": {
+      "name": "PEP",
+      "icon": "🎓",
+      "facility_count": 0,
+      "facilities": []
+    },
+    "impact": {
+      "name": "IMPACT Project",
+      "icon": "🎯",
+      "facility_count": 0,
+      "facilities": []
+    },
+    "eye_health": {
+      "name": "Eye Health (ACSP)",
+      "icon": "👁️",
+      "facility_count": 53,
+      "facilities": [
+        {
+          "no": 319,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "AIC Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 322,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 128,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kiajbe hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 129,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kijabe College of Health Sciences",
+          "category": "Medical Training College"
+        },
+        {
+          "no": 139,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kijabe (AIC) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 141,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "Kikuyu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 157,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 158,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 480,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 481,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA TUMUTUMU MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 482,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 484,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "Tumutumu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 41,
+          "mfl": "11912",
+          "county": "Kilifi",
+          "subcounty": NaN,
+          "name": "Oasis Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 173,
+          "mfl": "11912",
+          "county": "Kilifi",
+          "subcounty": "Kilifi South",
+          "name": "Oasis Medical Center",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 512,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "Chogoria PCEA Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 538,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 539,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA CHOGORIA MEDICAL CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 540,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 216,
+          "mfl": "12213",
+          "county": "Kitui",
+          "subcounty": "Mwingi North",
+          "name": "AIC Katakani Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 273,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": "Igembe South",
+          "name": "Maua Methodist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 274,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": NaN,
+          "name": "Maua Methodist MTC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 217,
+          "mfl": "12566",
+          "county": "Kitui",
+          "subcounty": "Kitui Central",
+          "name": "AIC Mulango HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 215,
+          "mfl": "12780",
+          "county": "Kitui",
+          "subcounty": NaN,
+          "name": "ACK Syongila Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 218,
+          "mfl": "12860",
+          "county": "Kitui",
+          "subcounty": "Kitui East",
+          "name": "AIC Zombe Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 351,
+          "mfl": "12972",
+          "county": "Nairobi",
+          "subcounty": "Mathare",
+          "name": "Jumuia Huruma Hospital",
+          "category": "Dispensary"
+        },
+        {
+          "no": 490,
+          "mfl": "13535",
+          "county": "Siaya",
+          "subcounty": "Gem",
+          "name": "Dolphil Nursing & Maternity Home",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 492,
+          "mfl": "13535",
+          "county": "Siaya",
+          "subcounty": NaN,
+          "name": "DOPHIL NURSING & MATERNITY HOME NOMIYA FAITH BASE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 449,
+          "mfl": "13547",
+          "county": "Nyamira",
+          "subcounty": "Borabu",
+          "name": "Eronge Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 287,
+          "mfl": "13570",
+          "county": "Migori",
+          "subcounty": "Kuria East",
+          "name": "Getongoroma Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 451,
+          "mfl": "13628",
+          "county": "Nyamira",
+          "subcounty": "Nyamira North",
+          "name": "Itibo Mission Adventist Hospital",
+          "category": "Health Centre"
+        },
+        {
+          "no": 64,
+          "mfl": "13667",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo North ",
+          "name": "Kendu Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 65,
+          "mfl": "13667",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo North ",
+          "name": "Kendu Adventist School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 211,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "ACK Maseno School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 213,
+          "mfl": "13781",
+          "county": "Kisumu",
+          "subcounty": "Kisumu West",
+          "name": "Maseno Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 291,
+          "mfl": "13788",
+          "county": "Migori",
+          "subcounty": "Kuria East",
+          "name": "Matare SDA Mission Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 69,
+          "mfl": "13789",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Matata Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 200,
+          "mfl": "13821",
+          "county": "Kisii",
+          "subcounty": "South Mugirango",
+          "name": "Monianku Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 212,
+          "mfl": "13881",
+          "county": "Kisumu",
+          "subcounty": "Nyakach",
+          "name": "AIC Nyakach Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 493,
+          "mfl": "13904",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "FPFK Nyambare Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 494,
+          "mfl": "13904",
+          "county": "Siaya",
+          "subcounty": "Alego Usonga",
+          "name": "FPFK NYAMBARE MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 204,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "NYANCHWA ADVENTIST MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 205,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "Nyanchwa Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 206,
+          "mfl": "13918",
+          "county": "Kisii",
+          "subcounty": "Nyaribari Chache",
+          "name": "Nyanchwa School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 73,
+          "mfl": "13962",
+          "county": "Homa Bay",
+          "subcounty": NaN,
+          "name": "St. Lukes ACK Ogande Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 298,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen (SDA) Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 299,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "Ranen Adventist Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 300,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": "Awendo",
+          "name": "RANEN S.D.A HEALTH CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 301,
+          "mfl": "14032",
+          "county": "Migori",
+          "subcounty": NaN,
+          "name": "Ranen SDA Conference",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 209,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "Riokindo Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 210,
+          "mfl": "14052",
+          "county": "Kisii",
+          "subcounty": "Bomachoge Borabu",
+          "name": "RIOKINDO S.D.A DISPENSARY",
+          "category": "Dispensary"
+        },
+        {
+          "no": 74,
+          "mfl": "14174",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Wire Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 75,
+          "mfl": "14174",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "Wire Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 113,
+          "mfl": "14178",
+          "county": "Kericho",
+          "subcounty": "Bureti",
+          "name": "AIC LITEIN HOSPITAL",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 553,
+          "mfl": "14663",
+          "county": "Turkana",
+          "subcounty": "Turkana Central",
+          "name": "AIC Kalokol Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 42,
+          "mfl": "14767",
+          "county": "Elgeyo Marakwet",
+          "subcounty": "Marakwet West",
+          "name": "AIC Kapsowar Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 43,
+          "mfl": "14767",
+          "county": "Elgeyo Marakwet",
+          "subcounty": NaN,
+          "name": "AIC Kapsowar School of Nursing",
+          "category": "Medical Training College"
+        },
+        {
+          "no": 562,
+          "mfl": "15057",
+          "county": "Turkana",
+          "subcounty": "Turkana South",
+          "name": "RCEA Lokichar Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 554,
+          "mfl": "15059",
+          "county": "Turkana",
+          "subcounty": "Lokichoggio",
+          "name": "AIC Lokichoggio health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 555,
+          "mfl": "15064",
+          "county": "Turkana",
+          "subcounty": "Turkana East",
+          "name": "AIC Lokori health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 561,
+          "mfl": "15299",
+          "county": "Turkana",
+          "subcounty": "Lokiriama",
+          "name": "PAG Namoruputh Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 558,
+          "mfl": "15303",
+          "county": "Turkana",
+          "subcounty": "Lokichoggio",
+          "name": "AIC Nanam health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 8,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": NaN,
+          "name": "AGC Tenwek CHS",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 9,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": "Bomet Central",
+          "name": "AGC Tenwek Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 14,
+          "mfl": "15719",
+          "county": "Bomet",
+          "subcounty": "Bomet Central",
+          "name": "TENWEK HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 403,
+          "mfl": "15778",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Wesley Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 26,
+          "mfl": "15864",
+          "county": "Bungoma",
+          "subcounty": "Kimilili",
+          "name": "IcFEM Dreamland Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 100,
+          "mfl": "15902",
+          "county": "Kakamega",
+          "subcounty": "Navakholo",
+          "name": "Ingotse Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 580,
+          "mfl": "15913",
+          "county": "Vihiga",
+          "subcounty": "Hamisi",
+          "name": "Jumuia Friends Hospita Kaimosi",
+          "category": "Hospital"
+        },
+        {
+          "no": 20,
+          "mfl": "15935",
+          "county": "Bungoma",
+          "subcounty": "Bumula",
+          "name": "ACK Khasoko Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 581,
+          "mfl": "15946",
+          "county": "Vihiga",
+          "subcounty": "Luanda",
+          "name": "Kima Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 96,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": NaN,
+          "name": "COG Mwihilia Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 108,
+          "mfl": "16058",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "Mwihila Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 91,
+          "mfl": "16065",
+          "county": "Kakamega",
+          "subcounty": "Khwisero",
+          "name": "ACK Namasoli Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 34,
+          "mfl": "16067",
+          "county": "Busia",
+          "subcounty": "Samia",
+          "name": "ACK Namboboto HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 35,
+          "mfl": "16067",
+          "county": "Busia",
+          "subcounty": "Samia",
+          "name": "ACK NAMBOBOTO HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 578,
+          "mfl": "16097",
+          "county": "Vihiga",
+          "subcounty": NaN,
+          "name": "FRIENDS CHURCH SABATIA EYE HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 583,
+          "mfl": "16097",
+          "county": "Vihiga",
+          "subcounty": "Sabatia",
+          "name": "Sabatia Eye Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 382,
+          "mfl": "16392",
+          "county": "Nakuru",
+          "subcounty": "Molo",
+          "name": "FULL GOSPEL CHURCHES OF KENYA - MOLO MEDICAL CENT",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 80,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope",
+          "category": "Dispensary"
+        },
+        {
+          "no": 81,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 59,
+          "mfl": "16983",
+          "county": "Homa Bay",
+          "subcounty": "Homa Bay Town",
+          "name": "ACK Hope Compassionate Health Services",
+          "category": "Dispensary"
+        },
+        {
+          "no": 160,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 161,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 23,
+          "mfl": "21896",
+          "county": "Bungoma",
+          "subcounty": NaN,
+          "name": "Christian Mission International Sambocho Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 61,
+          "mfl": "26205",
+          "county": "Homa Bay",
+          "subcounty": "Rachuonyo South",
+          "name": "BERIL\\'S GWP MEDICAL CENTER",
+          "category": "Clinic / Medical Centre"
+        }
+      ]
+    },
+    "cdic_icare": {
+      "name": "CDIC / iCARE",
+      "icon": "💻",
+      "facility_count": 0,
+      "facilities": []
+    },
+    "internship": {
+      "name": "Internship Program",
+      "icon": "🧑‍⚕️",
+      "facility_count": 0,
+      "facilities": []
+    },
+    "gitlab": {
+      "name": "GitLab",
+      "icon": "🦋",
+      "facility_count": 31,
+      "facilities": [
+        {
+          "no": 179,
+          "mfl": "10093",
+          "county": "Kirinyaga",
+          "subcounty": "Kirinyaga South",
+          "name": "ACK Mt. Kenya Hospital-Mwea",
+          "category": "Hospital"
+        },
+        {
+          "no": 319,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "AIC Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 322,
+          "mfl": "10267",
+          "county": "Murang'a",
+          "subcounty": "Kandara",
+          "name": "Githumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 128,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kiajbe hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 129,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": NaN,
+          "name": "AIC Kijabe College of Health Sciences",
+          "category": "Medical Training College"
+        },
+        {
+          "no": 139,
+          "mfl": "10602",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kijabe (AIC) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 141,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "Kikuyu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 157,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 158,
+          "mfl": "10603",
+          "county": "Kiambu",
+          "subcounty": "Kikuyu",
+          "name": "PCEA Kikuyu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 142,
+          "mfl": "10610",
+          "county": "Kiambu",
+          "subcounty": "Lari",
+          "name": "Kimende Orthodox Mission Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 178,
+          "mfl": "10738",
+          "county": "Kirinyaga",
+          "subcounty": NaN,
+          "name": "ACK Mt. Kenya Hospital Kerugoya",
+          "category": "Hospital"
+        },
+        {
+          "no": 189,
+          "mfl": "10738",
+          "county": "Kirinyaga",
+          "subcounty": "Kirinyaga Central",
+          "name": "Mt Kenya (ACK) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 480,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 481,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA TUMUTUMU MISSION HOSPITAL",
+          "category": "Hospital"
+        },
+        {
+          "no": 482,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "PCEA Tumutumu School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 484,
+          "mfl": "11124",
+          "county": "Nyeri",
+          "subcounty": "Mathira West",
+          "name": "Tumutumu (PCEA) Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 512,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "Chogoria PCEA Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 538,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 539,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA CHOGORIA MEDICAL CENTRE",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 540,
+          "mfl": "11970",
+          "county": "Tharaka Nithi",
+          "subcounty": "Maara",
+          "name": "PCEA Chogoria School of Nursing",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 273,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": "Igembe South",
+          "name": "Maua Methodist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 274,
+          "mfl": "12492",
+          "county": "Meru",
+          "subcounty": NaN,
+          "name": "Maua Methodist MTC",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 342,
+          "mfl": "12889",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "Cana Family Clinic and Resource Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 353,
+          "mfl": "12894",
+          "county": "Nairobi",
+          "subcounty": "Kibra",
+          "name": "Kibera Chemi Chemi Ya Uzima Clinic",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 351,
+          "mfl": "12972",
+          "county": "Nairobi",
+          "subcounty": "Mathare",
+          "name": "Jumuia Huruma Hospital",
+          "category": "Dispensary"
+        },
+        {
+          "no": 367,
+          "mfl": "13017",
+          "county": "Nairobi",
+          "subcounty": NaN,
+          "name": "SOWETO KAYOLE PRIMARY HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 435,
+          "mfl": "15276",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "NAIKARRA HEALTH CENTRE",
+          "category": "Health Centre"
+        },
+        {
+          "no": 373,
+          "mfl": "15282",
+          "county": "Nakuru",
+          "subcounty": NaN,
+          "name": "AIC KIJABE HOSPITAL-NAIVASHA MEDICAL CENTRE",
+          "category": "Hospital"
+        },
+        {
+          "no": 389,
+          "mfl": "15282",
+          "county": "Nakuru",
+          "subcounty": "Naivasha",
+          "name": "Naivasha (AIC) Medical Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 416,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "AIC Olasiti HC",
+          "category": "Health Centre"
+        },
+        {
+          "no": 439,
+          "mfl": "15387",
+          "county": "Narok",
+          "subcounty": "Narok East",
+          "name": "Olasiti Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 448,
+          "mfl": "15702",
+          "county": "Narok",
+          "subcounty": "Narok West",
+          "name": "Talek Health Centre",
+          "category": "Dispensary"
+        },
+        {
+          "no": 382,
+          "mfl": "16392",
+          "county": "Nakuru",
+          "subcounty": "Molo",
+          "name": "FULL GOSPEL CHURCHES OF KENYA - MOLO MEDICAL CENT",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 231,
+          "mfl": "16651",
+          "county": "Machakos",
+          "subcounty": NaN,
+          "name": "Tumaini Mission Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 80,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope",
+          "category": "Dispensary"
+        },
+        {
+          "no": 81,
+          "mfl": "16667",
+          "county": "Kajiado",
+          "subcounty": NaN,
+          "name": "Beacon of Hope Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 160,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 161,
+          "mfl": "17124",
+          "county": "Kiambu",
+          "subcounty": "Kiambu Town",
+          "name": "PEFA Mercy Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 127,
+          "mfl": "17368",
+          "county": "Kiambu",
+          "subcounty": "Kabete",
+          "name": "ACK ST. JOSEPH KANYARIRI DISP.",
+          "category": "Dispensary"
+        },
+        {
+          "no": 167,
+          "mfl": "17368",
+          "county": "Kiambu",
+          "subcounty": "Kabete",
+          "name": "St. Joseph Kanyariri Dispensary",
+          "category": "Dispensary"
+        },
+        {
+          "no": 348,
+          "mfl": "17685",
+          "county": "Nairobi",
+          "subcounty": "Embakasi South",
+          "name": "Imara Health Centre",
+          "category": "Health Centre"
+        },
+        {
+          "no": 132,
+          "mfl": "18006",
+          "county": "Kiambu",
+          "subcounty": "Kiambaa",
+          "name": "Cargo Human Care Clinic",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 344,
+          "mfl": "18795",
+          "county": "Nairobi",
+          "subcounty": "Makadara",
+          "name": "Church Army Medical Centre",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 355,
+          "mfl": "20091",
+          "county": "Nairobi",
+          "subcounty": "Ruaraka",
+          "name": "Mwangaza Ulio na Tumaini Clinic Korogocho",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 384,
+          "mfl": "20839",
+          "county": "Nakuru",
+          "subcounty": "Nakuru North",
+          "name": "Impact Health Care",
+          "category": "Clinic / Medical Centre"
+        },
+        {
+          "no": 350,
+          "mfl": "24073",
+          "county": "Nairobi",
+          "subcounty": "Roysambu",
+          "name": "Jesse Kay Childrens Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 356,
+          "mfl": "24563",
+          "county": "Nairobi",
+          "subcounty": "Westlands",
+          "name": "Nairobi Adventist Hospital",
+          "category": "Hospital"
+        },
+        {
+          "no": 385,
+          "mfl": "25111",
+          "county": "Nakuru",
+          "subcounty": NaN,
+          "name": "IMPACT HEALTHCARE ANNEX",
+          "category": "Health Centre"
+        },
+        {
+          "no": 343,
+          "mfl": "25152",
+          "county": "Nairobi",
+          "subcounty": "Kasarani",
+          "name": "Cascade of Hope Health Centre",
+          "category": "Health Centre"
+        }
+      ]
+    }
+  },
+  "leftover": [
+    {
+      "mfl": "10020",
+      "county": "Murang'a",
+      "name": "Gituamba (AIPCA) Dispensary"
+    },
+    {
+      "mfl": "10050",
+      "county": "Kiambu",
+      "name": "ACK Bathi Faith Medical Centre"
+    },
+    {
+      "mfl": "10092",
+      "county": "Kirinyaga",
+      "name": "Christian Community Services Clinic Base Kerugoya"
+    },
+    {
+      "mfl": "10219",
+      "county": "Kiambu",
+      "name": "Gathiruini (PCEA) Dispensary"
+    },
+    {
+      "mfl": "10232",
+      "county": "Kirinyaga",
+      "name": "Gatumbi (SDA) Dispensary"
+    },
+    {
+      "mfl": "10235",
+      "county": "Nyeri",
+      "name": "Mahiga (PCEA) Dispensary"
+    },
+    {
+      "mfl": "10262",
+      "county": "Nyeri",
+      "name": "Githanga ACK Dispensary"
+    },
+    {
+      "mfl": "10296",
+      "county": "Nyeri",
+      "name": "ACK Good Samaritan Dispensary"
+    },
+    {
+      "mfl": "10375",
+      "county": "Kirinyaga",
+      "name": "Jesmond (ACK) Dispensary (Mburi)"
+    },
+    {
+      "mfl": "10387",
+      "county": "Nyandarua",
+      "name": "Nyandarua Medical Centre"
+    },
+    {
+      "mfl": "10422",
+      "county": "Murang'a",
+      "name": "Kahuhia (ACK) Clinic"
+    },
+    {
+      "mfl": "10423",
+      "county": "Nyandarua",
+      "name": "AIC Kahuho Dispensary"
+    },
+    {
+      "mfl": "10446",
+      "county": "Kiambu",
+      "name": "Kambui (PCEA) Dispensary"
+    },
+    {
+      "mfl": "10454",
+      "county": "Murang'a",
+      "name": "Kamung'ang'a (ACK) Dispensary"
+    },
+    {
+      "mfl": "10478",
+      "county": "Kirinyaga",
+      "name": "Karaini (ACK) Dispensary"
+    },
+    {
+      "mfl": "10531",
+      "county": "Kirinyaga",
+      "name": "Kiamagunyi (ACK) Clinic"
+    },
+    {
+      "mfl": "10551",
+      "county": "Kirinyaga",
+      "name": "Kiandegwa (Methodist Church of Kenya) Dispensary"
+    },
+    {
+      "mfl": "10567",
+      "county": "Nyeri",
+      "name": "Kiaruhiu (PCEA) Health Centre"
+    },
+    {
+      "mfl": "10598",
+      "county": "Murang'a",
+      "name": "Kihumbu-ini Dispensary"
+    },
+    {
+      "mfl": "10612",
+      "county": "Kiambu",
+      "name": "Kimunyu (PCEA) Dispensary"
+    },
+    {
+      "mfl": "10654",
+      "county": "Kiambu",
+      "name": "Lankia (PCEA) Dispensary"
+    },
+    {
+      "mfl": "10659",
+      "county": "Kiambu",
+      "name": "Life Care Ministries Clinic"
+    },
+    {
+      "mfl": "10705",
+      "county": "Nyeri",
+      "name": "PCEA MATHAKWAINI HEALTH CENTRE"
+    },
+    {
+      "mfl": "10728",
+      "county": "Murang'a",
+      "name": "Mihuti Dispensary (Muranga North)"
+    },
+    {
+      "mfl": "10746",
+      "county": "Kirinyaga",
+      "name": "St Mary (ACK) Mugumo Dispensary"
+    },
+    {
+      "mfl": "10755",
+      "county": "Nyandarua",
+      "name": "Mukeu (AIC) Dispensary"
+    },
+    {
+      "mfl": "10760",
+      "county": "Kiambu",
+      "name": "Mukurwe (PCEA) Medical Clinic"
+    },
+    {
+      "mfl": "10773",
+      "county": "Nyeri",
+      "name": "Munyange (AIPCA) Dispensary"
+    },
+    {
+      "mfl": "10796",
+      "county": "Kirinyaga",
+      "name": "Mutira (ACK) Dispensary"
+    },
+    {
+      "mfl": "10841",
+      "county": "Kiambu",
+      "name": "Nduriri (AIC) Dispensary"
+    },
+    {
+      "mfl": "10859",
+      "county": "Kiambu",
+      "name": "Ngarariga Health Centre"
+    },
+    {
+      "mfl": "10862",
+      "county": "Kiambu",
+      "name": "Ngecha Orthodox Dispensary"
+    },
+    {
+      "mfl": "11024",
+      "county": "Murang'a",
+      "name": "St Anne (ACK) Dispensary"
+    },
+    {
+      "mfl": "11035",
+      "county": "Kirinyaga",
+      "name": "St James Angilcan Church of Kenya Kiaritha Dispens"
+    },
+    {
+      "mfl": "11040",
+      "county": "Kirinyaga",
+      "name": "St. John's Thaita Dispensary"
+    },
+    {
+      "mfl": "11048",
+      "county": "Kirinyaga",
+      "name": "St Mary (ACK) Dispensary (Ngariama)"
+    },
+    {
+      "mfl": "11063",
+      "county": "Kiambu",
+      "name": "St. Pauls University Health Centre"
+    },
+    {
+      "mfl": "11066",
+      "county": "Nairobi",
+      "name": "St Peter's (ACK) Medical Clinic-Uthiru"
+    },
+    {
+      "mfl": "11067",
+      "county": "Kirinyaga",
+      "name": "St Philips (ACK) Dispensary Ndiriti"
+    },
+    {
+      "mfl": "11086",
+      "county": "Murang'a",
+      "name": "Tata Hannah (African Christian Churches and School"
+    },
+    {
+      "mfl": "11180",
+      "county": "Murang'a",
+      "name": "Weithaga (ACK) Dispensary"
+    },
+    {
+      "mfl": "11296",
+      "county": "Tana River",
+      "name": "Daba (AIC) Dispensary"
+    },
+    {
+      "mfl": "11467",
+      "county": "Kwale",
+      "name": "Kichaka Simba Dispensary"
+    },
+    {
+      "mfl": "11519",
+      "county": "Mombasa",
+      "name": "Light House for Christ Hospital"
+    },
+    {
+      "mfl": "11553",
+      "county": "Kilifi",
+      "name": "Malanga (AIC) Dispensary"
+    },
+    {
+      "mfl": "11574",
+      "county": "Tana River",
+      "name": "Marynoll Dispensary"
+    },
+    {
+      "mfl": "11760",
+      "county": "Taita Taveta",
+      "name": "Rumangao Dispensary"
+    },
+    {
+      "mfl": "11817",
+      "county": "Taita Taveta",
+      "name": "St Joseph's Shelter of Hope"
+    },
+    {
+      "mfl": "11818",
+      "county": "Kilifi",
+      "name": "ACK ST.LUKES MISSION NURSING HOME"
+    },
+    {
+      "mfl": "11821",
+      "county": "Mombasa",
+      "name": "Dean St Paul's Univerisity"
+    },
+    {
+      "mfl": "11823",
+      "county": "Kilifi",
+      "name": "DVC Academic St Paul's"
+    },
+    {
+      "mfl": "11832",
+      "county": "Mombasa",
+      "name": "Stella Maris Medical Clinic"
+    },
+    {
+      "mfl": "11852",
+      "county": "Tana River",
+      "name": "Titila (AIC) Dispensary"
+    },
+    {
+      "mfl": "11893",
+      "county": "Kilifi",
+      "name": "SDA Watamu"
+    },
+    {
+      "mfl": "11909",
+      "county": "Taita Taveta",
+      "name": "Wusi-Wutesia (ACK) Dispensary"
+    },
+    {
+      "mfl": "11960",
+      "county": "Isiolo",
+      "name": "ACL Isiolo Disp"
+    },
+    {
+      "mfl": "12026",
+      "county": "Meru",
+      "name": "Athiru Gaitu Dispensary"
+    },
+    {
+      "mfl": "12028",
+      "county": "Meru",
+      "name": "Gangara Dispensary"
+    },
+    {
+      "mfl": "12079",
+      "county": "Tharaka Nithi",
+      "name": "Ikumbo Dispensary"
+    },
+    {
+      "mfl": "12092",
+      "county": "Tharaka Nithi",
+      "name": "Iriga Dispensary"
+    },
+    {
+      "mfl": "12100",
+      "county": "Tharaka Nithi",
+      "name": "Itungururu Disp."
+    },
+    {
+      "mfl": "12120",
+      "county": "Tharaka Nithi",
+      "name": "Kaare Dispensary"
+    },
+    {
+      "mfl": "12131",
+      "county": "Tharaka Nithi",
+      "name": "Kajiampau Dispensary"
+    },
+    {
+      "mfl": "12141",
+      "county": "Marsabit",
+      "name": "Kalacha (AIC) Dispensary"
+    },
+    {
+      "mfl": "12200",
+      "county": "Meru",
+      "name": "Karia Dispensary"
+    },
+    {
+      "mfl": "12201",
+      "county": "Tharaka Nithi",
+      "name": "Karimba Dispensary"
+    },
+    {
+      "mfl": "12225",
+      "county": "Embu",
+      "name": "ACK Kathangariri Dispensary"
+    },
+    {
+      "mfl": "12229",
+      "county": "Meru",
+      "name": "Kathera Dispensary"
+    },
+    {
+      "mfl": "12270",
+      "county": "Tharaka Nithi",
+      "name": "Kiairugu Dispensary"
+    },
+    {
+      "mfl": "12275",
+      "county": "Tharaka Nithi",
+      "name": "Kiamuriuki Dispensary"
+    },
+    {
+      "mfl": "12278",
+      "county": "Embu",
+      "name": "Kianjokoma Trinity Health Centre"
+    },
+    {
+      "mfl": "12299",
+      "county": "Tharaka Nithi",
+      "name": "Kigogo EAPC Dispensary"
+    },
+    {
+      "mfl": "12331",
+      "county": "Tharaka Nithi",
+      "name": "Kiriani dispensary"
+    },
+    {
+      "mfl": "12332",
+      "county": "Embu",
+      "name": "ACK Kiriari Dispensary"
+    },
+    {
+      "mfl": "12368",
+      "county": "Makueni",
+      "name": "KITUNDU ADVENTIST HEALTH CENTER"
+    },
+    {
+      "mfl": "12374",
+      "county": "Makueni",
+      "name": "Kiu AIC Dispensary"
+    },
+    {
+      "mfl": "12417",
+      "county": "Kitui",
+      "name": "Kyome AIC Dispensary"
+    },
+    {
+      "mfl": "12419",
+      "county": "Makueni",
+      "name": "Kyumbe Dispensary"
+    },
+    {
+      "mfl": "12437",
+      "county": "Meru",
+      "name": "PCEA Rigiri Mission Dispensary"
+    },
+    {
+      "mfl": "12443",
+      "county": "Tharaka Nithi",
+      "name": "Magenka Dispensary"
+    },
+    {
+      "mfl": "12451",
+      "county": "Meru",
+      "name": "Makandune Dispensary"
+    },
+    {
+      "mfl": "12467",
+      "county": "Makueni",
+      "name": "AIC Health Ministries"
+    },
+    {
+      "mfl": "12510",
+      "county": "Meru",
+      "name": "St. John's Mariene Dispensary"
+    },
+    {
+      "mfl": "12517",
+      "county": "Meru",
+      "name": "Kenya Methodist University H/C"
+    },
+    {
+      "mfl": "12558",
+      "county": "Makueni",
+      "name": "AIC Mukaa Dispensary"
+    },
+    {
+      "mfl": "12559",
+      "county": "Embu",
+      "name": "ACK St.Peters Mukangu Dispensary"
+    },
+    {
+      "mfl": "12579",
+      "county": "Tharaka Nithi",
+      "name": "Murambani Dispensary"
+    },
+    {
+      "mfl": "12648",
+      "county": "Machakos",
+      "name": "Ngelani AIC Dispensary"
+    },
+    {
+      "mfl": "12649",
+      "county": "Tharaka Nithi",
+      "name": "Ngeru Dispensary"
+    },
+    {
+      "mfl": "12667",
+      "county": "Meru",
+      "name": "KEMU Medical Centre"
+    },
+    {
+      "mfl": "12683",
+      "county": "Tharaka Nithi",
+      "name": "Nyagani Dispensary"
+    },
+    {
+      "mfl": "12716",
+      "county": "Meru",
+      "name": "Ruiri Methodist Curch Health Centre"
+    },
+    {
+      "mfl": "12761",
+      "county": "Meru",
+      "name": "MCK St. Marks Kariene Dispensary"
+    },
+    {
+      "mfl": "12845",
+      "county": "Tharaka Nithi",
+      "name": "Weru Dispensary"
+    },
+    {
+      "mfl": "12903",
+      "county": "Nairobi",
+      "name": "Conerstone Clinic"
+    },
+    {
+      "mfl": "12904",
+      "county": "Nairobi",
+      "name": "Coptic Medical Clinic"
+    },
+    {
+      "mfl": "12905",
+      "county": "Nairobi",
+      "name": "Coptic Hospital (Ngong Road)"
+    },
+    {
+      "mfl": "13124",
+      "county": "Kiambu",
+      "name": "PCEA Ngundu Health Centre"
+    },
+    {
+      "mfl": "13135",
+      "county": "Nairobi",
+      "name": "Orthodox Dispensary(Riruta)"
+    },
+    {
+      "mfl": "13170",
+      "county": "Nairobi",
+      "name": "Ruai (SDA) Clinic"
+    },
+    {
+      "mfl": "13248",
+      "county": "Nairobi",
+      "name": "Vision Peoples Inter Health Centre"
+    },
+    {
+      "mfl": "13262",
+      "county": "Nairobi",
+      "name": "Zinduka Clinic"
+    },
+    {
+      "mfl": "13268",
+      "county": "Wajir",
+      "name": "AIC Wajir Dispensary"
+    },
+    {
+      "mfl": "13485",
+      "county": "Siaya",
+      "name": "Aro SDA Dispensary"
+    },
+    {
+      "mfl": "13489",
+      "county": "Homa Bay",
+      "name": "Atemo Health Centre"
+    },
+    {
+      "mfl": "13574",
+      "county": "Nyamira",
+      "name": "Gietai (AIC) Dispensary"
+    },
+    {
+      "mfl": "13643",
+      "county": "Homa Bay",
+      "name": "Kager Dispensary"
+    },
+    {
+      "mfl": "13649",
+      "county": "Migori",
+      "name": "Kamagambo Adventist Dispensary"
+    },
+    {
+      "mfl": "13666",
+      "county": "Nyamira",
+      "name": "Kemera Dispensary (Manga)"
+    },
+    {
+      "mfl": "13755",
+      "county": "Nyamira",
+      "name": "Magwagwa (SDA) Dispensary"
+    },
+    {
+      "mfl": "13768",
+      "county": "Homa Bay",
+      "name": "Mangima SDA Health Centre"
+    },
+    {
+      "mfl": "13794",
+      "county": "Nyamira",
+      "name": "Matutu Dispensary"
+    },
+    {
+      "mfl": "13859",
+      "county": "Migori",
+      "name": "Nyabikaye SDA Health Centre"
+    },
+    {
+      "mfl": "13860",
+      "county": "Nyamira",
+      "name": "Nyabikomu Dispensary"
+    },
+    {
+      "mfl": "13869",
+      "county": "Mombasa",
+      "name": "Nyachogochogo Dispensary"
+    },
+    {
+      "mfl": "13871",
+      "county": "Kisii",
+      "name": "Nyagesenda Dispensary"
+    },
+    {
+      "mfl": "13895",
+      "county": "Nyamira",
+      "name": "Nyamakoroto Dispensary"
+    },
+    {
+      "mfl": "13943",
+      "county": "Kisii",
+      "name": "Nyasore Dispensary"
+    },
+    {
+      "mfl": "13960",
+      "county": "Migori",
+      "name": "Ogada Health Centre"
+    },
+    {
+      "mfl": "14034",
+      "county": "Nyamira",
+      "name": "Rangenyo Health Centre"
+    },
+    {
+      "mfl": "14044",
+      "county": "Nyamira",
+      "name": "Riakworo Dispensary"
+    },
+    {
+      "mfl": "14073",
+      "county": "Siaya",
+      "name": "Dophil Mission Hospital"
+    },
+    {
+      "mfl": "14078",
+      "county": "Homa Bay",
+      "name": "WIRE SDA DISPENSARY OYUGIS"
+    },
+    {
+      "mfl": "14143",
+      "county": "Migori",
+      "name": "St Barnabas Dispensary"
+    },
+    {
+      "mfl": "14216",
+      "county": "Elgeyo Marakwet",
+      "name": "ARROR HEALTH CENTRE"
+    },
+    {
+      "mfl": "14232",
+      "county": "Nandi",
+      "name": "Baraton Jeremic Community Medical Centre"
+    },
+    {
+      "mfl": "14279",
+      "county": "Nakuru",
+      "name": "Canaan (ACK) Medical Clinic"
+    },
+    {
+      "mfl": "14357",
+      "county": "Nakuru",
+      "name": "Cheppemma (AIC) Dispensary"
+    },
+    {
+      "mfl": "14382",
+      "county": "Kericho",
+      "name": "Chesinende (Elck) Dispensary"
+    },
+    {
+      "mfl": "14426",
+      "county": "Nakuru",
+      "name": "DVC EA Baraton University"
+    },
+    {
+      "mfl": "14428",
+      "county": "Nakuru",
+      "name": "Elburgon (PCEA) Dispensary"
+    },
+    {
+      "mfl": "14440",
+      "county": "Turkana",
+      "name": "AIC Eliye Springs"
+    },
+    {
+      "mfl": "14452",
+      "county": "Narok",
+      "name": "Emurua Dikirr Dispensary"
+    },
+    {
+      "mfl": "14457",
+      "county": "Narok",
+      "name": "Endonyo Erinka Dispensary"
+    },
+    {
+      "mfl": "14480",
+      "county": "Laikipia",
+      "name": "Ethi Dispensary"
+    },
+    {
+      "mfl": "14504",
+      "county": "Samburu",
+      "name": "Loltulelei Friends Dispensary"
+    },
+    {
+      "mfl": "14534",
+      "county": "Kajiado",
+      "name": "Grace Medical Centre"
+    },
+    {
+      "mfl": "14537",
+      "county": "Nakuru",
+      "name": "Great Commission Medical Clinic"
+    },
+    {
+      "mfl": "14640",
+      "county": "Nandi",
+      "name": "KAIBOI MISSION HEALTH CENTRE"
+    },
+    {
+      "mfl": "14650",
+      "county": "Kajiado",
+      "name": "AIC KAJIADO HEALTH CENTRE"
+    },
+    {
+      "mfl": "14651",
+      "county": "Kajiado",
+      "name": "Kajiado Christian Medical Centre"
+    },
+    {
+      "mfl": "14797",
+      "county": "Narok",
+      "name": "Kapweria Dispensary"
+    },
+    {
+      "mfl": "14822",
+      "county": "Kericho",
+      "name": "Kebeneti (SDA) Health Centre"
+    },
+    {
+      "mfl": "14823",
+      "county": "Kericho",
+      "name": "Kebeneti SDA Dispensary"
+    },
+    {
+      "mfl": "14852",
+      "county": "Kajiado",
+      "name": "Kibini Hill (PCEA) Dispensary"
+    },
+    {
+      "mfl": "14864",
+      "county": "Narok",
+      "name": "Kiligoris COG Dispensary"
+    },
+    {
+      "mfl": "14873",
+      "county": "Narok",
+      "name": "Kirinton Dispensary"
+    },
+    {
+      "mfl": "14904",
+      "county": "Uasin Gishu",
+      "name": "Kiplombe Dispensary"
+    },
+    {
+      "mfl": "14941",
+      "county": "Baringo",
+      "name": "AIC Kiserian Dispensary"
+    },
+    {
+      "mfl": "14946",
+      "county": "Trans Nzoia",
+      "name": "Italale Dispensary"
+    },
+    {
+      "mfl": "14978",
+      "county": "Baringo",
+      "name": "Kokwototo Dispensary"
+    },
+    {
+      "mfl": "14980",
+      "county": "Nandi",
+      "name": "Koloch Mission Dispensary"
+    },
+    {
+      "mfl": "14983",
+      "county": "Baringo",
+      "name": "Komolion Dispensary"
+    },
+    {
+      "mfl": "15083",
+      "county": "Turkana",
+      "name": "AIC Lopur Dispensary"
+    },
+    {
+      "mfl": "15098",
+      "county": "Turkana",
+      "name": "RCEA Loyapat Dispensary"
+    },
+    {
+      "mfl": "15113",
+      "county": "Narok",
+      "name": "Maji Moto Dispensary"
+    },
+    {
+      "mfl": "15130",
+      "county": "West Pokot",
+      "name": "Marich RCEA Dispensary"
+    },
+    {
+      "mfl": "15131",
+      "county": "Trans Nzoia",
+      "name": "RCEA Maridadi Dispensary"
+    },
+    {
+      "mfl": "15146",
+      "county": "Kericho",
+      "name": "Mary Finch Dispensary"
+    },
+    {
+      "mfl": "15174",
+      "county": "Baringo",
+      "name": "MERCY MISSION HOSPITAL"
+    },
+    {
+      "mfl": "15213",
+      "county": "Nakuru",
+      "name": "Molo Full Gospel Medical Centre"
+    },
+    {
+      "mfl": "15314",
+      "county": "West Pokot",
+      "name": "Nasolot Dispensary"
+    },
+    {
+      "mfl": "15319",
+      "county": "Nandi",
+      "name": "RCEA Ndalat Health Centre"
+    },
+    {
+      "mfl": "15324",
+      "county": "Nakuru",
+      "name": "Ndarugu (PCEA) Dispensary"
+    },
+    {
+      "mfl": "15348",
+      "county": "Narok",
+      "name": "Ngito Dispensary"
+    },
+    {
+      "mfl": "15357",
+      "county": "Nakuru",
+      "name": "Njoro (PCEA) Dispensary"
+    },
+    {
+      "mfl": "15362",
+      "county": "Narok",
+      "name": "Nkararo Health Centre"
+    },
+    {
+      "mfl": "15365",
+      "county": "Nakuru",
+      "name": "Nakuru West (PCEA) Health Centre"
+    },
+    {
+      "mfl": "15366",
+      "county": "Kajiado",
+      "name": "Nolasit Dispensary"
+    },
+    {
+      "mfl": "15369",
+      "county": "Narok",
+      "name": "ACK Nturumeti Dispensary"
+    },
+    {
+      "mfl": "15392",
+      "county": "Narok",
+      "name": "Olderkesi Dispensary"
+    },
+    {
+      "mfl": "15397",
+      "county": "Narok",
+      "name": "Olendeem Dispensary"
+    },
+    {
+      "mfl": "15400",
+      "county": "Narok",
+      "name": "Olereko Dispensary"
+    },
+    {
+      "mfl": "15443",
+      "county": "Kajiado",
+      "name": "Orinie (AIC) Clinic"
+    },
+    {
+      "mfl": "15458",
+      "county": "Trans Nzoia",
+      "name": "PCEA Makutano Women Guild Dispensary"
+    },
+    {
+      "mfl": "15599",
+      "county": "Narok",
+      "name": "Siyiapei Dispensary"
+    },
+    {
+      "mfl": "15603",
+      "county": "Nandi",
+      "name": "AIC Sochoi Dispensary"
+    },
+    {
+      "mfl": "15722",
+      "county": "Kericho",
+      "name": "Thessalia Dispensary"
+    },
+    {
+      "mfl": "15816",
+      "county": "Busia",
+      "name": "ACK Bujumba Disp."
+    },
+    {
+      "mfl": "15832",
+      "county": "Kakamega",
+      "name": "Bushiangala Mission Health Centre"
+    },
+    {
+      "mfl": "15837",
+      "county": "Bungoma",
+      "name": "ACK Butonge Dispensary"
+    },
+    {
+      "mfl": "15849",
+      "county": "Kakamega",
+      "name": "Chebwai SDA Dispensary"
+    },
+    {
+      "mfl": "15952",
+      "county": "Bungoma",
+      "name": "Kipsigon Health Centre"
+    },
+    {
+      "mfl": "16033",
+      "county": "Kakamega",
+      "name": "Mulwanda Dispensary"
+    },
+    {
+      "mfl": "16049",
+      "county": "Kakamega",
+      "name": "ACK Mumias Dipensary"
+    },
+    {
+      "mfl": "16084",
+      "county": "Kakamega",
+      "name": "Nzoia ACK Dispensary"
+    },
+    {
+      "mfl": "16116",
+      "county": "Kakamega",
+      "name": "Shiraha Health Centre"
+    },
+    {
+      "mfl": "16175",
+      "county": "Murang'a",
+      "name": "Muthithi (PCEA) Dispensary"
+    },
+    {
+      "mfl": "16194",
+      "county": "Tana River",
+      "name": "Mwina Methodist Dispensary"
+    },
+    {
+      "mfl": "16198",
+      "county": "Tana River",
+      "name": "Shirikisho Methodist Dispensary"
+    },
+    {
+      "mfl": "16207",
+      "county": "Marsabit",
+      "name": "CCS Marsabit Clinic/Also known as Tumaini Medical Centre Marsabit"
+    },
+    {
+      "mfl": "16242",
+      "county": "Embu",
+      "name": "CCS Macumo Clinic"
+    },
+    {
+      "mfl": "16284",
+      "county": "Homa Bay",
+      "name": "Oriang SDA Dispensary"
+    },
+    {
+      "mfl": "16330",
+      "county": "Narok",
+      "name": "Olenkasorai Dispensary"
+    },
+    {
+      "mfl": "16337",
+      "county": "Uasin Gishu",
+      "name": "LANGAS RACECOURSE NURSING HOME"
+    },
+    {
+      "mfl": "16599",
+      "county": "Meru",
+      "name": "KAG Meru Medical Clinic"
+    },
+    {
+      "mfl": "16660",
+      "county": "Nyamira",
+      "name": "Nderema Dispensary"
+    },
+    {
+      "mfl": "16688",
+      "county": "Narok",
+      "name": "Meguara Dispensary"
+    },
+    {
+      "mfl": "16712",
+      "county": "Bungoma",
+      "name": "Ngwelo Dispensary"
+    },
+    {
+      "mfl": "16720",
+      "county": "Nandi",
+      "name": "Kimng'oror Health Centre"
+    },
+    {
+      "mfl": "16776",
+      "county": "Nyeri",
+      "name": "Sugarbaker Memorial Clinic"
+    },
+    {
+      "mfl": "16821",
+      "county": "Nakuru",
+      "name": "St. Luke's Clinic"
+    },
+    {
+      "mfl": "16865",
+      "county": "Kakamega",
+      "name": "Mukhombe Dispensary"
+    },
+    {
+      "mfl": "16881",
+      "county": "Kisii",
+      "name": "Nyagichenche (SDA) Dispensary"
+    },
+    {
+      "mfl": "16977",
+      "county": "Murang'a",
+      "name": "Prisca Wakarima (ACK) Dispensary"
+    },
+    {
+      "mfl": "16978",
+      "county": "Murang'a",
+      "name": "St Peters Gaitheri (ACK) Dispensary"
+    },
+    {
+      "mfl": "17141",
+      "county": "Kiambu",
+      "name": "St Peters (ACK) Dispensary"
+    },
+    {
+      "mfl": "17149",
+      "county": "Busia",
+      "name": "Chamasir Dispensary"
+    },
+    {
+      "mfl": "17218",
+      "county": "Nandi",
+      "name": "EA Baraton"
+    },
+    {
+      "mfl": "17247",
+      "county": "Nandi",
+      "name": "Sironoi Dispensary"
+    },
+    {
+      "mfl": "17307",
+      "county": "Muranga",
+      "name": "Kinyona Dispensary"
+    },
+    {
+      "mfl": "17324",
+      "county": "Narok",
+      "name": "Ilcharituyiani Dispensary"
+    },
+    {
+      "mfl": "17327",
+      "county": "Narok",
+      "name": "Keyian Medical Center"
+    },
+    {
+      "mfl": "17369",
+      "county": "Kiambu",
+      "name": "St John Orthodox Dispensary Kahuho"
+    },
+    {
+      "mfl": "17373",
+      "county": "Kiambu",
+      "name": "Renguti (PCEA) Women's Guild Clinic"
+    },
+    {
+      "mfl": "17395",
+      "county": "Kiambu",
+      "name": "Orthodox Maternity and Health Centre"
+    },
+    {
+      "mfl": "17397",
+      "county": "Kiambu",
+      "name": "Cure (AIC) International Hospital"
+    },
+    {
+      "mfl": "17398",
+      "county": "Kiambu",
+      "name": "Women's Guild (PCEA) Uplands Dispensary"
+    },
+    {
+      "mfl": "17402",
+      "county": "Kiambu",
+      "name": "Cura (ACK) Medical Clinic"
+    },
+    {
+      "mfl": "17406",
+      "county": "Kiambu",
+      "name": "St Stephen (ACK) Cura Dispensary"
+    },
+    {
+      "mfl": "17466",
+      "county": "Uasin Gishu",
+      "name": "Mercy Health Centre"
+    },
+    {
+      "mfl": "17513",
+      "county": "Bungoma",
+      "name": "ACK DR. PIKE ROPER MEDICAL CENTRE"
+    },
+    {
+      "mfl": "17589",
+      "county": "Kericho",
+      "name": "Live With Hope"
+    },
+    {
+      "mfl": "17655",
+      "county": "Kericho",
+      "name": "AIC Litein MTC"
+    },
+    {
+      "mfl": "17752",
+      "county": "Narok",
+      "name": "NGOSWANI COMMUNITY HEALTH CENTER"
+    },
+    {
+      "mfl": "17771",
+      "county": "Tharaka Nithi",
+      "name": "Karandini Medical Clinic"
+    },
+    {
+      "mfl": "17787",
+      "county": "Nakuru",
+      "name": "Fountain Medical Clinic"
+    },
+    {
+      "mfl": "17805",
+      "county": "Narok",
+      "name": "Olooltoto Dispensary"
+    },
+    {
+      "mfl": "17875",
+      "county": "Kirinyaga",
+      "name": "ACK Githure Dispensary"
+    },
+    {
+      "mfl": "17878",
+      "county": "Nakuru",
+      "name": "PCEA Mau-Summit Health Centre"
+    },
+    {
+      "mfl": "17921",
+      "county": "Makueni",
+      "name": "PCEA Kibwezi Dispensary"
+    },
+    {
+      "mfl": "17955",
+      "county": "Nairobi",
+      "name": "Nuru Lutheran Media Ministry"
+    },
+    {
+      "mfl": "17980",
+      "county": "Kiambu",
+      "name": "ACK Kanunga Dispensary"
+    },
+    {
+      "mfl": "18061",
+      "county": "Kiambu",
+      "name": "Neema Hospital (Ruiru)"
+    },
+    {
+      "mfl": "18102",
+      "county": "Nakuru",
+      "name": "Mutukanio ACK Dispensary"
+    },
+    {
+      "mfl": "18103",
+      "county": "Nakuru",
+      "name": "AIC Turi Health Centre"
+    },
+    {
+      "mfl": "18215",
+      "county": "Meru",
+      "name": "Ukuu MCK Dispensary"
+    },
+    {
+      "mfl": "18242",
+      "county": "Meru",
+      "name": "Mugona Methodist Dispensary"
+    },
+    {
+      "mfl": "18305",
+      "county": "Mombasa",
+      "name": "St Patricks Dispensary"
+    },
+    {
+      "mfl": "18315",
+      "county": "Kakamega",
+      "name": "Bukwala SDA Dispensary"
+    },
+    {
+      "mfl": "18376",
+      "county": "Nakuru",
+      "name": "PCEA Upendo Health Centre"
+    },
+    {
+      "mfl": "18485",
+      "county": "Nairobi",
+      "name": "RUARAKA UHAI NEEMA HOSPITAL"
+    },
+    {
+      "mfl": "18535",
+      "county": "Nairobi",
+      "name": "Adventist Centre For Care and Support (Kilimani)"
+    },
+    {
+      "mfl": "18537",
+      "county": "Muranga",
+      "name": "St Paul Ithiki (ACK ) Dispensary"
+    },
+    {
+      "mfl": "18548",
+      "county": "Murang'a",
+      "name": "St Paul Kiamuri (ACK) Dispensary"
+    },
+    {
+      "mfl": "18581",
+      "county": "Machakos",
+      "name": "Loglogo Health Centre"
+    },
+    {
+      "mfl": "18593",
+      "county": "Nairobi",
+      "name": "SDA Health Services Likoni Road Clinic"
+    },
+    {
+      "mfl": "18598",
+      "county": "Nakuru",
+      "name": "PCEA Kagai Dispensary"
+    },
+    {
+      "mfl": "18660",
+      "county": "Makueni",
+      "name": "Musoa SDA Dispensary"
+    },
+    {
+      "mfl": "18669",
+      "county": "Uasin Gishu",
+      "name": "Eldoret Rapha Medical Centre"
+    },
+    {
+      "mfl": "18775",
+      "county": "Tharaka Nithi",
+      "name": "Kambandi Dispensary"
+    },
+    {
+      "mfl": "18823",
+      "county": "Nakuru",
+      "name": "Kabarak University"
+    },
+    {
+      "mfl": "18835",
+      "county": "Trans Nzoia",
+      "name": "AIC Biribiriet Dispensary"
+    },
+    {
+      "mfl": "18849",
+      "county": "Meru",
+      "name": "Ruongo Dispensary"
+    },
+    {
+      "mfl": "18891",
+      "county": "Bungoma",
+      "name": "Cheptais Dispensary"
+    },
+    {
+      "mfl": "18962",
+      "county": "Muranga",
+      "name": "Gituru Dispensary"
+    },
+    {
+      "mfl": "18965",
+      "county": "Murang'a",
+      "name": "Acc&S Kariua Dispensary"
+    },
+    {
+      "mfl": "19322",
+      "county": "Baringo",
+      "name": "AIC ELDAMA RAVINE HEALTH CENTRE"
+    },
+    {
+      "mfl": "19435",
+      "county": "Nairobi",
+      "name": "PCEA Kayole Parish Health Centre"
+    },
+    {
+      "mfl": "19591",
+      "county": "Kericho",
+      "name": "Kipsitet Baptist Dispensary"
+    },
+    {
+      "mfl": "19602",
+      "county": "Kiambu",
+      "name": "Bibirioni Health Centre"
+    },
+    {
+      "mfl": "19651",
+      "county": "Kitui",
+      "name": "ACK Mwingi CHBC Clinic"
+    },
+    {
+      "mfl": "19700",
+      "county": "Nairobi",
+      "name": "PCEA PIPELINE CARE CLINIC"
+    },
+    {
+      "mfl": "19704",
+      "county": "Laikipia",
+      "name": "ACK Nyandarua Medical Clinic"
+    },
+    {
+      "mfl": "19793",
+      "county": "Nyandarua",
+      "name": "ACK Rurii Mothers Union Medical Clinic"
+    },
+    {
+      "mfl": "19827",
+      "county": "Nyeri",
+      "name": "PCEA Honi Dispensary"
+    },
+    {
+      "mfl": "19900",
+      "county": "Kakamega",
+      "name": "Ikomero Dispensary"
+    },
+    {
+      "mfl": "19939",
+      "county": "Bomet",
+      "name": "Bomet Youth Centre"
+    },
+    {
+      "mfl": "20013",
+      "county": "Siaya",
+      "name": "Maliera SDA Dispensary"
+    },
+    {
+      "mfl": "20071",
+      "county": "Murang'a",
+      "name": "AIC Mununga Dispensary"
+    },
+    {
+      "mfl": "20252",
+      "county": "Kiambu",
+      "name": "Kangundo Reedemed Medical Clinic"
+    },
+    {
+      "mfl": "20388",
+      "county": "Nairobi",
+      "name": "AIC Zion Medical Clinic"
+    },
+    {
+      "mfl": "20498",
+      "county": "Embu",
+      "name": "Kigumo Dispensary"
+    },
+    {
+      "mfl": "20570",
+      "county": "Migori",
+      "name": "Muhuru Bay St. Hellen Clinic"
+    },
+    {
+      "mfl": "20615",
+      "county": "Embu",
+      "name": "St. Mary Magdalene Medical Centre"
+    },
+    {
+      "mfl": "20644",
+      "county": "Kiambu",
+      "name": "Kamburu (PCEA) Dispensary"
+    },
+    {
+      "mfl": "20682",
+      "county": "Nyandarua",
+      "name": "AIC Kitogo Dispensary"
+    },
+    {
+      "mfl": "20729",
+      "county": "Kakamega",
+      "name": "Lirhanda Mission Health Centre"
+    },
+    {
+      "mfl": "21045",
+      "county": "Busia",
+      "name": "Segero Dispensary"
+    },
+    {
+      "mfl": "21100",
+      "county": "Kakamega",
+      "name": "Musango Dispensary"
+    },
+    {
+      "mfl": "21230",
+      "county": "Kiambu",
+      "name": "Shacolas Orthodox Medical Clinic"
+    },
+    {
+      "mfl": "21243",
+      "county": "Mombasa",
+      "name": "PCEA Makupa Medical Clinic"
+    },
+    {
+      "mfl": "21315",
+      "county": "Turkana",
+      "name": "AIC Lotubae Dispensary"
+    },
+    {
+      "mfl": "21410",
+      "county": "Nyandarua",
+      "name": "Pace Dental Clinic"
+    },
+    {
+      "mfl": "21455",
+      "county": "Nakuru",
+      "name": "AFRICA INLAND CHURCH LALANG AMALO HEALTH CENTRE"
+    },
+    {
+      "mfl": "21652",
+      "county": "Kericho",
+      "name": "TUIYOBEI AGC DISPENSARY"
+    },
+    {
+      "mfl": "21748",
+      "county": "Trans Nzoia",
+      "name": "Tuwan Highway Mission Hospital"
+    },
+    {
+      "mfl": "21757",
+      "county": "Meru",
+      "name": "Kamreri Dispensary"
+    },
+    {
+      "mfl": "21824",
+      "county": "Tharaka Nithi",
+      "name": "Runguu SDA Dispensary"
+    },
+    {
+      "mfl": "22335",
+      "county": "Turkana",
+      "name": "AIC Natiira dispensary"
+    },
+    {
+      "mfl": "22342",
+      "county": "Nairobi",
+      "name": "KAG Bahati Medical Centre"
+    },
+    {
+      "mfl": "22364",
+      "county": "Tharaka Nithi",
+      "name": "Chogoria Hospital Chuka Medical Centre"
+    },
+    {
+      "mfl": "22489",
+      "county": "Kiambu",
+      "name": "P.C.E.A Ruburi Medical Clinic"
+    },
+    {
+      "mfl": "22508",
+      "county": "Bungoma",
+      "name": "Kaptama Mission Health Centre"
+    },
+    {
+      "mfl": "22525",
+      "county": "Laikipia",
+      "name": "Mumo Dispensary"
+    },
+    {
+      "mfl": "22560",
+      "county": "Nakuru",
+      "name": "WESLEY MISSION CLINIC LANET"
+    },
+    {
+      "mfl": "22664",
+      "county": "Baringo",
+      "name": "Kapkitony Dispensary"
+    },
+    {
+      "mfl": "22871",
+      "county": "Meru",
+      "name": "KENYA COMMUNITY HEALTH CLINIC MCK CIOTHIRAI"
+    },
+    {
+      "mfl": "22904",
+      "county": "Nyandarua",
+      "name": "St. Luke's Medical Clinic Olkalau"
+    },
+    {
+      "mfl": "23125",
+      "county": "Meru",
+      "name": "Nkacii Dispensary"
+    },
+    {
+      "mfl": "23217",
+      "county": "Meru",
+      "name": "Mama Rael Memorial Health Centre"
+    },
+    {
+      "mfl": "23318",
+      "county": "Tana River",
+      "name": "KAG Sombo Dispensary"
+    },
+    {
+      "mfl": "23385",
+      "county": "Nairobi",
+      "name": "BETTER LIVING HOSPITAL"
+    },
+    {
+      "mfl": "23695",
+      "county": "Kwale",
+      "name": "Bethany Dispensary"
+    },
+    {
+      "mfl": "23749",
+      "county": "Kiambu",
+      "name": "Kings Medical Clinic"
+    },
+    {
+      "mfl": "24001",
+      "county": "Nairobi",
+      "name": "Neema Hospital"
+    },
+    {
+      "mfl": "24008",
+      "county": "Uasin Gishu",
+      "name": "Abigael Health Care Centre"
+    },
+    {
+      "mfl": "24114",
+      "county": "Nakuru",
+      "name": "AIPCA NAKURU WEST MEDICAL CLINIC"
+    },
+    {
+      "mfl": "24143",
+      "county": "Bomet",
+      "name": "AGC Tenwek Mission Hospital - Bomet Annex"
+    },
+    {
+      "mfl": "24408",
+      "county": "Marsabit",
+      "name": "KAG Moyale Mission Clinic"
+    },
+    {
+      "mfl": "24485",
+      "county": "Nairobi",
+      "name": "Vision People's Mission Medical Centre"
+    },
+    {
+      "mfl": "24515",
+      "county": "Narok",
+      "name": "Oldonyorok Dispensary"
+    },
+    {
+      "mfl": "24639",
+      "county": "Uasin Gishu",
+      "name": "RAPHA TOTAL CARE CLINICS"
+    },
+    {
+      "mfl": "24691",
+      "county": "Kisii",
+      "name": "Gionseri SDA Dispensary"
+    },
+    {
+      "mfl": "24809",
+      "county": "Meru",
+      "name": "CCS Maua Medical Centre"
+    },
+    {
+      "mfl": "24879",
+      "county": "Siaya",
+      "name": "ACK Maseno West Diocess"
+    },
+    {
+      "mfl": "25148",
+      "county": "Laikipia",
+      "name": "Kerudo Mobile Clinic"
+    },
+    {
+      "mfl": "25453",
+      "county": "Kisii",
+      "name": "Omorembe Sengera Clinic"
+    },
+    {
+      "mfl": "25507",
+      "county": "Kakamega",
+      "name": "Musanda Dispensary"
+    },
+    {
+      "mfl": "25618",
+      "county": "Narok",
+      "name": "AGC LIONS NGOSWANI HOSPITAL"
+    },
+    {
+      "mfl": "25635",
+      "county": "Meru",
+      "name": "Gatundune Dispensary"
+    },
+    {
+      "mfl": "25650",
+      "county": "Nairobi",
+      "name": "Reedemed Gospel Baba Dogo"
+    },
+    {
+      "mfl": "25694",
+      "county": "Kakamega",
+      "name": "Eshikhangi Dispensary"
+    },
+    {
+      "mfl": "25742",
+      "county": "Nyandarua",
+      "name": "PEFA Mercy Mission Medical Centre"
+    },
+    {
+      "mfl": "25784",
+      "county": "Narok",
+      "name": "Naikarra Dispensary"
+    },
+    {
+      "mfl": "26248",
+      "county": "Kiambu",
+      "name": "Mugutha SDA Dispensary"
+    },
+    {
+      "mfl": "26905",
+      "county": "Wajir",
+      "name": "AIC Dispensary"
+    },
+    {
+      "mfl": "26948",
+      "county": "Kakamega",
+      "name": "Musango GPC Clinic"
+    },
+    {
+      "mfl": "26961",
+      "county": "Migori",
+      "name": "MOHETO UNITED METHODIST MISSION HEALTH CENTRE"
+    },
+    {
+      "mfl": "26995",
+      "county": "Kirinyaga",
+      "name": "Health Charge Medical Centre"
+    },
+    {
+      "mfl": "27230",
+      "county": "Kakamega",
+      "name": "CHEBWAI SDA RURAL HEATH CENTRE"
+    },
+    {
+      "mfl": "27259",
+      "county": "Vihiga",
+      "name": "ADC Boyani Clinic"
+    },
+    {
+      "mfl": "27288",
+      "county": "Embu",
+      "name": "Kirigi Dispensary"
+    },
+    {
+      "mfl": "27297",
+      "county": "Kericho",
+      "name": "AIC LITEIN HOSPITAL-KERICHO ANNEX"
+    },
+    {
+      "mfl": "27381",
+      "county": "Meru",
+      "name": "Mbwinjeru Methodist Dispensary"
+    },
+    {
+      "mfl": "28598",
+      "county": "Bomet",
+      "name": "AIC Lalang Amalo Health Center"
+    },
+    {
+      "mfl": "28930",
+      "county": "MURANG'A",
+      "name": "A.C.C & S GITURU HEALTH CENTRE"
+    },
+    {
+      "mfl": "29388",
+      "county": "Nakuru",
+      "name": "Turi (PCEA) Dispensary"
+    },
+    {
+      "mfl": "29431",
+      "county": "Nakuru",
+      "name": "Presbyterian Care Centre"
+    },
+    {
+      "mfl": "29747",
+      "county": "Meru",
+      "name": "Methodist Treatment and Rehabilitation Centre"
+    },
+    {
+      "mfl": "30086",
+      "county": "Uasin Gishu",
+      "name": "A.I.C BETHLEHEM HOUSE OF BREAD DISPENSARY"
+    },
+    {
+      "mfl": "30119",
+      "county": "Mombasa",
+      "name": "Mombasa Mobile Clinic"
+    },
+    {
+      "mfl": "30162",
+      "county": "Tharaka Nithi",
+      "name": "ACK Karuri Medical Centre"
+    },
+    {
+      "mfl": "30178",
+      "county": "Vihiga",
+      "name": "P.A.G. (K) MISSION HOSPITAL GOIBEI"
+    },
+    {
+      "mfl": "30627",
+      "county": "Kajiado",
+      "name": "Kiserian Dispensary"
+    },
+    {
+      "mfl": "30675",
+      "county": "Nairobi",
+      "name": "IMARA HEALTHCARE CENTRE"
+    },
+    {
+      "mfl": "31022",
+      "county": "Kericho",
+      "name": "Kabokyek SDA Dispensary"
+    },
+    {
+      "mfl": "31276",
+      "county": "Trans Nzoia",
+      "name": "RCEA Maridadi Health Centre"
+    },
+    {
+      "mfl": "31338",
+      "county": "Kakamega",
+      "name": "Emunuku Baptist Dispensary"
+    },
+    {
+      "mfl": "31517",
+      "county": "Narok",
+      "name": "Fountain Mission Medical Centre"
+    },
+    {
+      "mfl": "31822",
+      "county": "Bungoma",
+      "name": "ACK Kamukuywa Dispensary"
+    },
+    {
+      "mfl": "32230",
+      "county": "Kirinyaga",
+      "name": "ANGLICAN DEVELOPMENT SERVICES"
+    },
+    {
+      "mfl": "32376",
+      "county": "Kisii",
+      "name": "Itierio Nursing Home"
+    },
+    {
+      "mfl": "32685",
+      "county": "Embu",
+      "name": "Kimangaru Methodist Dispensary"
+    }
+  ]
+}

@@ -775,7 +775,8 @@ def create_app() -> Flask:
                 page_context += f", tab '{active_tab}'"
             page_context += ". "
 
-        cache_key = f"{chart_id}::{re.sub(r'\\s+', ' ', question.lower()).strip()}"
+        normalized_question = re.sub(r"\s+", " ", question.lower()).strip()
+        cache_key = f"{chart_id}::{normalized_question}"
         with app.config["AI_RESPONSE_CACHE_LOCK"]:
             cached_response = app.config["AI_RESPONSE_CACHE"].get(cache_key)
         if cached_response is not None:
@@ -1245,125 +1246,117 @@ def create_app() -> Flask:
     # ── Project-to-Facility Mapping (for homepage project cards) ──────
     @app.get("/api/projects/facility-mapping")
     def project_facility_mapping():
-        """Return which KHIS facility IDs belong to each project.
-        Uses the Jamii Tekelezi filters CSV to map facilities by county.
+        """Return the 11 real CHAK projects with facility and MHU counts.
+        MHU counts come from the confirmed per-project alignment
+        (train/data/project_mhus_confirmed.json); facilities for the maps
+        are resolved from KHIS locations.
         """
         projects = {
             "jamii_tekelezi": {
-                "name": "Jamii Tekelezi",
-                "icon": "📊",
-                "description": "HIV/AIDS program — Testing, Treatment, PrEP, PMTCT, TB.",
-                "counties": ["Embu County", "Meru County", "Nyandarua County", "Tharaka Nithi County"],
+                "name": "Jamii Tekelezi (JTP)",
+                "icon": "🩺",
+                "description": "Comprehensive HIV/AIDS program — Testing, Treatment, PrEP, PMTCT, TB.",
             },
             "chap_stawisha": {
                 "name": "CHAP Stawisha",
                 "icon": "🌱",
-                "description": "Community Health and Adolescent Program.",
-                "counties": ["Nairobi", "Kiambu", "Machakos"],
-            },
-            "eye_health": {
-                "name": "Eye Health — ACSP & GitLab",
-                "icon": "👁️",
-                "description": "Eye Health program partnership.",
-                "counties": ["Nairobi", "Kisumu", "Mombasa"],
+                "description": "Community Health and Adolescent Program — HIV care, FHTS, PrEP, TB, Lab.",
             },
             "eis": {
                 "name": "EIS",
                 "icon": "🔬",
-                "description": "Enhanced Infection Surveillance.",
-                "counties": ["Nairobi", "Kiambu"],
+                "description": "EIS — Evaluation of Integrated Services.",
             },
-            "bftw_hss": {
-                "name": "BFTW HSS",
-                "icon": "🏗️",
-                "description": "Health Systems Strengthening.",
-                "counties": ["Kisumu", "Homabay", "Migori"],
+            "gf_mnch": {
+                "name": "Gates Foundation MNCH",
+                "icon": "💉",
+                "description": "Gates Foundation — Maternal, Newborn & Child Health (MNCH).",
             },
             "bftw_rmncah": {
                 "name": "BFTW RMNCAH",
-                "icon": "👶",
-                "description": "Reproductive, Maternal, Newborn, Child & Adolescent Health.",
-                "counties": ["Kisumu", "Homabay", "Migori", "Siaya"],
+                "icon": "🤝",
+                "description": "Bread for the World RMNCAH — universal access to RMNCAH & nutrition services.",
             },
             "pep": {
                 "name": "PEP",
                 "icon": "💊",
-                "description": "Post-Exposure Prophylaxis program.",
-                "counties": ["Nairobi", "Mombasa", "Kisumu"],
-            },
-            "gf_mnch": {
-                "name": "GF-MNCH",
-                "icon": "🤱",
-                "description": "Global Fund — Maternal, Newborn & Child Health.",
-                "counties": ["Turkana", "West Pokot", "Mandera", "Garissa"],
+                "description": "PEP — Partnership for Education and Health Professionals.",
             },
             "impact": {
-                "name": "IMPACT",
+                "name": "IMPACT Project",
                 "icon": "🎯",
-                "description": "Integrated Monitoring & Program Analysis.",
-                "counties": ["Nairobi", "Kiambu", "Machakos", "Kajiado"],
+                "description": "Improving Pharmaceutical Access Through Continuous Training (IMPACT).",
+            },
+            "eye_health": {
+                "name": "Eye Health (ACSP)",
+                "icon": "👁️",
+                "description": "Eye Health (ACSP) — Africa Clear Sight Partnership presbyopia program.",
             },
             "cdic_icare": {
-                "name": "CDIC-iCARE",
+                "name": "CDIC / iCARE",
                 "icon": "💻",
-                "description": "Comprehensive Data Integration for Community AIDS Response.",
-                "counties": ["Nairobi", "Mombasa", "Kisumu", "Homabay"],
+                "description": "CDIC / iCARE — Community Data Integration for Care and Response Evaluation.",
+            },
+            "internship": {
+                "name": "Internship Program",
+                "icon": "🧑‍⚕️",
+                "description": "Internship Program — training and professional development placements.",
+            },
+            "gitlab": {
+                "name": "GitLab",
+                "icon": "🔭",
+                "description": "GitLab — monthly reporting and monitoring.",
             },
         }
 
-        # Load facility locations from cached data
+        # ── Load confirmed per-project MHU counts (MFL code based) ──
+        confirmed = {}
+        try:
+            confirmed_path = BASE_DIR / "data" / "project_mhus_confirmed.json"
+            if confirmed_path.exists():
+                with open(confirmed_path, "r", encoding="utf-8") as f:
+                    confirmed = json.load(f).get("projects", {})
+        except Exception:
+            pass
+
+        # ── Resolve facilities + counties for maps ──
         facility_locations = app.config.get("_khis_facility_locations", {})
         result = {}
         for proj_id, proj_info in projects.items():
-            target_counties = set(c.lower().strip() for c in proj_info.get("counties", []))
-            matched_facilities = {}
-            for fid, finfo in facility_locations.items():
-                finfo_county = (finfo.get("county", "") or "").lower().strip()
-                if finfo_county in target_counties:
-                    matched_facilities[fid] = finfo
-            result[proj_id] = {
-                **proj_info,
-                "facility_count": len(matched_facilities),
-                "facilities": matched_facilities,
-            }
+            conf = confirmed.get(proj_id, {})
+            fac_list = conf.get("facilities", [])
+            # facility_count is the deduplicated count (unique MFL codes)
+            mhu_count = conf.get("facility_count", 0) or len(fac_list)
+            counties = sorted({f.get("county", "") for f in fac_list if f.get("county")})
 
-        # For projects with no matched facilities, create county-center markers for visual
-        for proj_id, proj_info in projects.items():
-            if result[proj_id]["facility_count"] == 0:
-                counties = proj_info.get("counties", [])
-                fallback_facs = {}
-                for i, county in enumerate(counties):
-                    center = KENYA_COUNTY_CENTERS.get(county, {"lat": 0.5, "lng": 38.0})
-                    fallback_facs[f"__{proj_id}_{i}"] = {
+            # Build KHIS facility markers by county (fallback visual)
+            matched_facilities = {}
+            if counties:
+                cset = {c.lower().strip() for c in counties}
+                for fid, finfo in facility_locations.items():
+                    fcounty = (finfo.get("county", "") or "").lower().strip()
+                    if fcounty in cset:
+                        matched_facilities[fid] = finfo
+            if not matched_facilities:
+                # Fallback: county-centre markers for visual
+                for i, county in enumerate(counties or ["Kenya"]):
+                    center = KENYA_COUNTY_CENTERS.get(
+                        county, {"lat": 0.5, "lng": 38.0}
+                    )
+                    matched_facilities[f"__{proj_id}_{i}"] = {
                         "name": f"{county} Office",
                         "lat": center["lat"],
                         "lng": center["lng"],
                         "county": county,
                     }
-                result[proj_id]["facilities"] = fallback_facs
-                result[proj_id]["facility_count"] = len(fallback_facs)
 
-        # ── Add MHU/County counts from full KHIS mapping ──────────
-        try:
-            mhu_map_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
-            if mhu_map_path.exists():
-                with open(mhu_map_path, "r", encoding="utf-8") as f:
-                    khis_all = json.load(f).get("facilities", {})
-                # Count facilities per county from the full mapping
-                county_fac_counts = {}
-                for finfo in khis_all.values():
-                    co = finfo.get("county", "").strip()
-                    if co:
-                        county_fac_counts[co] = county_fac_counts.get(co, 0) + 1
-                for proj_id, proj_info in projects.items():
-                    total_mhu = 0
-                    for c in proj_info.get("counties", []):
-                        # Normalize: strip " County" suffix for matching
-                        c_key = c.replace(" County", "").strip()
-                        total_mhu += county_fac_counts.get(c_key, 0) or county_fac_counts.get(c, 0)
-                    result[proj_id]["mhu_count"] = total_mhu
-        except Exception:
-            pass
+            result[proj_id] = {
+                **proj_info,
+                "facility_count": len(matched_facilities),
+                "facilities": matched_facilities,
+                "mhu_count": mhu_count,
+                "counties": counties,
+            }
 
         return jsonify({"ok": True, "projects": result})
 
