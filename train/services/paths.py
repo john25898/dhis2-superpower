@@ -35,5 +35,5 @@ if SUPERPOWER_ENV_PATH.exists():
                 _sp_vars[_k.strip()] = _v.strip()
     # Override DHIS credentials so superpower uses the CHAK server
     for _k, _v in _sp_vars.items():
-        if _k.startswith("DHIS_") or _k.startswith("GEMINI_API_KEY"):
+        if _k.startswith("DHIS_") or _k.startswith("GEMINI_API_KEY") or _k.startswith("GROQ_") or _k.startswith("KHIS_"):
             os.environ[_k] = _v
