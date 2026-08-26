@@ -1327,7 +1327,20 @@ def create_app() -> Flask:
             fac_list = conf.get("facilities", [])
             # facility_count is the deduplicated count (unique MFL codes)
             mhu_count = conf.get("facility_count", 0) or len(fac_list)
-            counties = sorted({f.get("county", "") for f in fac_list if f.get("county")})
+            # Dedupe by MFL code first so county counts, the visible MHU list
+            # and the map all agree with the card number (a facility can appear
+            # in multiple datasets, sometimes with a conflicting county).
+            seen_mfl = set()
+            unique_fac = []
+            for f in fac_list:
+                mfl = str(f.get("mfl", "")).strip()
+                if not mfl or mfl in seen_mfl:
+                    continue
+                seen_mfl.add(mfl)
+                unique_fac.append(f)
+            counties = sorted(
+                {f.get("county", "") for f in unique_fac if f.get("county")}
+            )
 
             # Build KHIS facility markers by county (fallback visual)
             matched_facilities = {}
@@ -1356,7 +1369,7 @@ def create_app() -> Flask:
                 "facilities": matched_facilities,
                 "mhu_count": mhu_count,
                 "counties": counties,
-                "mhu_list": fac_list,
+                "mhu_list": unique_fac,
             }
 
         # ── Full confirmed MHU list (586 rows) for the "All MHUs" hero card ──
