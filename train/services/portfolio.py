@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from services.paths import BASE_DIR
+from services.paths import BASE_DIR, JAMII_TEKELEZI_FILTERS_CSV
 
 # ────────────────────────────────────────────────────────────
 # PROJECT PERFORMANCE MONITORING — Excel Data Loader
@@ -343,7 +343,7 @@ PROJECT_NARRATIVES = {
 
 def _load_geography_hierarchy() -> dict:
     """Load county/subcounty/facility hierarchy from jamii_tekelezi_filters.csv."""
-    jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+    jt_path = JAMII_TEKELEZI_FILTERS_CSV
     if not jt_path.exists():
         return {"counties": [], "subcounties": [], "facilities": [], "hierarchy": {}}
     import pandas as _pd

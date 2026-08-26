@@ -1320,20 +1320,32 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!--
       CHAK VISTA app scripts — split by domain/chart for easy editing.
-      Order matters: core.js first (state + routing + helpers), then each
-      domain section, then per-chart CHAK renderers (registered into
-      CHAK_RENDERERS by chak-core.js).
+      Order matters: per-project config files first (they populate
+      window.PROJECT_CONFIGS which core.js reads at load time), then
+      core.js (state + routing + helpers), then each domain section,
+      then per-chart CHAK renderers (registered into CHAK_RENDERERS by
+      chak-core.js).
     -->
-    <script src="/js/core.js?v=20260826b"></script>
-    <script src="/js/mhu.js?v=20260826b"></script>
-    <script src="/js/playground.js?v=20260826b"></script>
-    <script src="/js/dashboard.js?v=20260826b"></script>
-    <script src="/js/nart-hiv.js?v=20260826b"></script>
-    <script src="/js/homepage.js?v=20260826b"></script>
-    <script src="/js/overviews.js?v=20260826b"></script>
-    <script src="/js/analytics.js?v=20260826b"></script>
-    <script src="/js/jamii.js?v=20260826b"></script>
-    <script src="/js/chak-core.js?v=20260826b"></script>
+    <script src="/projects/chap_stawisha/config.js?v=20260826c"></script>
+    <script src="/projects/gates_foundation/config.js?v=20260826c"></script>
+    <script src="/projects/acsp_optical/config.js?v=20260826c"></script>
+    <script src="/projects/impact/config.js?v=20260826c"></script>
+    <script src="/projects/gitlab_vision/config.js?v=20260826c"></script>
+    <script src="/projects/bftw_rmncah/config.js?v=20260826c"></script>
+    <script src="/projects/eis/config.js?v=20260826c"></script>
+    <script src="/projects/cdic_icare/config.js?v=20260826c"></script>
+    <script src="/projects/internship/config.js?v=20260826c"></script>
+    <script src="/projects/prep_tool/config.js?v=20260826c"></script>
+    <script src="/js/core.js?v=20260826c"></script>
+    <script src="/js/mhu.js?v=20260826c"></script>
+    <script src="/js/playground.js?v=20260826c"></script>
+    <script src="/js/dashboard.js?v=20260826c"></script>
+    <script src="/js/nart-hiv.js?v=20260826c"></script>
+    <script src="/js/homepage.js?v=20260826c"></script>
+    <script src="/js/overviews.js?v=20260826c"></script>
+    <script src="/js/analytics.js?v=20260826c"></script>
+    <script src="/projects/jamii_tekelezi/jamii.js?v=20260826c"></script>
+    <script src="/js/chak-core.js?v=20260826c"></script>
     <script src="/js/chak-profile.js?v=20260826b"></script>
     <script src="/js/chak-key-indicators.js?v=20260826b"></script>
     <script src="/js/chak-prep.js?v=20260826b"></script>

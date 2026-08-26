@@ -5,7 +5,7 @@ import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from services.common import json_safe
-from services.paths import BASE_DIR
+from services.paths import JAMII_TEKELEZI_FILTERS_CSV
 
 jt_bp = Blueprint("jt", __name__)
 
@@ -22,7 +22,7 @@ def register_jt_blueprint(app):
 @jt_bp.get("/api/jamii-tekelezi/locations")
 def jamii_tekelezi_locations() -> object:
     """Return JT counties, sub-counties, and full facility hierarchy for global filters."""
-    jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+    jt_path = JAMII_TEKELEZI_FILTERS_CSV
     if not jt_path.exists():
         return jsonify({"counties": [], "subcounties": [], "county_subcounties": {}, "facility_names": [], "facility_ids": [], "facility_id_name_map": {}, "facilities_by_subcounty": {}})
     try:

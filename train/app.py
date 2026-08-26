@@ -327,7 +327,7 @@ def create_app() -> Flask:
     from blueprints.chat import register_chat_blueprint
     register_chat_blueprint(app)
 
-    from blueprints.jt import register_jt_blueprint
+    from projects.jamii_tekelezi.backend import register_jt_blueprint
     register_jt_blueprint(app)
 
     from blueprints.mhu import register_mhu_blueprint

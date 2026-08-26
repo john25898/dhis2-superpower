@@ -15,7 +15,7 @@ from services.khis import (
     _khis_fetch,
     _khis_fetch_disaggregated,
 )
-from services.paths import BASE_DIR, SUPERPOWER_DIR
+from services.paths import BASE_DIR, JAMII_TEKELEZI_FILTERS_CSV, SUPERPOWER_DIR
 
 mhu_bp = Blueprint("mhu", __name__)
 
@@ -41,7 +41,7 @@ def register_mhu_blueprint(app):
 @mhu_bp.get("/api/khis/facility-locations")
 def khis_facility_locations():
     """Return facility locations from local mapping data with county centroids.
-    Uses jamii_tekelezi_filters.csv and facility_ward_mapping.json.
+    Uses jamii_tekelezi_filters.csv (project folder) and facility_ward_mapping.json.
     """
     cache_key = "_khis_facility_locations"
     if cache_key in _app.config:
@@ -49,7 +49,7 @@ def khis_facility_locations():
 
     facilities = {}
     try:
-        jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+        jt_path = JAMII_TEKELEZI_FILTERS_CSV
         if jt_path.exists():
             with open(jt_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)

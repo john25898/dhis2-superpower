@@ -99,6 +99,17 @@ def js_assets(filename: str) -> object:
     return response
 
 
+@core_bp.get("/projects/<path:filename>")
+def project_assets(filename: str) -> object:
+    """Serve per-project files (train/projects/<slug>/*: config.js, jamii.js, CSVs).
+    No-cache so edits to any project file show up immediately on refresh."""
+    response = send_from_directory(BASE_DIR / "projects", filename)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @core_bp.post("/api/reload-csvs")
 def reload_csvs_endpoint() -> object:
     try:

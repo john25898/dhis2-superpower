@@ -15,6 +15,13 @@ GUIDE_XLSX_PATH = BASE_DIR / "Copy of DATIM DATA ENTRY GUIDE FY26 Q2.xlsx"
 TABLE_NAME = "clinics"
 MAX_RESULT_ROWS = 100
 
+# ── Per-project data paths ─────────────────────────────────────
+# jamii_tekelezi_filters.csv lives with the Jamii Tekelezi project
+# (frontend + backend + data together), but is also read by MHU,
+# OU resolver and portfolio services.
+JAMII_TEKELEZI_DIR = BASE_DIR / "projects" / "jamii_tekelezi"
+JAMII_TEKELEZI_FILTERS_CSV = JAMII_TEKELEZI_DIR / "jamii_tekelezi_filters.csv"
+
 # ── Superpower module for DHIS2 live queries ──────────────────────
 SUPERPOWER_DIR = BASE_DIR.parent  # ai_translator.py is in the repo root
 SUPERPOWER_ENV_PATH = BASE_DIR / ".env"

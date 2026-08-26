@@ -1,7 +1,7 @@
 """Jamii Tekelezi filter → DHIS2 organisation unit resolution."""
 from __future__ import annotations
 
-from services.paths import BASE_DIR
+from services.paths import JAMII_TEKELEZI_FILTERS_CSV
 
 _JT_OU_CACHE = None  # {facility_name: facility_id, subcounty_name: [facility_id, ...]}
 
@@ -11,7 +11,7 @@ def _load_jt_ou_map():
     global _JT_OU_CACHE
     if _JT_OU_CACHE is not None:
         return _JT_OU_CACHE
-    jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+    jt_path = JAMII_TEKELEZI_FILTERS_CSV
     if not jt_path.exists():
         _JT_OU_CACHE = {}
         return _JT_OU_CACHE
