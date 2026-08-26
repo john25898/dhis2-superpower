@@ -1817,6 +1817,10 @@ function renderKhisSubtabNav(
 const MHU_API = "/api/mhu/khis-data";
 const MHU_BADGE = "KHIS MOH 717";
 
+// MHU data period — LAST_MONTH = last complete month (fast; avoids the slow
+// 12-month pull when loading the MHU tab with all facilities)
+const MHU_PE = "LAST_MONTH";
+
 // ── MOH 711 Data Elements for Workload tab sections ──────────────────
 const WORKLOAD_MOH711_UIDS = [
   "f9vesk5d4IY", // MOH 711 New ANC clients
@@ -1922,7 +1926,7 @@ async function loadAndRenderMhuTab(
     if (tabSlug === "WORKLOAD" || tabSlug === "MNCH") {
       const moh711Dx = WORKLOAD_MOH711_UIDS.join(";");
       const resp711 = await fetch(
-        `${MHU_API}?dx=${encodeURIComponent(moh711Dx)}&ou=${encodeURIComponent(ouId)}&pe=LAST_12_MONTHS`,
+        `${MHU_API}?dx=${encodeURIComponent(moh711Dx)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
       );
       if (resp711.ok) {
         const result711 = await resp711.json();
@@ -1931,7 +1935,7 @@ async function loadAndRenderMhuTab(
     }
 
     const resp = await fetch(
-      `${MHU_API}?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(ouId)}&pe=LAST_12_MONTHS`,
+      `${MHU_API}?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
     );
     if (!resp.ok) {
       throw new Error(`API returned ${resp.status}`);
@@ -1947,7 +1951,7 @@ async function loadAndRenderMhuTab(
       contentEl.innerHTML = `
         <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
           <div class="font-semibold text-slate-500">No data available</div>
-          <div class="mt-1 text-xs">KHIS returned no records for ${escapeHtml(facilityName)} in the last 12 months</div>
+          <div class="mt-1 text-xs">KHIS returned no records for ${escapeHtml(facilityName)} in the last complete month</div>
         </div>`;
       return;
     }
@@ -1977,7 +1981,7 @@ async function loadAndRenderMhuTab(
       const MHU_COC_API = "/api/mhu/khis-data-coc";
       try {
         const respCoc = await fetch(
-          `${MHU_COC_API}?dx=${encodeURIComponent(dxStr)}&co=${encodeURIComponent(cocStr)}&ou=${encodeURIComponent(ouId)}&pe=LAST_12_MONTHS`,
+          `${MHU_COC_API}?dx=${encodeURIComponent(dxStr)}&co=${encodeURIComponent(cocStr)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
         );
         if (respCoc.ok) {
           const resultCoc = await respCoc.json();
@@ -2153,7 +2157,7 @@ async function loadAndRenderMhuAggregatedTab(
         body: JSON.stringify({
           dx: moh711DxIds,
           names: facilityNames,
-          pe: "LAST_12_MONTHS",
+          pe: MHU_PE,
         }),
       });
       if (resp711.ok) {
@@ -2168,7 +2172,7 @@ async function loadAndRenderMhuAggregatedTab(
       body: JSON.stringify({
         dx: dxIds,
         names: facilityNames,
-        pe: "LAST_12_MONTHS",
+        pe: MHU_PE,
       }),
     });
     if (!resp.ok) throw new Error("API returned " + resp.status);

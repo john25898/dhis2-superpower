@@ -1009,7 +1009,7 @@ def create_app() -> Flask:
     KHIS_USER = os.getenv("KHIS_USERNAME", "rgngumo")
     KHIS_PASS = os.getenv("KHIS_PASSWORD", "Advisorychs123!")
 
-    def _khis_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
+    def _khis_fetch(dx_ids, ou_id, pe="LAST_MONTH", coc_ids=None):
         """Fetch analytics rows from the KHIS DHIS2 server.
         Same interface as _dhis2_fetch but targets https://hiskenya.dha.go.ke/api.
         """
@@ -1101,7 +1101,7 @@ def create_app() -> Flask:
             result[composite_key][pe_name] = result[composite_key].get(pe_name, 0) + val
         return result
 
-    def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_12_MONTHS"):
+    def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_MONTH"):
         """Fetch analytics rows with CO dimension, returning per-COC data.
         Returns: {"DE_ID.CO_ID": {period_name: value, ...}, ...}
         """
@@ -1459,12 +1459,12 @@ def create_app() -> Flask:
     @app.get("/api/mhu/khis-data")
     def mhu_khis_data():
         """Query KHIS DHIS2 analytics for MHU indicators.
-        Params: ?dx=...&ou=...&pe=LAST_12_MONTHS&resolve_ward=false
+        Params: ?dx=...&ou=...&pe=LAST_MONTH&resolve_ward=false
         When resolve_ward=true, resolves facility OU to its LEVEL-4 (ward) parent.
         """
         dx = request.args.get("dx", "")
         ou = request.args.get("ou", "")
-        pe = request.args.get("pe", "LAST_12_MONTHS")
+        pe = request.args.get("pe", "LAST_MONTH")
         resolve_ward = request.args.get("resolve_ward", "false").lower() == "true"
         if not dx or not ou:
             return jsonify({"error": "Both 'dx' and 'ou' parameters are required"}), 400
@@ -1481,12 +1481,12 @@ def create_app() -> Flask:
                         "ward_name": entry["ward_name"],
                         "facility_name": entry["facility_name"],
                     }
-                    # Try LAST_12_MONTHS first, fall back to yearly periods
-                    result = _khis_fetch(dx, actual_ou, "LAST_12_MONTHS", None)
+                    # Try LAST_MONTH first (fast), fall back to broader periods
+                    result = _khis_fetch(dx, actual_ou, "LAST_MONTH", None)
+                    if not result or all(len(v) == 0 for v in result.values()):
+                        result = _khis_fetch(dx, actual_ou, "LAST_3_MONTHS", None)
                     if not result or all(len(v) == 0 for v in result.values()):
                         result = _khis_fetch(dx, actual_ou, "2025", None)
-                    if not result or all(len(v) == 0 for v in result.values()):
-                        result = _khis_fetch(dx, actual_ou, "2024;2025", None)
                     if not result or all(len(v) == 0 for v in result.values()):
                         result = _khis_fetch(dx, actual_ou, "LAST_5_YEARS", None)
                     return jsonify({
@@ -1506,13 +1506,13 @@ def create_app() -> Flask:
     @app.get("/api/mhu/khis-data-coc")
     def mhu_khis_data_coc():
         """Query KHIS analytics with CO dimension for COC-level breakdown.
-        Params: ?dx=...&co=COC1;COC2&ou=...&pe=LAST_12_MONTHS
+        Params: ?dx=...&co=COC1;COC2&ou=...&pe=LAST_MONTH
         Returns: {"data": {"DE_ID.CO_ID": {period: value, ...}, ...}}
         """
         dx = request.args.get("dx", "")
         co = request.args.get("co", "")
         ou = request.args.get("ou", "")
-        pe = request.args.get("pe", "LAST_12_MONTHS")
+        pe = request.args.get("pe", "LAST_MONTH")
         if not dx or not ou or not co:
             return jsonify({"error": "Parameters 'dx', 'co', and 'ou' are required"}), 400
         try:
@@ -1525,14 +1525,14 @@ def create_app() -> Flask:
     @app.post("/api/mhu/khis-data-aggregate")
     def mhu_khis_data_aggregate():
         """Aggregate KHIS data across multiple facilities.
-        POST JSON body: {dx: "...", names: ["Fac1", "Fac2", ...], pe: "LAST_12_MONTHS"}
+        POST JSON body: {dx: "...", names: ["Fac1", "Fac2", ...], pe: "LAST_MONTH"}
         Looks up KHIS IDs from the mapping config by facility name.
         Batches requests (max ~300 OUs each) to avoid KHIS URL length limits.
         """
         body = request.get_json(silent=True) or {}
         dx = body.get("dx", "")
         names = body.get("names", [])
-        pe = body.get("pe", "LAST_12_MONTHS")
+        pe = body.get("pe", "LAST_MONTH")
         if not dx or not names or not isinstance(names, list):
             return jsonify({"error": "Body must include 'dx' (string) and 'names' (array)"}), 400
         try:
@@ -1551,12 +1551,26 @@ def create_app() -> Flask:
                 if fn:
                     name_to_id[fn] = uid
 
-            # Match requested names to KHIS IDs
+            # Match requested names to KHIS IDs — exact first, then flexible
+            # containment (same logic as the single-facility view) so CHAK
+            # names like "ACK Kathangariri Dispensary" match KHIS
+            # "Kathangariri Dispensary". Results are cached across requests
+            # (facility set is static) so repeated loads are fast.
+            nonlocal _MHU_FLEX_MATCH
             matched_ids = []
             matched_names = []
+            flex_index = list(name_to_id.items())
             for name in names:
                 key = name.lower().strip()
                 uid = name_to_id.get(key)
+                if not uid:
+                    uid = _MHU_FLEX_MATCH.get(key)
+                if not uid:
+                    for fn, cand_uid in flex_index:
+                        if key in fn or fn in key:
+                            uid = cand_uid
+                            _MHU_FLEX_MATCH[key] = uid
+                            break
                 if uid:
                     matched_ids.append(uid)
                     matched_names.append(name)
@@ -1578,9 +1592,9 @@ def create_app() -> Flask:
                 ou_str = ";".join(batch_ids)
                 result = _khis_fetch(dx, ou_str, pe, None)
                 if not result or all(len(v) == 0 for v in result.values()):
-                    result = _khis_fetch(dx, ou_str, "2025", None)
+                    result = _khis_fetch(dx, ou_str, "LAST_3_MONTHS", None)
                 if not result or all(len(v) == 0 for v in result.values()):
-                    result = _khis_fetch(dx, ou_str, "2024;2025", None)
+                    result = _khis_fetch(dx, ou_str, "2025", None)
                 # Merge batch results
                 for de_id, period_data in result.items():
                     if de_id not in merged:
@@ -1772,6 +1786,9 @@ def create_app() -> Flask:
     # ── MHU CSV data endpoint (from PBIX exports: data.csv + data2.csv) ──
     _MHU_CSV_CACHE = None
     _MHU_CSV_ROWS_CACHE = None
+    # Flexible name -> KHIS uid cache for the aggregate endpoint (built lazily
+    # across requests; keyed by lowercased facility name)
+    _MHU_FLEX_MATCH = {}
 
     @app.get("/api/mhu/csv-data")
     def mhu_csv_data():
