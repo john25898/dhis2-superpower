@@ -7,8 +7,8 @@ import os
 from services.paths import BASE_DIR
 
 KHIS_BASE = os.getenv("KHIS_BASE_URL", "https://hiskenya.dha.go.ke/api")
-KHIS_USER = os.getenv("KHIS_USERNAME", "rgngumo")
-KHIS_PASS = os.getenv("KHIS_PASSWORD", "Advisorychs123!")
+KHIS_USER = os.getenv("KHIS_USERNAME", "Tom Hastings")
+KHIS_PASS = os.getenv("KHIS_PASSWORD", "N3sh!8112")
 
 
 def _khis_fetch(dx_ids, ou_id, pe="LAST_MONTH", coc_ids=None):
