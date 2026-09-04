@@ -60,15 +60,21 @@ async function renderMhuPage() {
     return;
   }
 
-  // Get selected filters from state (keys: county, ownerType, owner, facilityName)
-  let selectedCounty = state.mhuCounty || "all";
-  let selectedOwnerType = state.mhuOwnerType || "all";
-  let selectedOwner = state.mhuOwner || "all";
-  let selectedFacility = state.mhuFacility || ""; // facility name
-
   const allFacilities = csvData.facilities;
   const counties = csvData.counties;
   const countyNames = Object.keys(counties).sort();
+
+  // Get selected filters from state (keys: county, ownerType, owner, facilityName)
+  // Default to Kiambu county (user request) for a fast, focused first load.
+  // An explicit "All Counties" choice is preserved since state.mhuCounty === "all"
+  // is truthy; only an empty state falls back to Kiambu.
+  let selectedCounty = state.mhuCounty || "Kiambu";
+  if (countyNames.length && !countyNames.includes(selectedCounty)) {
+    selectedCounty = "all";
+  }
+  let selectedOwnerType = state.mhuOwnerType || "all";
+  let selectedOwner = state.mhuOwner || "all";
+  let selectedFacility = state.mhuFacility || ""; // facility name
 
   // ── Cascade filtering ──
   // 1. Filter by county
@@ -161,6 +167,10 @@ async function renderMhuPage() {
   const tabKeys = config?.tabs ? Object.keys(config.tabs) : [];
   const activeSubtab = state.mhuMhuSubtab || "WORKLOAD";
 
+  // Charts from a previous MHU render still exist in chartRoot — destroy them
+  // before wiping the DOM so chart objects don't accumulate on tab switches.
+  if (elements.chartRoot) destroyChartsIn(elements.chartRoot);
+
   elements.chartRoot.innerHTML = `
     <div class="space-y-5">
       <!-- Filters Row (4 cascading filters) -->
@@ -221,6 +231,14 @@ async function renderMhuPage() {
         </div>
       </div>
 
+      <!-- Trend range picker (defaults to last 6 months) -->
+      <div class="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
+        <div class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Trend range</div>
+        <div class="inline-flex gap-0.5 rounded-lg bg-slate-100 p-0.5">
+          ${mhuRangeButtonsHtml()}
+        </div>
+      </div>
+
       <!-- Detail Area: KHIS MOH 717 subtabs (always visible) -->
       <div id="mhuRoot" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm min-h-[200px]">
         ${
@@ -249,6 +267,9 @@ async function renderMhuPage() {
       </div>
     </div>
   `;
+
+  // Bind the trend-range toggle
+  bindMhuRangeControls();
 
   // ── Bind county filter ──
   const countyEl = document.getElementById("mhuCountyFilter");
@@ -569,6 +590,8 @@ function renderKhisSubtabNav(
   const root = document.getElementById("mhuRoot");
   if (!root) return;
 
+  destroyChartsIn(root);
+
   // Tab labels for display
   const tabLabels = {
     WORKLOAD: "Workload",
@@ -649,8 +672,66 @@ const MHU_BADGE = "KHIS MOH 717";
 // 12-month pull when loading the MHU tab with all facilities)
 const MHU_PE = "LAST_MONTH";
 
-// ── MOH 711 Data Elements for Workload tab sections ──────────────────
-const WORKLOAD_MOH711_UIDS = [
+// ── Trend range (used by Workload / HTN-Diabetes / MNCH / Other trends) ──
+// Defaults to the last 6 months. The "Trend range" toggle on the MHU page
+// updates state.mhuTrendMonths (1/3/6/12). Periods are pinned to end at
+// 202607 (July 2026) so the numbers stay aligned with the rest of the app.
+function mhuTrendMonths() {
+  return rangeMonthsOf(state.mhuTrendMonths); // defaults to 6
+}
+
+function mhuTrendPe() {
+  const n = mhuTrendMonths();
+  // n = 1 → just July 2026. (Don't use LAST_MONTH here: DHIS2 expands it to
+  // two months, current + previous.)
+  if (n <= 1) return "202607";
+  return buildMonthRangeParam("202607", n);
+}
+
+function mhuRangeCaption() {
+  const n = mhuTrendMonths();
+  return n <= 1 ? "last month" : `last ${n} months`;
+}
+
+function mhuRangeButtonsHtml() {
+  const active = mhuTrendMonths();
+  const opts = [
+    { n: 1, label: "1M" },
+    { n: 3, label: "3M" },
+    { n: 6, label: "6M" },
+    { n: 12, label: "12M" },
+  ];
+  return opts
+    .map(
+      (o) =>
+        `<button data-mhu-range="${o.n}" class="mhu-range-btn rounded-md px-3 py-1 text-[12px] font-semibold transition ${
+          active === o.n
+            ? "bg-white text-sky-700 shadow-sm"
+            : "text-slate-500 hover:text-slate-700"
+        }">${o.label}</button>`,
+    )
+    .join("");
+}
+
+function bindMhuRangeControls() {
+  const btns = document.querySelectorAll("[data-mhu-range]");
+  btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const n = Number(btn.getAttribute("data-mhu-range")) || 6;
+      if (n === mhuTrendMonths()) return;
+      state.mhuTrendMonths = n;
+      renderMhuPage();
+    });
+  });
+}
+
+// ── MOH 711 / Admission / Department config for Workload & MNCH ──────
+// PRIMARY source: mhu_khis_mapping.json → config.moh711 (array of
+// {id, name}) and config.workloadAdmissions ({deIds, deLabels,
+// departments: [{id, name, label}]}). The DEFAULT_* constants below are
+// fallbacks only — used when the config omits a section, so older config
+// files keep working unchanged.
+const DEFAULT_MOH711_UIDS = [
   "f9vesk5d4IY", // MOH 711 New ANC clients
   "Fz0LzxMT1vV", // MOH 711 Pregnant women completing 4 ANC visits
   "cKr5133RFuN", // MOH 711 Rev 2020_No. of clients completed 8th ANC Contact
@@ -670,7 +751,7 @@ const WORKLOAD_MOH711_UIDS = [
   "tHRlLvvCObn", // MOH 711 Rev 2020_Neonatal deaths audited within 7 days
 ];
 
-const WORKLOAD_MOH711_LABELS = {
+const DEFAULT_MOH711_LABELS = {
   f9vesk5d4IY: "ANC New Visits",
   Fz0LzxMT1vV: "ANC 4th Visit (Completing 4 visits)",
   cKr5133RFuN: "ANC 8th Visit (Completed 8 contacts)",
@@ -690,6 +771,91 @@ const WORKLOAD_MOH711_LABELS = {
   tHRlLvvCObn: "Neonatal Deaths Audited (7 days)",
 };
 
+// Inpatient Admissions by Department (Under 5 / Over 5) — from config
+const DEFAULT_ADMISSION_DE_IDS = ["cvJuw6Fbuiw", "r7LJ3kCX8EZ"];
+const DEFAULT_ADMISSION_LABELS = {
+  cvJuw6Fbuiw: "Under 5",
+  r7LJ3kCX8EZ: "Over 5",
+};
+
+// 14 inpatient department COCs: COC id → dept key
+const DEFAULT_DEPT_MAP = {
+  ObiJr399QRt: "PAEDIATRICS",
+  bPNw3Km3Ug7: "MATERNITY",
+  O68sxX0pJMT: "PSYCHIATRY",
+  oJ6IUNugflo: "EYE",
+  KFmqREu0VSL: "SURGICAL",
+  JUI7tesx6as: "AMENITY",
+  Lj5arkL7GL8: "MEDICAL",
+  R99ctw9w6Kt: "RENAL",
+  B0ji6ZY2zJ3: "ORTHOPAEDIC",
+  szjWdpjHTDe: "ISOLATION",
+  vr2WcWaojbO: "NURSERY/NEWBORN",
+  tMEFFDHQCAW: "ICU",
+  Qy5yADe3SiB: "OTHER",
+  rYfAgBnJKnj: "OBST/GYN",
+};
+
+// Dept key → display label
+const DEFAULT_DEPT_LABELS = {
+  PAEDIATRICS: "Paediatrics",
+  MATERNITY: "Maternity",
+  PSYCHIATRY: "Psychiatry",
+  EYE: "Eye",
+  SURGICAL: "Surgical",
+  AMENITY: "Amenity",
+  MEDICAL: "Medical",
+  RENAL: "Renal",
+  ORTHOPAEDIC: "Orthopaedic",
+  ISOLATION: "Isolation",
+  "NURSERY/NEWBORN": "Nursery/Newborn",
+  ICU: "ICU",
+  OTHER: "Other",
+  "OBST/GYN": "Obst/Gyn",
+};
+
+// Resolve chart config from mhu_khis_mapping.json (served at
+// /api/mhu/config). Falls back to the DEFAULT_* constants above when the
+// config omits a section — so old configs keep working unchanged.
+function resolveMhuChartConfig(config) {
+  const moh711 = (config && config.moh711) || [];
+  const wa = (config && config.workloadAdmissions) || {};
+
+  let uids, labels;
+  if (Array.isArray(moh711) && moh711.length > 0) {
+    uids = moh711.map((e) => e.id);
+    labels = {};
+    for (const e of moh711) labels[e.id] = e.name;
+  } else {
+    uids = DEFAULT_MOH711_UIDS;
+    labels = DEFAULT_MOH711_LABELS;
+  }
+
+  const deIds =
+    Array.isArray(wa.deIds) && wa.deIds.length > 0
+      ? wa.deIds
+      : DEFAULT_ADMISSION_DE_IDS;
+  const deLabels = wa.deLabels || DEFAULT_ADMISSION_LABELS;
+
+  let deptMap, deptLabels, deptIds;
+  if (Array.isArray(wa.departments) && wa.departments.length > 0) {
+    deptMap = {};
+    deptLabels = {};
+    deptIds = [];
+    for (const d of wa.departments) {
+      deptMap[d.id] = d.name;
+      deptLabels[d.name] = d.label || d.name;
+      deptIds.push(d.id);
+    }
+  } else {
+    deptMap = DEFAULT_DEPT_MAP;
+    deptLabels = DEFAULT_DEPT_LABELS;
+    deptIds = Object.keys(DEFAULT_DEPT_MAP);
+  }
+
+  return { uids, labels, deIds, deLabels, deptMap, deptLabels, deptIds };
+}
+
 // ── Load & render MHU tab data ────────────────────────────────────────
 async function loadAndRenderMhuTab(
   config,
@@ -699,8 +865,11 @@ async function loadAndRenderMhuTab(
   chakFacilityId,
 ) {
   const tabElements = config.tabs?.[tabSlug];
+  const chartCfg = resolveMhuChartConfig(config);
   const contentEl = document.getElementById("mhuTabContent");
   if (!contentEl) return; // nav not rendered yet
+
+  destroyChartsIn(contentEl);
 
   if (!tabElements || tabElements.length === 0) {
     contentEl.innerHTML = `
@@ -752,9 +921,9 @@ async function loadAndRenderMhuTab(
     // Fetch MOH 711 data for WORKLOAD (summary cards) and MNCH (full charts)
     let moh711Data = null;
     if (tabSlug === "WORKLOAD" || tabSlug === "MNCH") {
-      const moh711Dx = WORKLOAD_MOH711_UIDS.join(";");
+      const moh711Dx = chartCfg.uids.join(";");
       const resp711 = await fetch(
-        `${MHU_API}?dx=${encodeURIComponent(moh711Dx)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
+        `${MHU_API}?dx=${encodeURIComponent(moh711Dx)}&ou=${encodeURIComponent(ouId)}&pe=${mhuTrendPe()}`,
       );
       if (resp711.ok) {
         const result711 = await resp711.json();
@@ -763,7 +932,7 @@ async function loadAndRenderMhuTab(
     }
 
     const resp = await fetch(
-      `${MHU_API}?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
+      `${MHU_API}?dx=${encodeURIComponent(dxIds)}&ou=${encodeURIComponent(ouId)}&pe=${mhuTrendPe()}`,
     );
     if (!resp.ok) {
       throw new Error(`API returned ${resp.status}`);
@@ -787,29 +956,14 @@ async function loadAndRenderMhuTab(
     // ── Fetch COC-disaggregated data for Inpatient Admissions (Under 5 / Over 5) ──
     let cocData = null;
     if (tabSlug === "WORKLOAD") {
-      // Hardcoded COC UIDs for all 14 inpatient departments (same for both Under 5 and Over 5)
-      const ALL_COC_IDS = [
-        "ObiJr399QRt",
-        "bPNw3Km3Ug7",
-        "O68sxX0pJMT",
-        "oJ6IUNugflo",
-        "KFmqREu0VSL",
-        "JUI7tesx6as",
-        "Lj5arkL7GL8",
-        "R99ctw9w6Kt",
-        "B0ji6ZY2zJ3",
-        "szjWdpjHTDe",
-        "vr2WcWaojbO",
-        "tMEFFDHQCAW",
-        "Qy5yADe3SiB",
-        "rYfAgBnJKnj",
-      ];
-      const dxStr = "cvJuw6Fbuiw;r7LJ3kCX8EZ";
-      const cocStr = ALL_COC_IDS.join(";");
+      // COC UIDs for all 14 inpatient departments come from config
+      // (same set for both Under 5 and Over 5 admission DEs)
+      const dxStr = chartCfg.deIds.join(";");
+      const cocStr = chartCfg.deptIds.join(";");
       const MHU_COC_API = "/api/mhu/khis-data-coc";
       try {
         const respCoc = await fetch(
-          `${MHU_COC_API}?dx=${encodeURIComponent(dxStr)}&co=${encodeURIComponent(cocStr)}&ou=${encodeURIComponent(ouId)}&pe=${MHU_PE}`,
+          `${MHU_COC_API}?dx=${encodeURIComponent(dxStr)}&co=${encodeURIComponent(cocStr)}&ou=${encodeURIComponent(ouId)}&pe=${mhuTrendPe()}`,
         );
         if (respCoc.ok) {
           const resultCoc = await respCoc.json();
@@ -831,11 +985,12 @@ async function loadAndRenderMhuTab(
         facilityName,
         moh711Data,
         cocData,
+        chartCfg,
       );
     } else if (tabSlug === "HYPERTENSION_DIABETES") {
       renderMhuDiabetesHypertension(contentEl, data, tabElements, facilityName);
     } else if (tabSlug === "MNCH") {
-      renderMhuMnch(contentEl, facilityName, moh711Data);
+      renderMhuMnch(contentEl, facilityName, moh711Data, chartCfg);
     } else if (tabSlug === "HIV_DASHBOARD") {
       // HIV_DASHBOARD uses hardcoded KHIS UIDs for HIV metrics
       await renderMhuHivDashboard(contentEl, facilityName, ouId);
@@ -864,6 +1019,8 @@ const MHU_AGGREGATE_API = "/api/mhu/khis-data-aggregate";
 function renderMhuAggregateNav(label, facilityCount, activeSubtab, tabKeys) {
   const root = document.getElementById("mhuRoot");
   if (!root) return;
+
+  destroyChartsIn(root);
 
   const tabLabels = {
     WORKLOAD: "Workload",
@@ -949,8 +1106,11 @@ async function loadAndRenderMhuAggregatedTab(
   aggregateLabel,
 ) {
   const tabElements = config.tabs?.[tabSlug];
+  const chartCfg = resolveMhuChartConfig(config);
   const contentEl = document.getElementById("mhuTabContent");
   if (!contentEl) return;
+
+  destroyChartsIn(contentEl);
 
   if (!tabElements || tabElements.length === 0) {
     contentEl.innerHTML = `
@@ -978,14 +1138,14 @@ async function loadAndRenderMhuAggregatedTab(
     // Fetch MOH 711 data for WORKLOAD (summary cards) and MNCH (full charts)
     let moh711Data = null;
     if (tabSlug === "WORKLOAD" || tabSlug === "MNCH") {
-      const moh711DxIds = WORKLOAD_MOH711_UIDS.join(";");
+      const moh711DxIds = chartCfg.uids.join(";");
       const resp711 = await fetch(MHU_AGGREGATE_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dx: moh711DxIds,
           names: facilityNames,
-          pe: MHU_PE,
+          pe: mhuTrendPe(),
         }),
       });
       if (resp711.ok) {
@@ -1000,7 +1160,7 @@ async function loadAndRenderMhuAggregatedTab(
       body: JSON.stringify({
         dx: dxIds,
         names: facilityNames,
-        pe: MHU_PE,
+        pe: mhuTrendPe(),
       }),
     });
     if (!resp.ok) throw new Error("API returned " + resp.status);
@@ -1031,6 +1191,7 @@ async function loadAndRenderMhuAggregatedTab(
         aggregateLabel + " (Aggregated)",
         moh711Data,
         null, // COC data not available for aggregated view
+        chartCfg,
       );
     } else if (tabSlug === "HYPERTENSION_DIABETES") {
       renderMhuDiabetesHypertension(
@@ -1040,7 +1201,12 @@ async function loadAndRenderMhuAggregatedTab(
         aggregateLabel + " (Aggregated)",
       );
     } else if (tabSlug === "MNCH") {
-      renderMhuMnch(contentEl, aggregateLabel + " (Aggregated)", moh711Data);
+      renderMhuMnch(
+        contentEl,
+        aggregateLabel + " (Aggregated)",
+        moh711Data,
+        chartCfg,
+      );
     } else {
       renderMhuGenericTable(
         contentEl,
@@ -1069,7 +1235,7 @@ function parseMhuTimeSeries(data, tabElements) {
       periodSet.add(period);
     }
   }
-  const periods = Array.from(periodSet).sort();
+  const periods = Array.from(periodSet).sort(sortPeriodLabels);
 
   // For each element, extract monthly values by looking up its DX ID
   return tabElements.map((el) => {
@@ -1217,24 +1383,6 @@ function renderHighchartDonut(containerId, title, seriesData) {
   }
 }
 
-// ── Department label map for Inpatient Admission COCs ────────────────
-const DEPT_LABELS = {
-  PAEDIATRICS: "Paediatrics",
-  MATERNITY: "Maternity",
-  PSYCHIATRY: "Psychiatry",
-  EYE: "Eye",
-  SURGICAL: "Surgical",
-  AMENITY: "Amenity",
-  MEDICAL: "Medical",
-  RENAL: "Renal",
-  ORTHOPAEDIC: "Orthopaedic",
-  ISOLATION: "Isolation",
-  "NURSERY/NEWBORN": "Nursery/Newborn",
-  ICU: "ICU",
-  OTHER: "Other",
-  "OBST/GYN": "Obst/Gyn",
-};
-
 // ── WORKLOAD tab ──────────────────────────────────────────────────────
 function renderMhuWorkload(
   container,
@@ -1243,7 +1391,10 @@ function renderMhuWorkload(
   facilityName,
   moh711Data,
   cocData,
+  chartCfg,
 ) {
+  chartCfg = chartCfg || resolveMhuChartConfig(null);
+
   // ── Parse MOH 717 data ──
   const parsed = parseMhuTimeSeries(data, tabElements);
   const periods = parsed.length > 0 ? parsed[0].periods : [];
@@ -1296,13 +1447,13 @@ function renderMhuWorkload(
       }
     }
   }
-  const moh711PeriodList = Array.from(moh711Periods).sort();
+  const moh711PeriodList = Array.from(moh711Periods).sort(sortPeriodLabels);
 
   // Compute totals for each MOH 711 UID
   const moh711Totals = {};
   const moh711Series = {};
   if (moh711Data) {
-    for (const uid of WORKLOAD_MOH711_UIDS) {
+    for (const uid of chartCfg.uids) {
       const dxData = moh711Data[uid] || {};
       const values = moh711PeriodList.map((p) => dxData[p] || 0);
       const total = values.reduce((a, b) => a + b, 0);
@@ -1336,29 +1487,11 @@ function renderMhuWorkload(
     babiesAlive > 0 ? ((lowBirthWeight / babiesAlive) * 100).toFixed(1) : "0.0";
 
   // ── Parse COC-disaggregated data for Inpatient Admissions ──
-  // Hardcoded COC ID → department name mapping (same for Under 5 and Over 5)
-  const cocDeptMap = {
-    ObiJr399QRt: "PAEDIATRICS",
-    bPNw3Km3Ug7: "MATERNITY",
-    O68sxX0pJMT: "PSYCHIATRY",
-    oJ6IUNugflo: "EYE",
-    KFmqREu0VSL: "SURGICAL",
-    JUI7tesx6as: "AMENITY",
-    Lj5arkL7GL8: "MEDICAL",
-    R99ctw9w6Kt: "RENAL",
-    B0ji6ZY2zJ3: "ORTHOPAEDIC",
-    szjWdpjHTDe: "ISOLATION",
-    vr2WcWaojbO: "NURSERY/NEWBORN",
-    tMEFFDHQCAW: "ICU",
-    Qy5yADe3SiB: "OTHER",
-    rYfAgBnJKnj: "OBST/GYN",
-  };
-  // Parse the two inpatient admission DEs from cocData
-  const ADMISSION_DE_IDS = ["cvJuw6Fbuiw", "r7LJ3kCX8EZ"];
-  const ADMISSION_LABELS = {
-    cvJuw6Fbuiw: "Under 5",
-    r7LJ3kCX8EZ: "Over 5",
-  };
+  // COC ID → department name mapping (from config; same for Under 5 and Over 5)
+  const cocDeptMap = chartCfg.deptMap;
+  // The two inpatient admission DEs (Under 5 / Over 5) come from config
+  const ADMISSION_DE_IDS = chartCfg.deIds;
+  const ADMISSION_LABELS = chartCfg.deLabels;
   const admissionDeptData = {}; // {deId: {deptName: total, ...}, ...}
   const admissionDeptPeriodData = {}; // {deId: {deptName: [values], ...}, ...}
   if (cocData) {
@@ -1369,7 +1502,7 @@ function renderMhuWorkload(
         cocPeriodSet.add(p);
       }
     }
-    const cocPeriods = Array.from(cocPeriodSet).sort();
+    const cocPeriods = Array.from(cocPeriodSet).sort(sortPeriodLabels);
     for (const deId of ADMISSION_DE_IDS) {
       admissionDeptData[deId] = {};
       admissionDeptPeriodData[deId] = {};
@@ -1394,7 +1527,7 @@ function renderMhuWorkload(
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">MOH 717 — Workload · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">MOH 717 — Workload · ${mhuRangeCaption()}</div>
     </div>
   `;
 
@@ -1452,14 +1585,14 @@ function renderMhuWorkload(
   }
 
   // ── SECTION 3B: Inpatient Admissions by Department (Under 5 / Over 5) ──
-  // Build ordered list of ALL department names from DEPT_LABELS (preserving order)
-  const ALL_DEPT_NAMES = Object.keys(DEPT_LABELS);
+  // Build ordered list of ALL department names from chartCfg.deptLabels (preserving order)
+  const ALL_DEPT_NAMES = Object.keys(chartCfg.deptLabels);
   html += `<div class="mb-5"><div class="text-sm font-bold text-slate-700 mb-3">📊 Inpatient Admissions by Department</div>`;
   html += `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">`;
   for (const deId of ADMISSION_DE_IDS) {
     const deptTotals = admissionDeptData[deId] || {};
     // Build values for ALL departments, defaulting to 0
-    const deptNames = ALL_DEPT_NAMES.map((name) => DEPT_LABELS[name]);
+    const deptNames = ALL_DEPT_NAMES.map((name) => chartCfg.deptLabels[name]);
     const deptValues = ALL_DEPT_NAMES.map((name) => deptTotals[name] || 0);
     const label = ADMISSION_LABELS[deId] || deId;
     const chartId = `mhuAdmission_${deId}`;
@@ -1608,7 +1741,7 @@ function renderMhuWorkload(
       const seriesData = def.uids
         .filter((uid) => (moh711Totals[uid] || 0) > 0)
         .map((uid) => ({
-          name: WORKLOAD_MOH711_LABELS[uid] || uid,
+          name: chartCfg.labels[uid] || uid,
           data: moh711Series[uid] || [],
         }));
       renderHighchartLine(
@@ -1637,7 +1770,7 @@ function renderMhuDiabetesHypertension(
     container.innerHTML = `
       <div class="mb-4">
         <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-        <div class="text-[11px] text-slate-400">Diabetes & Hypertension · MOH 740 · Last 12 months</div>
+        <div class="text-[11px] text-slate-400">Diabetes & Hypertension · MOH 740 · ${mhuRangeCaption()}</div>
       </div>
       <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
         <div class="font-semibold text-slate-500">No MOH 740 data available</div>
@@ -1735,7 +1868,7 @@ function renderMhuDiabetesHypertension(
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">Diabetes & Hypertension · MOH 740 · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">Diabetes & Hypertension · MOH 740 · ${mhuRangeCaption()}</div>
     </div>
   `;
 
@@ -2079,7 +2212,9 @@ function renderMhuDiabetesHypertension(
 }
 
 // ── MNCH tab — full MOH 711 charts ───────────────────────────────────
-function renderMhuMnch(container, facilityName, moh711Data) {
+function renderMhuMnch(container, facilityName, moh711Data, chartCfg) {
+  chartCfg = chartCfg || resolveMhuChartConfig(null);
+
   // ── Parse MOH 711 data ──
   const moh711Periods = new Set();
   if (moh711Data) {
@@ -2089,12 +2224,12 @@ function renderMhuMnch(container, facilityName, moh711Data) {
       }
     }
   }
-  const moh711PeriodList = Array.from(moh711Periods).sort();
+  const moh711PeriodList = Array.from(moh711Periods).sort(sortPeriodLabels);
 
   const moh711Totals = {};
   const moh711Series = {};
   if (moh711Data) {
-    for (const uid of WORKLOAD_MOH711_UIDS) {
+    for (const uid of chartCfg.uids) {
       const dxData = moh711Data[uid] || {};
       const values = moh711PeriodList.map((p) => dxData[p] || 0);
       const total = values.reduce((a, b) => a + b, 0);
@@ -2130,7 +2265,7 @@ function renderMhuMnch(container, facilityName, moh711Data) {
     container.innerHTML = `
       <div class="mb-4">
         <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-        <div class="text-[11px] text-slate-400">MNCH · MOH 711 · Last 12 months</div>
+        <div class="text-[11px] text-slate-400">MNCH · MOH 711 · ${mhuRangeCaption()}</div>
       </div>
       <div class="flex flex-col items-center justify-center py-14 text-sm text-slate-400">
         <div class="font-semibold text-slate-500">No MOH 711 data available for MNCH indicators</div>
@@ -2143,7 +2278,7 @@ function renderMhuMnch(container, facilityName, moh711Data) {
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">MNCH · MOH 711 · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">MNCH · MOH 711 · ${mhuRangeCaption()}</div>
     </div>
   `;
 
@@ -2272,7 +2407,7 @@ function renderMhuMnch(container, facilityName, moh711Data) {
         items: matUids
           .filter((uid) => (moh711Totals[uid] || 0) > 0)
           .map((uid) => ({
-            name: WORKLOAD_MOH711_LABELS[uid] || uid,
+            name: chartCfg.labels[uid] || uid,
             y: moh711Totals[uid] || 0,
           })),
       });
@@ -2341,7 +2476,7 @@ function renderMhuMnch(container, facilityName, moh711Data) {
       const seriesData = def.uids
         .filter((uid) => (moh711Totals[uid] || 0) > 0)
         .map((uid) => ({
-          name: WORKLOAD_MOH711_LABELS[uid] || uid,
+          name: chartCfg.labels[uid] || uid,
           data: moh711Series[uid] || [],
         }));
       renderHighchartLine(
@@ -2356,7 +2491,7 @@ function renderMhuMnch(container, facilityName, moh711Data) {
       const seriesData = def.uids
         .filter((uid) => (moh711Totals[uid] || 0) > 0)
         .map((uid) => ({
-          name: WORKLOAD_MOH711_LABELS[uid] || uid,
+          name: chartCfg.labels[uid] || uid,
           data: moh711Series[uid] || [],
         }));
       renderHighchartBar(
@@ -2761,7 +2896,7 @@ function renderMhuGenericTab(
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">${escapeHtml(tabTitle)} · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">${escapeHtml(tabTitle)} · ${mhuRangeCaption()}</div>
     </div>
   `;
 
@@ -2840,7 +2975,7 @@ function renderMhuGenericTable(
   let html = `
     <div class="mb-4">
       <div class="text-sm font-bold text-slate-700">${escapeHtml(facilityName)}</div>
-      <div class="text-[11px] text-slate-400">${escapeHtml(tabLabel)} · Last 12 months</div>
+      <div class="text-[11px] text-slate-400">${escapeHtml(tabLabel)} · ${mhuRangeCaption()}</div>
     </div>
   `;
 
@@ -2869,4 +3004,3 @@ function renderMhuGenericTable(
 
   container.innerHTML = html;
 }
-

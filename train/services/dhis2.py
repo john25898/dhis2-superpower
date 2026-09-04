@@ -45,15 +45,7 @@ def _dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
       - With coc_ids: dict of {(period_label, coc_id): value}
     dx_ids can be a single string or a list/set of strings.
     """
-    import requests as _req
-    from requests.auth import HTTPBasicAuth
-
-    # Always use the CHAK DHIS2 server
-    dhis_base = "http://ereporting.chak.or.ke:8500/api"
-    url_base = dhis_base + "/analytics.json"
-    username = os.getenv("DHIS_USERNAME", "Johnbrian")
-    password = os.getenv("DHIS_PASSWORD", "JOHNb123\\")
-    auth = HTTPBasicAuth(username, password)
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
 
     if isinstance(dx_ids, (list, set, tuple)):
         dx_str = ";".join(dx_ids)
@@ -68,6 +60,22 @@ def _dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
         ou_str = ";".join(ou_id)
     else:
         ou_str = ou_id
+
+    cache_key = make_key(dx_str, ou_str, pe, coc_ids, namespace="chak")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    import requests as _req
+    from requests.auth import HTTPBasicAuth
+
+    # Always use the CHAK DHIS2 server
+    dhis_base = "http://ereporting.chak.or.ke:8500/api"
+    url_base = dhis_base + "/analytics.json"
+    username = os.getenv("DHIS_USERNAME", "Johnbrian")
+    password = os.getenv("DHIS_PASSWORD", "JOHNb123\\")
+    auth = HTTPBasicAuth(username, password)
+
     dimensions = [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"]
     if coc_ids:
         if isinstance(coc_ids, (list, set, tuple)):
@@ -84,7 +92,9 @@ def _dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
         try:
             result = _superpower_fetch_result(api_url)
             if result.get("ok") and result.get("rows"):
-                return _parse_dhis2_rows(result["rows"], result.get("metaData", {}).get("items", {}), coc_ids)
+                parsed = _parse_dhis2_rows(result["rows"], result.get("metaData", {}).get("items", {}), coc_ids)
+                cache_set(cache_key, parsed)
+                return parsed
         except Exception:
             pass  # fall through to direct HTTP
 
@@ -99,13 +109,17 @@ def _dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
     data = resp.json()
     rows = data.get("rows", [])
     meta = data.get("metaData", {}).get("items", {})
-    return _parse_dhis2_rows(rows, meta, coc_ids)
+    parsed = _parse_dhis2_rows(rows, meta, coc_ids)
+    cache_set(cache_key, parsed)
+    return parsed
 
 
 def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
     """Fetch analytics rows from CHAK DHIS2.
     Returns {dx_id: {period_name: value, ...}, ...}
     """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
     import requests as _req
     from requests.auth import HTTPBasicAuth
 
@@ -123,6 +137,11 @@ def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
     else:
         ou_str = ou_id
 
+    cache_key = make_key(dx_str, ou_str, pe, namespace="chak")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
     url = CHAK_BASE.rstrip("/") + "/analytics.json"
     params = {
         "dimension": [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"],
@@ -135,7 +154,9 @@ def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
         data = resp.json()
         rows = data.get("rows", [])
         meta = data.get("metaData", {}).get("items", {})
-        return _khis_parse_per_de(rows, meta)
+        result = _khis_parse_per_de(rows, meta)
+        cache_set(cache_key, result)
+        return result
     except Exception:
         return {}
 

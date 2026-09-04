@@ -38,7 +38,7 @@ async function renderJamiiProgrammeHighlights(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=LAST_12_MONTHS`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=202607`;
 
   try {
     const resp = await fetch(url);
@@ -54,7 +54,9 @@ async function renderJamiiProgrammeHighlights(container) {
     const htsMomentum =
       tested > 0 ? Math.round((tested / Math.max(1, txCurr)) * 100) : 0;
 
-    document.getElementById("jamiiHighlightsLoading").outerHTML = `
+    const loadingEl = document.getElementById("jamiiHighlightsLoading");
+    if (!loadingEl || !container.contains(loadingEl)) return; // superseded render
+    loadingEl.outerHTML = `
       <div class="space-y-4">
         <div class="grid gap-3 md:grid-cols-2">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -105,7 +107,7 @@ async function renderJamiiWorkloadPage(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=LAST_12_MONTHS`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=202607`;
 
   try {
     const resp = await fetch(url);
@@ -125,7 +127,9 @@ async function renderJamiiWorkloadPage(container) {
       Math.min(100, Math.round((txNew / Math.max(1, txCurr)) * 100)),
     );
 
-    document.getElementById("jamiiWorkloadLoading").outerHTML = `
+    const loadingEl = document.getElementById("jamiiWorkloadLoading");
+    if (!loadingEl || !container.contains(loadingEl)) return; // superseded render
+    loadingEl.outerHTML = `
       <div class="space-y-4">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div class="text-sm font-semibold text-slate-700">Service workload summary</div>
@@ -162,6 +166,10 @@ async function renderJamiiWorkloadPage(container) {
 }
 
 async function renderJamiiOverview(container) {
+  // Old charts from a previous overview render still live inside this
+  // container — free them before replacing the DOM.
+  destroyChartsIn(container);
+
   container.innerHTML = `
     <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
       <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
@@ -169,6 +177,24 @@ async function renderJamiiOverview(container) {
     </div>
   `;
 
+  // Trend-range toggle: charts show the selected window (default last 6
+  // months ending July 2026); KPI cards still show the latest month.
+  if (!container.dataset.ovRangeBound) {
+    container.dataset.ovRangeBound = "1";
+    container.addEventListener("click", (ev) => {
+      const btn =
+        ev.target && ev.target.closest
+          ? ev.target.closest("[data-jamii-range]")
+          : null;
+      if (!btn) return;
+      const n = Number(btn.getAttribute("data-jamii-range")) || 6;
+      if (n === rangeMonthsOf(state.jamiiRangeMonths)) return;
+      state.jamiiRangeMonths = n;
+      renderJamiiOverview(container);
+    });
+  }
+
+  const rangeMonths = rangeMonthsOf(state.jamiiRangeMonths); // default 6
   const county =
     state.countyFilter !== "all" ? state.countyFilter : "Meru County";
   const scParam =
@@ -183,10 +209,12 @@ async function renderJamiiOverview(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
+  // If the user picked a single month in the top period filter, respect it;
+  // otherwise send an explicit month list ending at 202607 (July 2026).
   const selectedPeriod =
     state.periodFilter && state.periodFilter !== "all"
       ? state.periodFilter
-      : "LAST_12_MONTHS";
+      : buildMonthRangeParam("202607", rangeMonths);
 
   try {
     const [summaryResp, vlResp, linkageResp, prepResp] = await Promise.all([
@@ -277,6 +305,25 @@ async function renderJamiiOverview(container) {
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
               <span class="h-2 w-2 rounded-full bg-sky-500"></span> Master overview
+            </div>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-2">
+            <div>
+              <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Trend range</div>
+              <div class="text-[10px] text-slate-400">KPI cards show the latest month; charts cover the selected window</div>
+            </div>
+            <div class="inline-flex gap-0.5 rounded-full bg-white p-0.5 shadow-sm">
+              ${[3, 6, 12]
+                .map(
+                  (n) =>
+                    `<button data-jamii-range="${n}" class="rounded-full px-3.5 py-1 text-[11px] font-semibold transition ${
+                      rangeMonths === n
+                        ? "bg-sky-500 text-white shadow"
+                        : "text-slate-500 hover:text-slate-800"
+                    }">${n}M</button>`,
+                )
+                .join("")}
             </div>
           </div>
 
@@ -1446,4 +1493,3 @@ async function renderJamiiTrendView(container, params) {
     container.innerHTML = `<div class="text-center py-6 text-xs text-red-500">${escapeHtml(err.message)}</div>`;
   }
 }
-

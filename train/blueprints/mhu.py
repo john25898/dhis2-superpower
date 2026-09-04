@@ -29,6 +29,31 @@ _MHU_CSV_ROWS_CACHE = None
 # Flexible name -> KHIS uid cache for the aggregate endpoint (built lazily
 # across requests; keyed by lowercased facility name)
 _MHU_FLEX_MATCH = {}
+# Parsed index of data/mhu_khis_mapping.json: (facilities_map, name_to_id,
+# flex_index).  Built once and reused by the aggregate endpoint so we never
+# re-read + re-parse the 10k+ facility file per POST.
+_MHU_MAPPING_INDEX = None
+
+
+def _get_mhu_mapping_index():
+    """Return (facilities_map, name_to_id, flex_index) for the KHIS mapping.
+    facilities_map is keyed by KHIS uid -> {name, county, ...}.
+    name_to_id is a lowercase-name -> uid dict (exact match).
+    flex_index is the name_to_id items list for containment fallback.
+    """
+    global _MHU_MAPPING_INDEX
+    if _MHU_MAPPING_INDEX is None:
+        config_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        facilities_map = config.get("facilities", {})
+        name_to_id = {}
+        for uid, finfo in facilities_map.items():
+            fn = finfo.get("name", "").strip().lower()
+            if fn:
+                name_to_id[fn] = uid
+        _MHU_MAPPING_INDEX = (facilities_map, name_to_id, list(name_to_id.items()))
+    return _MHU_MAPPING_INDEX
 
 
 def register_mhu_blueprint(app):
@@ -371,20 +396,9 @@ def mhu_khis_data_aggregate():
     if not dx or not names or not isinstance(names, list):
         return jsonify({"error": "Body must include 'dx' (string) and 'names' (array)"}), 400
     try:
-        # Load config to get facility -> KHIS ID mappings
-        config_path = BASE_DIR / "data" / "mhu_khis_mapping.json"
-        if not config_path.exists():
-            return jsonify({"error": "Mapping file not found"}), 404
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        facilities_map = config.get("facilities", {})
-
-        # Build name -> KHIS ID lookup (case-insensitive exact match)
-        name_to_id = {}
-        for uid, finfo in facilities_map.items():
-            fn = finfo.get("name", "").strip().lower()
-            if fn:
-                name_to_id[fn] = uid
+        # Load the pre-built name -> KHIS ID index (cached module-level so
+        # the 10k+ facility mapping file is parsed only once per process).
+        facilities_map, name_to_id, flex_index = _get_mhu_mapping_index()
 
         # Match requested names to KHIS IDs — exact first, then flexible
         # containment (same logic as the single-facility view) so CHAK
@@ -393,7 +407,6 @@ def mhu_khis_data_aggregate():
         # (facility set is static) so repeated loads are fast.
         matched_ids = []
         matched_names = []
-        flex_index = list(name_to_id.items())
         for name in names:
             key = name.lower().strip()
             uid = name_to_id.get(key)

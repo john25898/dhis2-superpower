@@ -8,6 +8,11 @@ function renderCurrentView() {
     return;
   }
 
+  // Destroy chart instances (Highcharts / Chart.js) that are about to be
+  // replaced. Without this, switching tabs repeatedly leaked chart objects,
+  // which slowed the page down and eventually made views feel stuck.
+  if (elements.chartRoot) destroyChartsIn(elements.chartRoot);
+
   renderPageTabs();
   populateFilterOptions();
 
@@ -924,4 +929,3 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
-

@@ -206,6 +206,110 @@ function scrollToPageTop() {
   });
 }
 
+// Navigate to a page/subtab. Sets the hash only when it changes; the
+// hashchange listener then performs exactly ONE renderCurrentView(). If the
+// hash is already the target (e.g. re-clicking the active tab), render once
+// here because no hashchange event will fire.
+function navigateTo(pageId, subtabSlug) {
+  const prevHash = window.location.hash;
+  state.activePage = pageId;
+  if (subtabSlug) state.activeSubtabs[pageId] = subtabSlug;
+  setPageHash(pageId, subtabSlug || state.activeSubtabs[pageId]);
+  if (window.location.hash === prevHash) renderCurrentView();
+}
+
+// Build a DHIS2 monthly `pe` list ending at `endPeriod` (YYYYMM) spanning
+// `count` months, e.g. buildMonthRangeParam("202607", 6) →
+// "202602;202603;202604;202605;202606;202607".
+function buildMonthRangeParam(endPeriod, count) {
+  const n = Math.max(1, Math.min(48, Math.round(Number(count) || 6)));
+  let year = Number(String(endPeriod).slice(0, 4));
+  let month = Number(String(endPeriod).slice(4, 6));
+  const months = [];
+  for (let i = 0; i < n; i++) {
+    months.unshift(String(year) + String(month).padStart(2, "0"));
+    month -= 1;
+    if (month === 0) {
+      month = 12;
+      year -= 1;
+    }
+  }
+  return months.join(";");
+}
+
+function rangeMonthsOf(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 6; // default: last 6 months
+  return Math.min(12, n);
+}
+
+// Destroy Highcharts / Chart.js instances that live inside `root` (or that
+// are already detached from the document). Called before a container's
+// innerHTML is replaced so chart objects are freed instead of accumulating.
+function destroyChartsIn(root) {
+  try {
+    if (window.Highcharts && Array.isArray(Highcharts.charts)) {
+      Highcharts.charts.slice().forEach(function (ch) {
+        try {
+          if (!ch) return;
+          const c = ch.container;
+          const orphaned = c && !c.isConnected;
+          if (!c || (root && root.contains && root.contains(c)) || orphaned) {
+            ch.destroy();
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      });
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  try {
+    if (window.Chart && Chart.instances) {
+      Object.keys(Chart.instances).forEach(function (key) {
+        try {
+          const inst = Chart.instances[key];
+          if (!inst || !inst.canvas) return;
+          const orphaned = !inst.canvas.isConnected;
+          if (
+            (root && root.contains && root.contains(inst.canvas)) ||
+            orphaned
+          ) {
+            inst.destroy();
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      });
+    }
+  } catch (e) {
+    /* ignore */
+  }
+
+  // Highcharts 13 leaves `null` placeholders in Highcharts.charts when a
+  // chart is destroyed. Compact them IN PLACE — never reassign the array,
+  // because Highcharts keeps its own reference to it internally and new
+  // charts are pushed to that original array.
+  try {
+    if (window.Highcharts && Array.isArray(Highcharts.charts)) {
+      const charts = Highcharts.charts;
+      for (let i = charts.length - 1; i >= 0; i--) {
+        const ch = charts[i];
+        if (!ch || !ch.container) {
+          try {
+            charts.splice(i, 1);
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 // ── Get subtabs filtered for current context (Jamii Tekelezi vs global) ──
 function getSubtabsForPage(pageId) {
   const meta = getPageMeta(pageId);
@@ -257,11 +361,10 @@ function bindHeaderNavLinks() {
           if (!state.activeSubtabs[pageId]) {
             state.activeSubtabs[pageId] = toSlug(meta.subtabs[0]);
           }
-          setPageHash(pageId, state.activeSubtabs[pageId]);
+          navigateTo(pageId, state.activeSubtabs[pageId]);
         } else {
-          setPageHash(pageId);
+          navigateTo(pageId);
         }
-        renderCurrentView();
         headerLinks.forEach(
           (ln) => ln.classList && ln.classList.remove("active"),
         );
@@ -460,8 +563,7 @@ function renderPageContext(pageId) {
         state.activePage = "health_programmes";
         state.activeSubtabs["health_programmes"] = "projects";
         if (elements.projectFilter) elements.projectFilter.value = "all";
-        setPageHash("health_programmes", "projects");
-        renderCurrentView();
+        navigateTo("health_programmes", "projects");
       });
     }
     // Still render subtabs
@@ -479,9 +581,8 @@ function renderPageContext(pageId) {
         btn.addEventListener("click", () => {
           const slug = btn.getAttribute("data-subtab") || "";
           state.activeSubtabs[pageId] = slug;
-          setPageHash(pageId, slug);
+          navigateTo(pageId, slug);
           scrollToPageTop();
-          renderCurrentView();
         });
       });
     } else {
@@ -518,9 +619,8 @@ function renderPageContext(pageId) {
     btn.addEventListener("click", () => {
       const slug = btn.getAttribute("data-subtab") || "";
       state.activeSubtabs[pageId] = slug;
-      setPageHash(pageId, slug);
+      navigateTo(pageId, slug);
       scrollToPageTop();
-      renderCurrentView();
     });
   });
 }
@@ -826,6 +926,7 @@ function renderPageTabs() {
           var pid = el.getAttribute("data-page-tab") || "overview";
           var dsId = el.getAttribute("data-ds-id") || "";
           var dbId = el.getAttribute("data-db-id") || "";
+          var hashBefore = window.location.hash;
           if (pid === "overview") {
             state.activePage = "overview";
             state.activeDatasetId = "";
@@ -847,7 +948,7 @@ function renderPageTabs() {
               "#/" + prefix + "chak_dashboard/" + encodeURIComponent(dbId);
           }
           scrollToPageTop();
-          renderCurrentView();
+          if (window.location.hash === hashBefore) renderCurrentView();
         });
       });
     return;
@@ -879,15 +980,12 @@ function renderPageTabs() {
       const pid = el.getAttribute("data-page-tab") || "overview";
       state.activePage = pid;
       const meta = getPageMeta(pid);
-      if (meta.subtabs && meta.subtabs.length) {
-        if (!state.activeSubtabs[pid])
-          state.activeSubtabs[pid] = toSlug(meta.subtabs[0]);
-        setPageHash(pid, state.activeSubtabs[pid]);
-      } else {
-        setPageHash(pid);
+      const hasSubtabs = !!(meta.subtabs && meta.subtabs.length);
+      if (hasSubtabs && !state.activeSubtabs[pid]) {
+        state.activeSubtabs[pid] = toSlug(meta.subtabs[0]);
       }
+      navigateTo(pid, hasSubtabs ? state.activeSubtabs[pid] : undefined);
       scrollToPageTop();
-      renderCurrentView();
     });
   });
 }

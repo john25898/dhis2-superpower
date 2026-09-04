@@ -15,12 +15,7 @@ def _khis_fetch(dx_ids, ou_id, pe="LAST_MONTH", coc_ids=None):
     """Fetch analytics rows from the KHIS DHIS2 server.
     Same interface as _dhis2_fetch but targets https://hiskenya.dha.go.ke/api.
     """
-    import requests as _req
-    from requests.auth import HTTPBasicAuth
-
-    base = KHIS_BASE
-    url_base = base.rstrip("/") + "/analytics.json"
-    auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
 
     if isinstance(dx_ids, (list, set, tuple)):
         dx_str = ";".join(dx_ids)
@@ -33,6 +28,19 @@ def _khis_fetch(dx_ids, ou_id, pe="LAST_MONTH", coc_ids=None):
         ou_str = ";".join(ou_id)
     else:
         ou_str = ou_id
+
+    cache_key = make_key(dx_str, ou_str, pe, coc_ids, namespace="khis")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    import requests as _req
+    from requests.auth import HTTPBasicAuth
+
+    base = KHIS_BASE
+    url_base = base.rstrip("/") + "/analytics.json"
+    auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+
     dimensions = [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"]
     if coc_ids:
         if isinstance(coc_ids, (list, set, tuple)):
@@ -49,7 +57,9 @@ def _khis_fetch(dx_ids, ou_id, pe="LAST_MONTH", coc_ids=None):
     rows = data.get("rows", [])
     meta = data.get("metaData", {}).get("items", {})
     # Return per-DE data
-    return _khis_parse_per_de(rows, meta)
+    result = _khis_parse_per_de(rows, meta)
+    cache_set(cache_key, result)
+    return result
 
 
 def _khis_parse_per_de(rows, meta):
@@ -108,12 +118,7 @@ def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_MONTH"):
     """Fetch analytics rows with CO dimension, returning per-COC data.
     Returns: {"DE_ID.CO_ID": {period_name: value, ...}, ...}
     """
-    import requests as _req
-    from requests.auth import HTTPBasicAuth
-
-    base = KHIS_BASE
-    url_base = base.rstrip("/") + "/analytics.json"
-    auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
 
     if isinstance(dx_ids, (list, set, tuple)):
         dx_str = ";".join(dx_ids)
@@ -132,6 +137,18 @@ def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_MONTH"):
     else:
         coc_str = coc_ids
 
+    cache_key = make_key(dx_str, ou_str, pe, coc_str, namespace="khis")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    import requests as _req
+    from requests.auth import HTTPBasicAuth
+
+    base = KHIS_BASE
+    url_base = base.rstrip("/") + "/analytics.json"
+    auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+
     dimensions = [f"dx:{dx_str}", f"co:{coc_str}", f"pe:{pe}", f"ou:{ou_str}"]
     params = {"dimension": dimensions, "displayProperty": "NAME"}
     resp = _req.get(url_base, params=params, auth=auth, timeout=120)
@@ -141,7 +158,9 @@ def _khis_fetch_disaggregated(dx_ids, ou_id, coc_ids, pe="LAST_MONTH"):
     rows = data.get("rows", [])
     meta = data.get("metaData", {}).get("items", {})
     headers = data.get("headers", [])
-    return _khis_parse_per_coc(rows, meta, headers)
+    result = _khis_parse_per_coc(rows, meta, headers)
+    cache_set(cache_key, result)
+    return result
 
 
 # ── Facility → Ward mapping (for HIV ward-level queries) ─────────

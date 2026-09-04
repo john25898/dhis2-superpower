@@ -120186,5 +120186,157 @@
         ]
       }
     ]
+  },
+  "moh711": [
+    {
+      "id": "f9vesk5d4IY",
+      "name": "ANC New Visits"
+    },
+    {
+      "id": "Fz0LzxMT1vV",
+      "name": "ANC 4th Visit (Completing 4 visits)"
+    },
+    {
+      "id": "cKr5133RFuN",
+      "name": "ANC 8th Visit (Completed 8 contacts)"
+    },
+    {
+      "id": "jaPrPmor6WV",
+      "name": "Normal Deliveries"
+    },
+    {
+      "id": "sMqM8DwiAaj",
+      "name": "Breach Delivery"
+    },
+    {
+      "id": "Kx64gGqaFVq",
+      "name": "Assisted Vaginal Delivery"
+    },
+    {
+      "id": "KuMX8VqCejs",
+      "name": "Deliveries from HIV+ Women"
+    },
+    {
+      "id": "rAZBTMa7Jy3",
+      "name": "Caesarian Sections"
+    },
+    {
+      "id": "zVTIzkATPDS",
+      "name": "Babies discharged Alive"
+    },
+    {
+      "id": "syjjPqXbjTm",
+      "name": "Low Birth Weight (<2500gms)"
+    },
+    {
+      "id": "GAr6xu6f1n7",
+      "name": "Neonatal Deaths (0-28 Days)"
+    },
+    {
+      "id": "BYMSIbnUzXQ",
+      "name": "Maternal Deaths (15-19 yrs)"
+    },
+    {
+      "id": "AC1Iorxdijc",
+      "name": "Maternal Deaths (20-24 yrs)"
+    },
+    {
+      "id": "dPRCstLVkZu",
+      "name": "Maternal Deaths (25+ yrs)"
+    },
+    {
+      "id": "CoAXLBxR0Ik",
+      "name": "Adolescent Maternal Deaths (10-19 yrs)"
+    },
+    {
+      "id": "kAp7ViUXEKh",
+      "name": "Maternal Deaths Audited (7 days)"
+    },
+    {
+      "id": "tHRlLvvCObn",
+      "name": "Neonatal Deaths Audited (7 days)"
+    }
+  ],
+  "workloadAdmissions": {
+    "deIds": [
+      "cvJuw6Fbuiw",
+      "r7LJ3kCX8EZ"
+    ],
+    "deLabels": {
+      "cvJuw6Fbuiw": "Under 5",
+      "r7LJ3kCX8EZ": "Over 5"
+    },
+    "departments": [
+      {
+        "id": "ObiJr399QRt",
+        "name": "PAEDIATRICS",
+        "label": "Paediatrics"
+      },
+      {
+        "id": "bPNw3Km3Ug7",
+        "name": "MATERNITY",
+        "label": "Maternity"
+      },
+      {
+        "id": "O68sxX0pJMT",
+        "name": "PSYCHIATRY",
+        "label": "Psychiatry"
+      },
+      {
+        "id": "oJ6IUNugflo",
+        "name": "EYE",
+        "label": "Eye"
+      },
+      {
+        "id": "KFmqREu0VSL",
+        "name": "SURGICAL",
+        "label": "Surgical"
+      },
+      {
+        "id": "JUI7tesx6as",
+        "name": "AMENITY",
+        "label": "Amenity"
+      },
+      {
+        "id": "Lj5arkL7GL8",
+        "name": "MEDICAL",
+        "label": "Medical"
+      },
+      {
+        "id": "R99ctw9w6Kt",
+        "name": "RENAL",
+        "label": "Renal"
+      },
+      {
+        "id": "B0ji6ZY2zJ3",
+        "name": "ORTHOPAEDIC",
+        "label": "Orthopaedic"
+      },
+      {
+        "id": "szjWdpjHTDe",
+        "name": "ISOLATION",
+        "label": "Isolation"
+      },
+      {
+        "id": "vr2WcWaojbO",
+        "name": "NURSERY/NEWBORN",
+        "label": "Nursery/Newborn"
+      },
+      {
+        "id": "tMEFFDHQCAW",
+        "name": "ICU",
+        "label": "ICU"
+      },
+      {
+        "id": "Qy5yADe3SiB",
+        "name": "OTHER",
+        "label": "Other"
+      },
+      {
+        "id": "rYfAgBnJKnj",
+        "name": "OBST/GYN",
+        "label": "Obst/Gyn"
+      }
+    ]
   }
 }
