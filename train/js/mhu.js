@@ -231,13 +231,8 @@ async function renderMhuPage() {
         </div>
       </div>
 
-      <!-- Trend range picker (defaults to last 6 months) -->
-      <div class="flex items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
-        <div class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Trend range</div>
-        <div class="inline-flex gap-0.5 rounded-lg bg-slate-100 p-0.5">
-          ${mhuRangeButtonsHtml()}
-        </div>
-      </div>
+      <!-- Reporting period picker: quick ranges / single month / custom date range -->
+      ${mhuPeriodCardHtml()}
 
       <!-- Detail Area: KHIS MOH 717 subtabs (always visible) -->
       <div id="mhuRoot" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm min-h-[200px]">
@@ -268,8 +263,9 @@ async function renderMhuPage() {
     </div>
   `;
 
-  // Bind the trend-range toggle
+  // Bind the reporting-period controls (quick ranges + calendar pickers)
   bindMhuRangeControls();
+  bindMhuPeriodControls();
 
   // ── Bind county filter ──
   const countyEl = document.getElementById("mhuCountyFilter");
@@ -672,15 +668,41 @@ const MHU_BADGE = "KHIS MOH 717";
 // 12-month pull when loading the MHU tab with all facilities)
 const MHU_PE = "LAST_MONTH";
 
-// ── Trend range (used by Workload / HTN-Diabetes / MNCH / Other trends) ──
-// Defaults to the last 6 months. The "Trend range" toggle on the MHU page
-// updates state.mhuTrendMonths (1/3/6/12). Periods are pinned to end at
-// 202607 (July 2026) so the numbers stay aligned with the rest of the app.
+// ── Reporting period (used by Workload / HTN-Diabetes / MNCH / Other trends) ──
+// Three ways to pick a window:
+//   1. Quick ranges (default): the last 1/3/6/12 months ending at 202607
+//      (July 2026) so numbers stay aligned with the rest of the app.
+//   2. A single month picked from a calendar (`<input type="month">`).
+//   3. A custom date range picked from two calendar date inputs — KHIS data is
+//      monthly, so the whole months between the two dates are included.
+// A custom selection (2 or 3) overrides the quick range until a quick chip is
+// clicked or "Reset" is pressed.
+function mhuCustomSelection() {
+  if (state.mhuFromYmd && state.mhuToYmd) {
+    const list = perYmListBetweenDates(state.mhuFromYmd, state.mhuToYmd, 24);
+    if (!list.length) return null;
+    return { pe: list.join(";"), caption: perYmSpanLabel(list) };
+  }
+  if (state.mhuSingleVal && /^\d{4}-\d{2}$/.test(state.mhuSingleVal)) {
+    const ym = state.mhuSingleVal.replace("-", "");
+    return { pe: ym, caption: perYmShortLabel(ym) };
+  }
+  return null;
+}
+
 function mhuTrendMonths() {
   return rangeMonthsOf(state.mhuTrendMonths); // defaults to 6
 }
 
+function mhuClearCustom() {
+  state.mhuSingleVal = null;
+  state.mhuFromYmd = null;
+  state.mhuToYmd = null;
+}
+
 function mhuTrendPe() {
+  const c = mhuCustomSelection();
+  if (c) return c.pe;
   const n = mhuTrendMonths();
   // n = 1 → just July 2026. (Don't use LAST_MONTH here: DHIS2 expands it to
   // two months, current + previous.)
@@ -689,12 +711,49 @@ function mhuTrendPe() {
 }
 
 function mhuRangeCaption() {
+  const c = mhuCustomSelection();
+  if (c) return c.caption;
   const n = mhuTrendMonths();
   return n <= 1 ? "last month" : `last ${n} months`;
 }
 
+function mhuSelectedMonthKeys() {
+  return mhuTrendPe().split(";").filter(Boolean);
+}
+
+// Friendly one-line summary shown under the controls, e.g.
+// "Showing the last 6 months (Feb 2026 – Jul 2026)".
+function mhuPeriodSummaryText() {
+  const keys = mhuSelectedMonthKeys();
+  if (!keys.length) return "";
+  const c = mhuCustomSelection();
+  if (c) {
+    if (state.mhuFromYmd && state.mhuToYmd) {
+      return `Showing <b>${c.caption}</b> (dates ${perYmdShortLabel(
+        state.mhuFromYmd,
+      )} &rarr; ${perYmdShortLabel(state.mhuToYmd)})`;
+    }
+    return `Showing <b>${c.caption}</b>`;
+  }
+  const n = mhuTrendMonths();
+  return `Showing the last <b>${n} month${n > 1 ? "s" : ""}</b> (${perYmSpanLabel(keys)})`;
+}
+
+// KHIS MOH 717 reporting ends at July 2026 in this environment; later months
+// have little or no data yet — surface that honestly instead of blank charts.
+function mhuCustomWarning() {
+  const c = mhuCustomSelection();
+  if (!c) return "";
+  const keys = c.pe.split(";").filter(Boolean);
+  const lastKey = keys[keys.length - 1];
+  if (lastKey && lastKey > "202607") {
+    return "Note: KHIS monthly reports are complete up to July 2026 &mdash; later months may show little or no data yet.";
+  }
+  return "";
+}
+
 function mhuRangeButtonsHtml() {
-  const active = mhuTrendMonths();
+  const active = mhuCustomSelection() ? null : mhuTrendMonths();
   const opts = [
     { n: 1, label: "1M" },
     { n: 3, label: "3M" },
@@ -713,16 +772,121 @@ function mhuRangeButtonsHtml() {
     .join("");
 }
 
+function mhuPeriodCardHtml() {
+  const monthVal = state.mhuSingleVal || "";
+  const fromVal = state.mhuFromYmd || "";
+  const toVal = state.mhuToYmd || "";
+  const summary = mhuPeriodSummaryText();
+  const warning = mhuCustomWarning();
+  const inputCls =
+    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200";
+  return `
+  <div class="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <div class="min-w-[160px]">
+        <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Quick range</div>
+        <div class="inline-flex gap-0.5 rounded-lg bg-slate-100 p-0.5">${mhuRangeButtonsHtml()}</div>
+      </div>
+      <div class="min-w-[150px]">
+        <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Single month</div>
+        <input type="month" id="mhuMonthInput" value="${monthVal}" min="2024-01" max="2027-12"
+          aria-label="Pick a single month"
+          class="${inputCls}">
+      </div>
+      <div class="min-w-[320px] flex-1">
+        <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Custom date range (calendar)</div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <input type="date" id="mhuFromDate" value="${fromVal}" aria-label="Start date"
+            class="${inputCls}">
+          <span class="text-[12px] font-medium text-slate-500">&nbsp;to&nbsp;</span>
+          <input type="date" id="mhuToDate" value="${toVal}" aria-label="End date"
+            class="${inputCls}">
+          <button id="mhuDateApply" type="button"
+            class="rounded-lg bg-sky-600 px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-sky-500">Apply</button>
+          <button id="mhuPeriodReset" type="button"
+            class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-100">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="mt-2 border-t border-slate-100 pt-2 text-[12px] leading-relaxed text-slate-500">
+      ${summary}
+      ${
+        warning
+          ? `<span class="text-amber-600"> &middot; ${warning}</span>`
+          : ""
+      }
+      <span id="mhuPeriodError" class="hidden font-semibold text-red-500"></span>
+    </div>
+  </div>`;
+}
+
 function bindMhuRangeControls() {
   const btns = document.querySelectorAll("[data-mhu-range]");
   btns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const n = Number(btn.getAttribute("data-mhu-range")) || 6;
-      if (n === mhuTrendMonths()) return;
+      if (!mhuCustomSelection() && n === mhuTrendMonths()) return;
+      mhuClearCustom();
       state.mhuTrendMonths = n;
       renderMhuPage();
     });
   });
+}
+
+function showMhuPeriodError(msg) {
+  const el = document.getElementById("mhuPeriodError");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function bindMhuPeriodControls() {
+  // Single-month calendar picker
+  const monthInput = document.getElementById("mhuMonthInput");
+  if (monthInput) {
+    monthInput.addEventListener("change", () => {
+      const v = monthInput.value;
+      if (!v) return;
+      mhuClearCustom();
+      state.mhuSingleVal = v;
+      renderMhuPage();
+    });
+  }
+  // Custom date range → apply
+  const applyBtn = document.getElementById("mhuDateApply");
+  if (applyBtn) {
+    applyBtn.addEventListener("click", () => {
+      const f = document.getElementById("mhuFromDate");
+      const t = document.getElementById("mhuToDate");
+      const fv = f && f.value ? f.value : "";
+      const tv = t && t.value ? t.value : "";
+      if (!fv || !tv) {
+        showMhuPeriodError(
+          "Please pick both a start date and an end date from the calendars.",
+        );
+        return;
+      }
+      if (fv > tv) {
+        showMhuPeriodError(
+          `Start (${perYmdShortLabel(fv)}) is after end (${perYmdShortLabel(tv)}) &mdash; please swap them.`,
+        );
+        return;
+      }
+      mhuClearCustom();
+      state.mhuFromYmd = fv;
+      state.mhuToYmd = tv;
+      renderMhuPage();
+    });
+  }
+  // Reset back to the default quick range (last 6 months)
+  const resetBtn = document.getElementById("mhuPeriodReset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      mhuClearCustom();
+      state.mhuTrendMonths = 6;
+      renderMhuPage();
+    });
+  }
 }
 
 // ── MOH 711 / Admission / Department config for Workload & MNCH ──────

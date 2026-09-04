@@ -16,10 +16,33 @@ async function renderJamiiPage(container, activeSlug) {
   }
 }
 
+// Reset the global top-bar period picker back to its default ("Period", i.e.
+// the app's pinned window ending July 2026). Called when the user switches a
+// Jamii view back to a trend-range chip or after a picked month has no data.
+function resetTopPeriodFilterUI() {
+  state.periodFilter = "all";
+  const label = document.getElementById("periodLabel");
+  const input = document.getElementById("periodFilter");
+  if (label) {
+    label.textContent = "Period";
+    label.style.color = "#64748b";
+  }
+  if (input) input.value = "";
+}
+
+// Period to use for single-month snapshot pages. Defaults to July 2026 (the
+// pinned reference month) unless the user actively picked a month in the top
+// period picker — then that month is honoured.
+function jtSnapshotMonthYm() {
+  const f = state.periodFilter;
+  if (f && f !== "all" && /^\d{4}-\d{2}$/.test(f)) return f.replace("-", "");
+  return "202607";
+}
+
 async function renderJamiiProgrammeHighlights(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights</div>
+      <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights · ${perYmShortLabel(jtSnapshotMonthYm())}</div>
       <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiHighlightsLoading">Loading snapshot…</div>
     </div>
   `;
@@ -38,7 +61,7 @@ async function renderJamiiProgrammeHighlights(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=202607`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotMonthYm()}`;
 
   try {
     const resp = await fetch(url);
@@ -88,7 +111,7 @@ async function renderJamiiProgrammeHighlights(container) {
 async function renderJamiiWorkloadPage(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus</div>
+      <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus · ${perYmShortLabel(jtSnapshotMonthYm())}</div>
       <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiWorkloadLoading">Loading workload view…</div>
     </div>
   `;
@@ -107,7 +130,7 @@ async function renderJamiiWorkloadPage(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=202607`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotMonthYm()}`;
 
   try {
     const resp = await fetch(url);
@@ -170,6 +193,11 @@ async function renderJamiiOverview(container) {
   // container — free them before replacing the DOM.
   destroyChartsIn(container);
 
+  // A one-shot notice (e.g. "that month has no data yet") survives the fallback
+  // re-render through dataset and is removed once shown.
+  const jamiiNotice = container.dataset.jamiiNotice || "";
+  if (jamiiNotice) delete container.dataset.jamiiNotice;
+
   container.innerHTML = `
     <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
       <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
@@ -188,7 +216,11 @@ async function renderJamiiOverview(container) {
           : null;
       if (!btn) return;
       const n = Number(btn.getAttribute("data-jamii-range")) || 6;
-      if (n === rangeMonthsOf(state.jamiiRangeMonths)) return;
+      // Clicking a chip after picking a top-bar month switches back to the
+      // pinned trend window, so always clear the month first.
+      const hadMonth = !!(state.periodFilter && state.periodFilter !== "all");
+      if (hadMonth) resetTopPeriodFilterUI();
+      if (!hadMonth && n === rangeMonthsOf(state.jamiiRangeMonths)) return;
       state.jamiiRangeMonths = n;
       renderJamiiOverview(container);
     });
@@ -215,6 +247,10 @@ async function renderJamiiOverview(container) {
     state.periodFilter && state.periodFilter !== "all"
       ? state.periodFilter
       : buildMonthRangeParam("202607", rangeMonths);
+  const monthPicked = !!(state.periodFilter && state.periodFilter !== "all");
+  const pickedYm = monthPicked
+    ? String(state.periodFilter).replace("-", "")
+    : "";
 
   try {
     const [summaryResp, vlResp, linkageResp, prepResp] = await Promise.all([
@@ -257,6 +293,28 @@ async function renderJamiiOverview(container) {
     const txNewTrend = summaryJson.tx_new_trend || [];
     const htsTrend = summaryJson.hts_trend || [];
     const latest = summaryJson.latest || {};
+
+    // A picked month with no reports at all (e.g. a future month) returns empty
+    // arrays plus an empty `latest` object. Instead of showing a wall of zeros,
+    // fall back to the pinned window and explain why.
+    const emptyForPickedMonth =
+      monthPicked &&
+      !txCurrTrend.length &&
+      !txNewTrend.length &&
+      !htsTrend.length &&
+      (!latest || Object.keys(latest).length === 0);
+
+    if (emptyForPickedMonth) {
+      const msg = `No KHIS reporting is available for <b>${perYmShortLabel(
+        pickedYm,
+      )}</b> yet &mdash; a month&rsquo;s reports usually appear after the month closes. Showing the latest available data instead.`;
+      resetTopPeriodFilterUI();
+      state.jamiiRangeMonths = 6;
+      container.dataset.jamiiNotice = msg;
+      renderJamiiOverview(container);
+      return;
+    }
+
     const latestVl = (vlJson.trend || []).slice(-1)[0] || {};
     const latestLinkage = (linkageJson.trend || []).slice(-1)[0] || {};
     const latestPrep = (prepJson.trend || []).slice(-1)[0] || {};
@@ -297,6 +355,11 @@ async function renderJamiiOverview(container) {
 
     container.innerHTML = `
       <div class="space-y-6">
+        ${
+          jamiiNotice
+            ? `<div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">${jamiiNotice}</div>`
+            : ""
+        }
         <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>

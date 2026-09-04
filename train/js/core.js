@@ -243,6 +243,82 @@ function rangeMonthsOf(value) {
   return Math.min(12, n);
 }
 
+// ── Calendar date range helpers (used by the MHU custom period picker) ──────
+// KHIS/DHIS2 aggregates are monthly, so a picked date range maps to the list of
+// whole months between the two dates (inclusive). Windows are capped at 24
+// months (dropping the earliest months) to keep API payloads reasonable.
+const CORE_MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function perYmShortLabel(ym) {
+  const y = Number(String(ym).slice(0, 4));
+  const m = Number(String(ym).slice(4, 6));
+  if (!y || !m || m < 1 || m > 12) return String(ym || "");
+  return CORE_MONTH_SHORT[m - 1] + " " + y;
+}
+
+function perYmdShortLabel(ymd) {
+  const s = String(ymd || "");
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (!m) return s;
+  return Number(m[3]) + " " + CORE_MONTH_SHORT[Number(m[2]) - 1] + " " + m[1];
+}
+
+// Inclusive list of "YYYYMM" months between two "YYYY-MM-DD" dates (ascending).
+// Returns [] when invalid or start > end. Clamps to `maxMonths` keeping the end.
+function perYmListBetweenDates(startYmd, endYmd, maxMonths) {
+  const parts = function (s) {
+    const m = /^(\d{4})-(\d{2})/.exec(String(s || ""));
+    return m ? { y: Number(m[1]), m: Number(m[2]) } : null;
+  };
+  const a = parts(startYmd);
+  const b = parts(endYmd);
+  if (!a || !b || a.m < 1 || a.m > 12 || b.m < 1 || b.m > 12) return [];
+  const aIdx = a.y * 12 + (a.m - 1);
+  const bIdx = b.y * 12 + (b.m - 1);
+  if (bIdx < aIdx) return [];
+  const cap = Math.max(1, Math.min(24, Math.round(Number(maxMonths) || 24)));
+  const total = bIdx - aIdx + 1;
+  const skip = Math.max(0, total - cap);
+  const out = [];
+  for (let i = skip; i < total; i++) {
+    const idx = aIdx + i;
+    const y = Math.floor(idx / 12);
+    const mo = (idx % 12) + 1;
+    out.push(String(y) + String(mo).padStart(2, "0"));
+  }
+  return out;
+}
+
+// Compact caption for a month list, e.g. "Jul 2026" or "Feb 2026 – Jul 2026".
+function perYmSpanLabel(yms) {
+  const list = Array.isArray(yms) ? yms.filter(Boolean) : [];
+  if (!list.length) return "";
+  if (list.length === 1) return perYmShortLabel(list[0]);
+  const first = list[0];
+  const last = list[list.length - 1];
+  if (first.slice(0, 4) === last.slice(0, 4)) {
+    return (
+      CORE_MONTH_SHORT[Number(first.slice(4, 6)) - 1] +
+      " – " +
+      perYmShortLabel(last)
+    );
+  }
+  return perYmShortLabel(first) + " – " + perYmShortLabel(last);
+}
+
 // Destroy Highcharts / Chart.js instances that live inside `root` (or that
 // are already detached from the document). Called before a container's
 // innerHTML is replaced so chart objects are freed instead of accumulating.
