@@ -319,16 +319,21 @@ def _daraja_scope():
     """Resolve the Daraja facility roster to CHAK DHIS2 org-unit ids.
 
     Reads train/Site_Census - Daraja.xlsx (the 259-facility merged
-    Jamii Tekelezi + CHAP Stawisha census) and matches each facility name
-    against the CHAK ereporting org-unit index (all_chak_facilities.csv +
-    CHAK MHUs.csv) — exact match first, containment fallback.
+    Jamii Tekelezi + CHAP Stawisha census).  Each census row carries the
+    national MFL code (col A) and the CHAK ereporting org units store the
+    same code, so we match by MFL code first — this also catches the
+    ~19 facilities whose CHAK display name differs from the census name
+    (e.g. census 'Olkalou Sub-District Hospital' -> CHAK 'JM Kariuki
+    Memorial County Referral Hospital').  Facilities with no code hit fall
+    back to the local name index (all_chak_facilities.csv + CHAK MHUs.csv)
+    with exact-first then containment matching.
     Returns (daraja_names, matched_ou_ids, matched_count).
     """
     global _DARJA_OUS_CACHE
     if _DARJA_OUS_CACHE is not None:
         return _DARJA_OUS_CACHE
 
-    daraja_names = []
+    daraja_rows = []  # each: {"mfl": code, "name": census display name}
     census_path = BASE_DIR / "Site_Census - Daraja.xlsx"
     try:
         if census_path.exists():
@@ -348,12 +353,13 @@ def _daraja_scope():
                     if not mfl or mfl in seen_mfl or not name:
                         continue
                     seen_mfl.add(mfl)
-                    daraja_names.append(name)
+                    daraja_rows.append({"mfl": mfl, "name": name})
             wb.close()
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] Daraja census parse failed: {exc}")
+    daraja_names = [r["name"] for r in daraja_rows]
 
-    # CHAK DHIS2 org-unit index (uid, lower-name)
+    # CHAK DHIS2 org-unit index (uid, lower-name) for name fallback
     index = []
     try:
         csv_path = BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv"
@@ -384,21 +390,78 @@ def _daraja_scope():
         by_name.setdefault(name, uid)
     flex = list(by_name.items())
 
+    # Primary join: national MFL code -> CHAK org-unit uid (live metadata).
+    by_code = _fetch_chak_ou_by_code(
+        [r["mfl"] for r in daraja_rows]
+    )
+
     matched_ids = []
-    for name in daraja_names:
-        key = name.lower().strip()
-        uid = by_name.get(key)
+    for row in daraja_rows:
+        uid = by_code.get(row["mfl"])
         if not uid:
-            for fn, cand in flex:
-                if key in fn or fn in key:
-                    uid = cand
-                    break
+            key = row["name"].lower().strip()
+            uid = by_name.get(key)
+            if not uid:
+                for fn, cand in flex:
+                    if key in fn or fn in key:
+                        uid = cand
+                        break
         if uid:
             matched_ids.append(uid)
     # unique, order-preserving
     matched_ids = list(dict.fromkeys(matched_ids))
     _DARJA_OUS_CACHE = (daraja_names, matched_ids, len(matched_ids))
     return _DARJA_OUS_CACHE
+
+
+def _fetch_chak_ou_by_code(codes):
+    """Map CHAK ereporting org-unit codes (national MFL codes) to UIDs.
+
+    Queries /api/organisationUnits.json with a code:in:[...] filter in
+    chunks (URL-length safety).  Returns {} if CHAK is unreachable — the
+    caller then falls back to name matching only.
+    """
+    mapping = {}
+    try:
+        import requests as _req
+        from requests.auth import HTTPBasicAuth
+
+        from services.dhis2 import CHAK_PASS, CHAK_USER
+
+        base = "http://ereporting.chak.or.ke:8500/api"
+        url = base + "/organisationUnits.json"
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+        # Chunk below URL-length comfort; retry transient resets.
+        for i in range(0, len(codes), 100):
+            chunk = codes[i:i + 100]
+            params = {
+                "filter": "code:in:[" + ",".join(chunk) + "]",
+                "fields": "id,code,level",
+                "paging": "false",
+            }
+            for attempt in range(3):
+                try:
+                    resp = _req.get(url, params=params, auth=auth,
+                                    timeout=90, verify=False)
+                except Exception as exc:  # noqa: BLE001
+                    if attempt == 2:
+                        print(f"[MILESTONE] CHAK OU-by-code fetch "
+                              f"failed (attempt {attempt + 1}): {exc}")
+                        return {}
+                    continue
+                if not resp.ok:
+                    print(f"[MILESTONE] CHAK OU-by-code HTTP "
+                          f"{resp.status_code} on chunk {i // 100}")
+                    return {}
+                for ou in resp.json().get("organisationUnits", []) or []:
+                    c = (ou.get("code") or "").strip()
+                    if c and ou.get("level") == 5 and c not in mapping:
+                        mapping[c] = ou["id"]
+                break
+        return mapping
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK OU-by-code fetch failed: {exc}")
+        return {}
 
 
 def _pe_key(pe):
