@@ -12,11 +12,13 @@ Serves a single read-only API:  GET /api/milestone/data
 from __future__ import annotations
 
 import csv
+import os
 import re
+import time
 from datetime import date, datetime
 
 import openpyxl
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from services.paths import BASE_DIR
 
@@ -26,6 +28,13 @@ _app = None  # set by register_milestone_blueprint
 
 # ── Module-level cache (parsed once, reused across requests) ──
 _MILESTONE_CACHE = None
+_MILESTONE_CACHE_AT = 0.0
+# Auto-refresh the live CHAK DHIS2 (MOH 731) baseline this often so the
+# tracker picks up new data-entry without a Flask restart.  Override with
+# env MILESTONE_CACHE_TTL (seconds).  The underlying analytics layer also
+# caches per-data-element for 300 s, so the real DHIS2 pull cadence is
+# ~max(TTL, 300 s) per element.
+_MILESTONE_TTL = int(os.getenv("MILESTONE_CACHE_TTL", "300"))
 
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
@@ -834,11 +843,34 @@ def _build_payload():
 
 @milestone_bp.get("/api/milestone/data")
 def milestone_data():
-    """Return the full Milestone Tracker dataset (read-only)."""
-    global _MILESTONE_CACHE
+    """Return the full Milestone Tracker dataset (read-only).
+
+    The payload is cached and auto-refreshed every _MILESTONE_TTL seconds
+    so live CHAK DHIS2 (MOH 731) numbers stay fresh without a restart.
+    Append ?refresh=1 to force an immediate rebuild.  If a rebuild fails
+    the last good payload is kept (never blank the dashboard on a DHIS2
+    hiccup); the failure is surfaced in the khis note.
+    """
+    global _MILESTONE_CACHE, _MILESTONE_CACHE_AT
     try:
-        if _MILESTONE_CACHE is None:
-            _MILESTONE_CACHE = _build_payload()
+        force = request.args.get("refresh") in ("1", "true", "yes")
+        stale = _MILESTONE_CACHE is None or (
+            time.time() - _MILESTONE_CACHE_AT > _MILESTONE_TTL
+        )
+        if stale or force:
+            try:
+                rebuilt = _build_payload()
+            except Exception as exc:  # noqa: BLE001
+                if _MILESTONE_CACHE is None:
+                    return jsonify({"ok": False, "error": str(exc)})
+                rebuilt = dict(_MILESTONE_CACHE)
+                khis = dict(rebuilt.get("khis") or {})
+                khis["status"] = "error"
+                khis["note"] = (khis.get("note") or "") + \
+                    f" [auto-refresh failed: {exc}]"
+                rebuilt["khis"] = khis
+            _MILESTONE_CACHE = rebuilt
+            _MILESTONE_CACHE_AT = time.time()
         payload = dict(_MILESTONE_CACHE)
         return jsonify(payload)
     except Exception as exc:  # noqa: BLE001 - surface friendly error
