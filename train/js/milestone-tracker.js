@@ -128,6 +128,89 @@ function milestoneEmptyCell() {
 }
 
 // =====================================================================
+// Live KHIS performance helpers (milestone rows carry row.perf when the
+// milestone is measured from CHAK DHIS2 MOH 731 data — ids 6,7,8,9,15,16).
+// =====================================================================
+function msPerformanceCell(perf) {
+  if (!perf) return milestoneEmptyCell();
+  const pct = Number(perf.pct);
+  const unlock = Number(perf.unlock) || 0;
+  const pctTxt = Number.isFinite(pct)
+    ? Number(pct).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "%"
+    : "—";
+  const valColor =
+    unlock >= 100
+      ? "text-emerald-600"
+      : unlock > 0
+        ? "text-amber-600"
+        : "text-rose-500";
+  const chipCls =
+    unlock >= 100
+      ? "bg-emerald-50 text-emerald-700"
+      : unlock > 0
+        ? "bg-amber-50 text-amber-700"
+        : "bg-rose-50 text-rose-700";
+  const hint = [
+    perf.band,
+    "as of " + (perf.asOf || "latest reporting month"),
+    perf.formula,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return `<div class="flex flex-col items-end gap-1" title="${escapeHtml(hint)}">
+      <div class="whitespace-nowrap text-[13px] font-bold ${valColor}">${pctTxt}
+        <span class="text-[10px] font-medium text-slate-400">of target</span></div>
+      <span class="inline-block rounded-full px-2 py-0.5 text-[9px] font-semibold whitespace-nowrap ${chipCls}">Unlock ${unlock}%</span>
+      <div class="max-w-[160px] text-right text-[9px] leading-tight text-slate-400">${escapeHtml(perf.actual || "")}</div>
+    </div>`;
+}
+
+function msEarnedCell(row, isFinalPay) {
+  const perf = row && row.perf;
+  if (!perf) return milestoneEmptyCell();
+  const amt = Number(row.amount) || 0;
+  if (!(amt > 0)) return milestoneEmptyCell();
+  const unlock = Number(perf.unlock) || 0;
+  const earned = Math.round((amt * unlock) / 100);
+  const basis = isFinalPay
+    ? "Final-pay max"
+    : "Schedule max " + fmtMoney(amt) + " × unlock " + unlock + "%";
+  const title =
+    basis +
+    " — unlocked by the CHAK DHIS2 baseline; GOR verification of the month is required before payment.";
+  if (unlock <= 0) {
+    return `<span class="whitespace-nowrap text-[12px] font-semibold text-rose-500" title="${escapeHtml(title)}">$0</span>`;
+  }
+  return `<span class="whitespace-nowrap text-[12px] font-semibold text-emerald-600" title="${escapeHtml(title)}">${fmtMoney(earned)}</span>`;
+}
+
+function msKhisChipHtml(khis) {
+  if (!khis) return "";
+  if (khis.status === "ok") {
+    return `<span class="rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700"
+      title="${escapeHtml(khis.note || "")}">📡 KHIS baseline · ${escapeHtml(khis.asOf || "latest month")} · ${Number(khis.matched) || 0} Daraja facilities</span>`;
+  }
+  if (khis.status === "empty" || khis.status === "error") {
+    return `<span class="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"
+      title="${escapeHtml(khis.error || khis.note || "")}">📡 KHIS baseline unavailable</span>`;
+  }
+  return "";
+}
+
+function msKhisNoteHtml(khis) {
+  if (!khis || khis.status !== "ok") return "";
+  return (
+    " The six DHIS2-measurable milestones (6–9, 15, 16) show a live baseline from the CHAK DHIS2 (MOH 731) " +
+    escapeHtml(String(khis.asOf || "latest reporting month")) +
+    " month across " +
+    (Number(khis.matched) || 0) +
+    " of " +
+    (Number(khis.total) || 0) +
+    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Milestones without a DHIS2 source (DSD, AHD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification."
+  );
+}
+
+// =====================================================================
 // Milestone Analytics — 5 visualizations (per-month donuts + M1–M6 trend)
 // Donuts always reflect ALL milestones scheduled in the active month —
 // the tier / payment filters above apply only to the table below.
@@ -642,7 +725,7 @@ async function renderMilestoneTrackerPage() {
           ${metaBits.length ? `<div class="mt-1 text-[10px] font-medium text-slate-400">${escapeHtml(metaBits.join(" · "))}</div>` : ""}
         </td>
         <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-700 whitespace-nowrap">${fmtMoney(row.allocation)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, false)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
@@ -728,9 +811,9 @@ async function renderMilestoneTrackerPage() {
           ${metaBits.length ? `<div class="mt-1 text-[10px] font-medium text-slate-400">${escapeHtml(metaBits.join(" · "))}</div>` : ""}
         </td>
         <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-700 whitespace-nowrap">${fmtMoney(row.allocation)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right align-top">${msPerformanceCell(row.perf)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, activeMonth.isFinalPay)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestonePaymentChip(status)}</td>
@@ -774,6 +857,7 @@ async function renderMilestoneTrackerPage() {
           <span class="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Award Total: <span class="text-slate-800">${awardTotal}</span></span>
           <span class="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Tiers: ${escapeHtml((data.tiers || []).join(" · "))}</span>
           <span class="text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Read-only · tracking update coming with sign-in</span>
+          ${msKhisChipHtml(data.khis)}
         </div>
       </div>
 
@@ -848,7 +932,7 @@ async function renderMilestoneTrackerPage() {
         </div>
         <div class="mt-2 text-[10px] text-slate-400">
           Source: ${escapeHtml(activeMonth.sheet || "")} · Milestone Summary columns follow the
-          "Milestones Summary2" tracker layout. Placeholders (—) are populated after each month is verified.
+          "Milestones Summary2" tracker layout. Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(data.khis)}
         </div>
       </div>
       `
