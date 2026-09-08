@@ -1,146 +1,131 @@
-﻿# Daraja FAA Milestone Tracker — Boss Demo Guide (2026-09-09)
+﻿# Daraja FAA Milestone Tracker — Demo Guide (2026-09-09) · SIMPLE STEP-BY-STEP
+
+## 0. Read this first — the ONLY 4 things you do, over and over
+
+For EVERY milestone below you do the same 4 moves inside **Pivot Tables** (the grid icon in CHAK DHIS2):
+
+1. **SEARCH** — type one short code into the search box.
+2. **FIND** — a list of rows appears under it.
+3. **PUSH** — tick the rows named in the milestone (ticked items go to the other side / become table columns).
+4. **READ** — each pushed item shows its own number (its total across the 259 facilities). Add / divide as the milestone says.
+
+Set up once before the first milestone:
+- **Period** = **August 2026** (the month shown on the tracker chip).
+- **Organisation units** = the **259 Daraja facilities** (drill Embu · Meru · Nyandarua · Tharaka-Nithi and tick them, or tick the "Daraja – FAA" group if CHAK admin has created it — do NOT tick a whole county, that adds extra facilities).
+- Nothing else on the table.
+
+> SAME-NAME TRAP: some rows share a name (e.g. "Tx_ML"). Every line below that is risky shows the item's **code in brackets** — tick the row whose code matches. Code shown = same item, zero doubt.
+
+---
 
 ## 1. The one-line story
 
-> "The tracker now reads **live MOH 731 data from CHAK DHIS2** across the **259 Daraja facilities** and converts each milestone's actual performance into the **Performance %** and the **Earned $** (schedule amount × unlock %). It matches facility-by-facility by the national **MFL code**, and it **auto-refreshes** so new data-entry flows in without a restart."
+> "The tracker now reads **live MOH 731 data from CHAK DHIS2** across the **259 Daraja facilities** and converts each milestone's actual performance into the **Performance %** and the **Earned $** (monthly schedule amount × unlock %). It matches facility-by-facility by the national **MFL code**, and it **auto-refreshes** so new data flows in without a restart."
 
 ## 2. Before you start
 
-1. Server is running: `python run_flask.py 5100` (from `train/`).
+1. Server: `python run_flask.py 5100` (from `train/`).
 2. Open `http://127.0.0.1:5100/#/milestone_tracker`.
-3. For a truly fresh pull right before the demo:
-   - Easy: hit `http://127.0.0.1:5100/api/milestone/data?refresh=1` once in a browser tab, then reload the tracker page.
-   - Or run the server with a short TTL so it self-refreshes during the demo:
-     `$env:MILESTONE_CACHE_TTL="60"; python run_flask.py 5100` (default is 300 s).
-4. The blue chip top-right shows the month the numbers come from:
-   `📡 KHIS baseline · <month> · 259 Daraja facilities`.
+3. Fresh numbers right before the demo: open `http://127.0.0.1:5100/api/milestone/data?refresh=1` in a tab, then reload the tracker.
+4. Top-right chip shows the data month: `📡 KHIS baseline · August 2026 · 259 Daraja facilities`.
 
-## 3. The period question (boss will ask "is this September?")
+## 3. "Is this September?" (boss question)
 
-- The tracker uses the **most recent month in which the 259 facilities have actually submitted data** (rule: latest month with TX_CURR > 0). Today that is **August 2026** — September data is not in yet because facilities report after the month closes.
-- **Once September numbers start appearing in CHAK DHIS2, the tracker advances to September automatically** on its next refresh. Nothing to change.
-- So when comparing against a pivot: **use the exact month shown on the chip** (August 2026 today). If the boss asks "why not September?" the answer is above — it self-advances.
+- CHAK facilities report **after** a month closes → the newest full month is **August 2026** (September is still being entered).
+- When September data appears, the tracker **moves to September by itself** on the next refresh. Nothing to change.
+- So in the pivot use the **month shown on the chip** (today: August 2026).
 
-## 4. Facilities in the pivot — EXACT steps (do this once, before milestone checks)
+---
 
-- The tracker joins the census MFL codes to CHAK org units → 259 facilities. **There is no "Daraja" org-unit group yet**, so the pivot must select facilities one of these two ways:
+## 4. THE SIX MILESTONES — search / find / push / read / calculate
 
-  - **Best (recommend to CHAK admin — one click afterwards):** create an org-unit group "Daraja – FAA" from the census roster (we can supply the list of MFL codes + org-unit UIDs). Then in Pivot Tables: **Organisation units → Groups** → tick **Daraja – FAA**.
-  - **Works today (no admin needed):** **Organisation units → select level → Facility** → use the **name search box** and drill each county: **Embu, Meru, Nyandarua, Tharaka-Nithi**. Tick **only** the Daraja facilities in the roster. ⚠️ Selecting a whole **county** is **over-inclusive** — it adds non-Daraja facilities, so never use county-only for an exact check.
+### #6 · HIV Case Identification — tracker says **11.9% → Earn $0**
 
-- **Layout for EVERY check below (same each time):**
-  1. Open **Pivot Tables** (grid icon, top-right under the app menu).
-  2. **Data items** (left panel) → type the exact search string from the milestone below → **tick the listed items** (tick exactly those named; verify against the name in the list).
-  3. **Organisation units** (left panel) → select the 259 Daraja facilities as above.
-  4. **Period** → set the month shown on the chip (today: **August 2026**).
-  5. Do **not** add anything else to rows/columns → the **grand total** cell is the tracker number.
-  - Optional but safest cross-check: tick the item, look at its small code shown in the panel (or hover) and compare to the **UID in brackets** in section 5 — identical code = identical item, zero ambiguity.
+1. **SEARCH:** `HTS_TST`
+2. **FIND:** many rows all starting `HTS_TST (facility) -`
+3. **PUSH — tick exactly these 8** (all END with `- HIV Testing`; skip every row ending Positive / Linked within / Linked outside Facility):
+   Malnutrition clinic · Other PITC · PITC Emergency · PITC Inpatient Services · PITC Pediatric Services · STI clinic · TB Clinic · VCT
+4. **READ:** 8 columns appear. **Add all 8 columns = 2,575** people tested. (Tracker shows "2,575 tested")
+5. **SEARCH again:** `HV01-19` → **FIND:** 1 row `MOH731_HV01-19` → **PUSH it** → **READ:** **43** positive. (Tracker: "43 positive")
+6. **CALCULATE:** tested 2,575 ÷ target 21,584 = **11.9%**  ·  positive 43 ÷ target 306 = 14.1%  ·  the milestone % = the **smaller = 11.9%**
+7. **MATCHES:** 11.9% is under the 70% band → **Unlock 0% → Earned $0**.
+   *Say: "2,575 people tested, 43 positive. Target is 21,584 tests/month — we're at ~12%, so no payment yet."*
 
-## 5. Milestone-by-milestone — EXACT search string + which items to tick
+### #7 · Linkage to ART — tracker says **97.7% → Earn $9,222 (full)**
 
-> The names below are copied verbatim from CHAK DHIS2 (ereporting) — type the **search string**, then tick the items whose **full name** appears in the "tick these" list. Count the ticks: the lists are sized so you can immediately see if one is missing or extra.
+1. **SEARCH:** `Linked within`
+2. **PUSH — tick the 3** rows ending `- Linked within`: Malnutrition clinic · Other PITC · PITC Emergency
+3. **SEARCH:** `Linked outside` → **PUSH — tick the 3** rows ending `- Linked outside Facility`: Malnutrition clinic · Other PITC · PITC Emergency
+4. **SEARCH:** `HV01-19` → **PUSH** `MOH731_HV01-19` (same 43 as #6)
+5. **READ:** add the 6 "Linked" columns = **42** linked. HV01-19 column = **43** positive.
+6. **CALCULATE:** 42 ÷ 43 = **97.7%**
+7. **MATCHES:** 97.7% is ≥ 95% → **Unlock 100% → Earned $9,222** (the full M1 amount for #7).
+   *Say: "42 of 43 newly-diagnosed people were linked to ART — 97.7%, above the 95% target, fully earned."*
 
-### #6 — HIV Case Identification (Tier 1, monthly)
+### #8 · PrEP Initiation — tracker says **18.9% → Earn $0**
 
-- **What it measures:** volume of people tested and positives found, vs FAA monthly targets (21,584 tested / 306 positive).
-- **Search string 1:** `HTS_TST` → tick the **8** items whose name **ends in `- HIV Testing`** (skip anything ending "- Positive", "- Linked within", "- Linked outside Facility"):
-  1. `HTS_TST (facility) - Malnutrition clinic - HIV Testing`
-  2. `HTS_TST (facility) - Other PITC - HIV Testing`
-  3. `HTS_TST (facility) - PITC Emergency - HIV Testing`
-  4. `HTS_TST (facility) - PITC Inpatient Services - HIV Testing`
-  5. `HTS_TST (facility) - PITC Pediatric Services - HIV Testing`
-  6. `HTS_TST (facility) - STI clinic - HIV Testing`
-  7. `HTS_TST (facility) - TB Clinic - HIV Testing`
-  8. `HTS_TST (facility) - VCT - HIV Testing`
-- **Search string 2:** `HV01-19` → tick the single item `MOH731_HV01-19` (positive tests).
-- **Read from grand totals:** tested = sum of the 8 items; positive = HV01-19.
-- **Expected August 2026 (the tracker's M1 test month):** tested **2,575**, positive **43**.
-- **Calculate:** `% = min(tested ÷ 21,584, positives ÷ 306) × 100` → min(11.9%, 14.1%) = **11.9%** → below the 70% band → **Unlock 0% → Earned $0**.
-- **Say:** "We found 2,575 people tested and 43 HIV-positive across Daraja. The FAA target needs 21,584 tests a month, so we're at ~12% of the volume target — no payment unlocks yet."
+1. **SEARCH:** `PREP_ALLMod`
+2. **FIND:** rows `PREP_ALLMod …` (there are also "Cum" totals — skip those)
+3. **PUSH — tick exactly these 15** (every row that ends `New F` or `New M`):
+   CCC New F+M · Community DSD New F+M · IPD New F+M · MNCH BF New F · MNCH New M · MNCH PG New F · OPD New F+M · PNS SNS New F+M · TB New F+M
+4. **READ:** **add all 15 columns = 92** (Tracker: "92 PrEP initiations")
+5. **CALCULATE:** 92 ÷ target 486 = **18.9%**
+6. **MATCHES:** under 70% band → **Unlock 0% → Earned $0**.
+   *Say: "92 people started PrEP vs a 486/month target — 19%, below the payment band."*
 
-### #7 — Linkage of HIV Positive Clients to ART (Tier 2, monthly)
+### #9 · Retention / IIT — tracker says **0.08% → Earn $48,562 (full)** — LOWER IS BETTER
 
-- **What it measures:** % of newly diagnosed positives linked to ART — target ≥95%.
-- **Search string 1:** `Linked within` → tick the **3** items **ending exactly `- Linked within`**:
-  1. `HTS_TST (facility) - Malnutrition clinic - Linked within`
-  2. `HTS_TST (facility) - Other PITC - Linked within`
-  3. `HTS_TST (facility) - PITC Emergency - Linked within`
-- **Search string 2:** `Linked outside` → tick the **3** items **ending exactly `- Linked outside Facility`**:
-  1. `HTS_TST (facility) - Malnutrition clinic - Linked outside Facility`
-  2. `HTS_TST (facility) - Other PITC - Linked outside Facility`
-  3. `HTS_TST (facility) - PITC Emergency - Linked outside Facility`
-- **Search string 3:** `HV01-19` → tick `MOH731_HV01-19` (same as #6; already ticked, no need to add twice).
-- **Read from grand totals:** linked = (within sum) + (outside sum); positive = HV01-19.
-- **Expected August 2026:** linked **42** of **43**.
-- **Calculate:** `% = (linked within + linked outside) ÷ positive × 100` = **97.7%** → ≥95% → **Unlock 100% → full monthly amount**.
-- **Say:** "42 of the 43 people newly diagnosed were linked into ART — that's 97.7%, above the 95% target, so this milestone is fully earned this month." (Note: it looked poor at ~72% before the 19 recovered facilities were added — this is why exact facility matching matters.)
+1. **SEARCH:** `TX_CURR` → **PUSH — the row named exactly `TX_CURR` [`kgzd9LfXZXq`]** (skip TX_CURR New / TX_CURR_Total)
+2. **SEARCH:** `Tx_ML` → **PUSH — only the row `C&T (facility) - Tx_ML, COD` [`G9HTTIls3L6`]** (skip `Tx_ML, Outcomes` and any other Tx_ML row)
+3. **READ:** TX_CURR = **21,732** on ART · Tx_ML, COD = **17** interrupted
+4. **CALCULATE:** 17 ÷ 21,732 = **0.08%** (0.1% shown). Ceiling is **2.0%**.
+5. **MATCHES:** 0.08% is under 2.0% → **Unlock 100% → Earned $48,562** (full).
+   *Say: "Only 17 of 21,732 on ART (0.08%) had a treatment interruption — well under the 2% ceiling. Fully earned."*
 
-### #8 — PrEP Initiation (Tier 1, monthly)
+### #15 · TB Preventive Therapy — tracker says **1.3% → Earn $0**
 
-- **What it measures:** new PrEP starts vs FAA monthly target (486/mo).
-- **Search string:** `PREP_ALLMod` → tick the **15** items whose name **ends in `New F` or `New M`** (i.e. the word "New" is present — skip all the "Cum"/cumulative and other rows). Tick exactly these 15:
-  1. `PREP_ALLMod CCC New F` · 2. `PREP_ALLMod CCC New M`
-  3. `PREP_ALLMod Community DSD New F` · 4. `PREP_ALLMod Community DSD New M`
-  5. `PREP_ALLMod IPD New F` · 6. `PREP_ALLMod IPD New M`
-  7. `PREP_ALLMod MNCH BF New F` · 8. `PREP_ALLMod MNCH New M` · 9. `PREP_ALLMod MNCH PG New F`
-  10. `PREP_ALLMod OPD New F` · 11. `PREP_ALLMod OPD New M`
-  12. `PREP_ALLMod PNS SNS New F` · 13. `PREP_ALLMod PNS SNS New M`
-  14. `PREP_ALLMod TB New F` · 15. `PREP_ALLMod TB New M`
-- **Read from grand total:** PrEP new = sum of the 15.
-- **Expected August 2026:** **92**.
-- **Calculate:** `% = PrEP new ÷ 486 × 100` = **18.9%** → below the 70% band → **Unlock 0% → Earned $0**.
-- **Say:** "92 people started PrEP in August against a 486/month target — 19%. Below the payment band."
+1. **SEARCH:** `TPT TX_Curr`
+2. **PUSH — the single indicator row `TPT TX_Curr  Total` [`dysZutXWPTz`]** (note TWO spaces; it is an *indicator*, under a different tab than data elements — it sits in the search results with the others)
+3. **SEARCH:** `TX_CURR` → **PUSH** the same `TX_CURR` [`kgzd9LfXZXq`] as #9 (skip if already pushed)
+4. **READ:** TPT = **285** · TX_CURR = **21,732**
+5. **CALCULATE:** 285 ÷ 21,732 = **1.3%**
+6. **MATCHES:** under 60% band → **Unlock 0% → Earned $0**.
+   *Say: "TPT is still low — 285 patients on TPT against ~21.7k on ART. Needs a push; no unlock."*
 
-### #9 — HIV Care, Treatment Continuity & Retention (Tier 1, monthly)
+### #16 · Viral Load Suppression — tracker says **95.8% → Earn $44,402 (full)**
 
-- **What it measures:** treatment interruptions (IIT) as a % of patients on ART — **lower is better**; target < 2.0%.
-- **Search string 1:** `TX_CURR` → tick the single item `TX_CURR` (active ART patients).
-- **Search string 2:** `Tx_ML` → tick **only** `C&T (facility) - Tx_ML, COD` (this is the IIT-total element — interruptions including deaths; do **not** tick `Tx_ML, Outcomes` or any other Tx_ML row).
-- **Read from grand totals:** TX_CURR = as ticked; IIT = Tx_ML, COD.
-- **Expected August 2026:** **17** interrupted of **21,732** on ART.
-- **Calculate:** `IIT% = Tx_ML ÷ TX_CURR × 100` = **0.08%** → under the 2.0% ceiling → **Unlock 100% → full monthly amount**.
-- **Say:** "Of 21,732 patients on ART across Daraja, only 17 (0.08%) had a treatment interruption — far below the 2% ceiling, so fully earned."
+1. **SEARCH:** `TX_PVLS`
+2. **PUSH — tick the 2 ROUTINE rows** (skip the Non-Routine ones):
+   - `VL Monitoring (All): TX_PVLS (D) Routine` [`JGd3MwmKBuM`] = **VL done**
+   - `VL Monitoring (All): TX_PVLS (N) Routine` [`FloZph8hN9z`] = **VL suppressed**
+3. **READ:** done = **16,374** · suppressed = **15,682**
+4. **CALCULATE:** 15,682 ÷ 16,374 = **95.8%**
+5. **MATCHES:** ≥ 95% → **Unlock 100% → Earned $44,402** (full).
+   *Say: "95.8% of patients with a viral load are suppressed — above the 95% target. Fully earned."*
 
-### #15 — TB Preventive Therapy (Tier 1, monthly)
+---
 
-- **What it measures:** TPT coverage (proxy: TPT ÷ TX_CURR — the DHIS2 TPT *indicator* sums all TPT modalities); target 90% of eligible (the app uses the TX_CURR proxy).
-- **Search string:** `TPT TX_Curr` → tick the single **indicator** `TPT TX_Curr  Total` (note the two spaces between "TX_Curr" and "Total" — the *indicator*, not a data element).
-- **Search string (denominator):** `TX_CURR` → tick `TX_CURR` (already ticked from #9 if on the same pivot).
-- **Expected August 2026:** **285** on TPT of **21,732** TX_CURR.
-- **Calculate:** `% = TPT ÷ TX_CURR × 100` = **1.3%** → below the 60% band → **Unlock 0% → Earned $0**.
-- **Say:** "TPT initiation is still low — 285 patients on TPT against ~21.7k on ART. This is an area needing a push; no unlock this month."
+## 5. Quick-reference (August 2026 · 259 facilities)
 
-### #16 — Viral Load Suppression (Tier 1, monthly)
+| # | Milestone | Search codes | Aug totals | % | Unlock | Earned (M1) |
+|---|-----------|--------------|------------|-----|--------|-------------|
+| 6 | Case ID | `HTS_TST`(8) + `HV01-19` | 2,575 tested / 43 pos | 11.9% | 0% | $0 |
+| 7 | Linkage | `Linked within`(3) + `Linked outside`(3) + `HV01-19` | 42 / 43 | 97.7% | 100% | **$9,222** |
+| 8 | PrEP | `PREP_ALLMod`(15 New) | 92 | 18.9% | 0% | $0 |
+| 9 | Retention | `TX_CURR` + `Tx_ML, COD` | 17 / 21,732 | 0.08% | 100% | **$48,562** |
+| 15 | TPT | `TPT TX_Curr` + `TX_CURR` | 285 / 21,732 | 1.3% | 0% | $0 |
+| 16 | VL | `TX_PVLS`(2 Routine) | 15,682 / 16,374 | 95.8% | 100% | **$44,402** |
 
-- **What it measures:** % suppressed among PLHIV with a documented VL — target ≥95%.
-- **Search string:** `TX_PVLS` → tick the **2** items that contain the word **Routine** (skip the Non-Routine rows):
-  1. `VL Monitoring (All): TX_PVLS (D) Routine` → VL **done**
-  2. `VL Monitoring (All): TX_PVLS (N) Routine` → VL **suppressed**
-- **Expected August 2026:** **15,682** suppressed of **16,374** done.
-- **Calculate:** `% = suppressed ÷ done × 100` = **95.8%** → ≥95% → **Unlock 100% → full monthly amount**.
-- **Say:** "95.8% of patients with a viral load this month are suppressed — above the 95% target. Fully earned."
+## 6. Why only the M1 tab has numbers (M2–M6 show "—")
 
-## 6. Quick-reference table (expected — August 2026 · 259 facilities)
+- The August baseline is attached to **M1 only**, as a **test of the indicator wiring** (treat M1 as "assume August" for now).
+- **M2–M6 show "—" on purpose** — GOR must verify each real project month before numbers are entered. Nothing is copied forward or faked.
+- The rows that always show "—" are **deliverable-based** (workplans, reports, DSD, AHD, eVTP, SHA, final pay) — GOR verifies them from submitted documents, not DHIS2.
 
-| Milestone    | Numerator             | Denominator         | %     | Unlock |
-| ------------ | --------------------- | ------------------- | ----- | ------ |
-| #6 Case ID   | 2,575 tested / 43 pos | 21,584 / 306 target | 11.9% | 0%     |
-| #7 Linkage   | 42 linked             | 43 positive         | 97.7% | 100%   |
-| #8 PrEP      | 92 new                | 486 target          | 18.9% | 0%     |
-| #9 Retention | 17 IIT                | 21,732 TX_CURR      | 0.08% | 100%   |
-| #15 TPT      | 285 TPT               | 21,732 TX_CURR      | 1.3%  | 0%     |
-| #16 VL       | 15,682 supp           | 16,374 done         | 95.8% | 100%   |
+## 7. "Proof it's live" moment (2 minutes)
 
-## 7. Why the numbers appear in M1 only — and M2–M6 show "—"
-
-- The live DHIS2 baseline is attached to the **M1 tab only**, as a **test of the indicator wiring** (M1 is being treated as "assume August" for now).
-- **M2–M6 deliberately show "—"** — the same August baseline is **not** copied into future months, because those months' confirmed performance has to be **verified by GOR** (actual reports + deliverables for Sep/Oct/Nov/Dec/Jan), not guessed from August.
-- So during the demo: click **M1** → the six DHIS2 milestones (6–9, 15, 16) show Performance % and Earned $; click **M2, M3, M4, M5 or M6** → those same rows show **—** until each project month is verified and its real numbers are entered.
-- The 19 rows that always show **—** for Performance/Earned are **deliverable-based** (workplans, reports, DSD enrolment, AHD, eVTP cascade, SHA, final pay, etc.). They are verified by **GOR against submitted deliverables/artefacts**, not by DHIS2.
-
-## 8. "Proof it's live" moment
-
-1. Open the tracker → click **M1** → note `baseline · August 2026 · 259` and the six rows with numbers (ids 6–9, 15, 16).
-2. Open CHAK DHIS2 **Pivot Tables** with the month + the 259 facilities per section 4 → search each milestone's items per section 5 → the grand-total numbers match the table above.
-3. Then click **M2** → show that the same rows now read **—** (nothing is pre-faked for future months).
-4. Optional wow: if a facility enters/edits data in DHIS2, hit `?refresh=1` (or wait the TTL) → reload → the % moves.
+1. Tracker → click **M1** → show the six rows with numbers (6–9, 15, 16) + chip `August 2026 · 259`.
+2. Pivot Tables (same month + 259 facilities) → do **#9** (2 search codes, 2 ticks) → grand totals 21,732 and 17 match the tracker.
+3. Do **#16** (1 search code, 2 ticks) → 16,374 and 15,682 → 95.8% matches.
+4. Click **M2** in the tracker → the same rows now read "—" (nothing pre-faked for future months).
+5. Wow: edit a facility's August number in DHIS2 → hit `?refresh=1` → reload → the % moves.
