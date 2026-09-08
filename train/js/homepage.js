@@ -113,6 +113,13 @@ const _PROJ_COLORS = {
     accent: "#059669",
     gradient: "from-emerald-500 to-green-600",
   },
+  // Daraja — merged successor of Jamii Tekelezi + CHAP Stawisha (deep teal)
+  daraja: {
+    border: "#0f766e",
+    bg: "#f0fdfa",
+    accent: "#115e59",
+    gradient: "from-teal-500 to-teal-800",
+  },
   gf_mnch: {
     border: "#f43f5e",
     bg: "#fff1f2",
@@ -177,6 +184,119 @@ const _PROJ_COLORS = {
 
 function _projColor(pid) {
   return _PROJ_COLORS[pid] || _PROJ_COLORS.default;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Daraja milestone-health panel (home featured card)
+// ─────────────────────────────────────────────────────────────
+// The merged project shows ONE Milestone Health donut — a truthful
+// count of every distinct milestone in the M1–M6 schedule. Only the
+// real seeds (M1 milestone ids 1–3) are coloured; every other
+// milestone is greyed out as "Not yet assessed" until its month is
+// verified (no fabricated statuses).
+const _HP_MS_ORDER = ["On Track", "Watch", "Off Track", "Not yet assessed"];
+const _HP_MS_COLORS = {
+  "On Track": "#10b981",
+  Watch: "#f59e0b",
+  "Off Track": "#ef4444",
+  "Not yet assessed": "#cbd5e1",
+};
+
+// Dedupe rows across all months by milestone id → counts per health bucket.
+function _homeMsHealthCounts(plan) {
+  const counts = {
+    "On Track": 0,
+    Watch: 0,
+    "Off Track": 0,
+    "Not yet assessed": 0,
+  };
+  const seen = new Set();
+  const months = plan && Array.isArray(plan.months) ? plan.months : [];
+  months.forEach(function (mo) {
+    (mo.rows || []).forEach(function (row) {
+      if (!row || row.id === undefined || row.id === null) return;
+      const key = String(row.id);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const al = String(row.alerts || "").trim();
+      if (Object.prototype.hasOwnProperty.call(counts, al)) counts[al] += 1;
+      else counts["Not yet assessed"] += 1;
+    });
+  });
+  return {
+    counts: _HP_MS_ORDER.map(function (l) {
+      return counts[l] || 0;
+    }),
+    colors: _HP_MS_ORDER.map(function (l) {
+      return _HP_MS_COLORS[l] || "#94a3b8";
+    }),
+    total: seen.size,
+  };
+}
+
+// Build the milestone-health panel HTML (canvas mounted post-render).
+function _buildHomeMsPanel(plan) {
+  const bucket = _homeMsHealthCounts(plan);
+  const total = bucket.total;
+  const planMonths =
+    (plan && Array.isArray(plan.months) ? plan.months : []) || [];
+  const firstM = planMonths[0];
+  const lastM = planMonths[planMonths.length - 1];
+  const awardNum = Number(plan && plan.awardTotal) || 0;
+  const awardStr = awardNum ? "$" + awardNum.toLocaleString("en-US") : "—";
+
+  const legend = _HP_MS_ORDER
+    .map(function (l, i) {
+      const v = bucket.counts[i];
+      if (!v) return "";
+      const pct = total ? Math.round((v / total) * 100) : 0;
+      return `<div class="flex items-center justify-between gap-2 text-[11px] leading-5">
+        <span class="flex min-w-0 items-center gap-1.5">
+          <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${bucket.colors[i]}"></span>
+          <span class="truncate text-slate-600">${escapeHtml(l)}</span>
+        </span>
+        <span class="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+          <span class="font-semibold text-slate-800">${v.toLocaleString("en-US")}</span>
+          <span class="w-8 text-right text-slate-400">${pct}%</span>
+        </span>
+      </div>`;
+    })
+    .join("");
+
+  const subtitle =
+    firstM && lastM
+      ? `Schedule ${typeof milestoneMonthShort === "function" ? milestoneMonthShort(firstM) : firstM.key || ""} – ${typeof milestoneMonthShort === "function" ? milestoneMonthShort(lastM) : lastM.key || ""} · Award ${awardStr}`
+      : `Award ${awardStr}`;
+
+  if (!total) {
+    // No milestone rows — graceful placeholder, still offer the tracker.
+    return `<div class="hp-donut-panel">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-700">🎯 Milestone Health</span>
+            <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">No data yet</span>
+          </div>
+        </div>
+        <div class="text-[11px] italic text-slate-400 pb-1">No milestones recorded yet.</div>
+        <button type="button" class="hp-ms-open-tracker hp-ms-btn">🗓️ Open Milestone Tracker →</button>
+      </div>`;
+  }
+
+  return `<div class="hp-donut-panel">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-700">🎯 Milestone Health</span>
+            <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${total.toLocaleString("en-US")} milestones</span>
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-400 mb-2">${escapeHtml(subtitle)}</div>
+        <div class="relative mx-auto" style="width:170px;height:170px">
+          <canvas id="hp-ms-home-canvas"></canvas>
+        </div>
+        <div class="mt-2 space-y-1">${legend}</div>
+        <p class="mt-2 text-[10px] leading-relaxed text-slate-400">Only M1 milestones 1–3 (Plan &amp; Workplan, Personnel, MEL/DQA protocol) carry verified statuses so far — the remaining ${(total - (bucket.counts[0] + bucket.counts[1] + bucket.counts[2])).toLocaleString("en-US")} milestones in the M1–M6 schedule are shown grey until their reporting month is assessed.</p>
+        <button type="button" class="hp-ms-open-tracker hp-ms-btn">🗓️ Open Milestone Tracker →</button>
+      </div>`;
 }
 
 async function renderHomepageDashboard() {
@@ -381,12 +501,13 @@ async function renderHomepageDashboard() {
     return `<div class="hp-perf-section space-y-4">${ach}${donuts}${narr}</div>`;
   }
 
+  // Daraja is the merged successor of Jamii Tekelezi + CHAP Stawisha —
+  // remove the two legacy projects from the home dashboard (their
+  // consolidated overview remains reachable via the project dropdown/chat).
+  delete projectData["jamii_tekelezi"];
+  delete projectData["chap_stawisha"];
+
   const projectIds = Object.keys(projectData);
-  const jamiiIdx = projectIds.indexOf("jamii_tekelezi");
-  if (jamiiIdx > 0) {
-    projectIds.splice(jamiiIdx, 1);
-    projectIds.unshift("jamii_tekelezi");
-  }
   if (!projectIds.length) {
     root.innerHTML = `<div class="text-slate-500 text-sm py-8 text-center">No projects found.</div>`;
     return;
@@ -399,6 +520,17 @@ async function renderHomepageDashboard() {
     if (mhuConfig.facilities)
       Object.keys(mhuConfig.facilities).forEach((id) => mhuFacilityIds.add(id));
   } catch (_) {}
+
+  // ── Milestone plan data (for the Daraja featured milestone panel) ──
+  let milestonePlan = null;
+  let msPanelHtml = "";
+  try {
+    milestonePlan = await loadMilestoneData();
+    msPanelHtml = _buildHomeMsPanel(milestonePlan);
+  } catch (_) {
+    msPanelHtml =
+      '<div class="hp-donut-panel"><div class="text-xs font-semibold text-slate-700 mb-2">🎯 Milestone Health</div><div class="text-[11px] italic text-slate-400 pb-2">Milestone tracker data is unavailable right now.</div><button type="button" class="hp-ms-open-tracker hp-ms-btn">🗓️ Open Milestone Tracker →</button></div>';
+  }
 
   // ── Compute overall stats ──
   const allCounties = new Set();
@@ -460,8 +592,8 @@ async function renderHomepageDashboard() {
   // ═══════════════════════════════════
   html += `<div id="hp-projects-view"><div class="space-y-5">`;
 
-  // Separate featured projects (JT, Stawisha) from carousel projects
-  const featuredPids = ["jamii_tekelezi", "chap_stawisha"];
+  // Daraja (merged JT + Stawisha) is the only featured project.
+  const featuredPids = ["daraja"];
   const carouselPids = projectIds.filter((pid) => !featuredPids.includes(pid));
 
   // ── Featured Project Rows ──
@@ -488,8 +620,7 @@ async function renderHomepageDashboard() {
             <div class="hp-featured-desc">${escapeHtml(projDesc)}</div>
           </div>
           <div class="hp-featured-actions">
-            <span class="hp-featured-badge">⭐ Featured</span>
-            <div class="hp-view-project-btn" data-project="${pid}" style="display:inline-flex;align-items:center;gap:3px;font-size:0.8rem;font-weight:600;color:${accentColor};cursor:pointer;padding:6px 14px;border-radius:8px;transition:background 0.2s;" onmouseover="this.style.background='${iconBg}'" onmouseout="this.style.background='transparent'">View →</div>
+            <span class="hp-featured-badge">🤝 Merged Project</span>
             <div class="hp-expand-btn open" data-target="body-${pid}"><span class="hp-expand-icon open">▼</span></div>
           </div>
         </div>
@@ -521,30 +652,15 @@ async function renderHomepageDashboard() {
                 </div>
               </div>
               <div class="hp-donut-col">
-                ${_renderIndicatorDonuts(pid)}
+                ${pid === "daraja" ? msPanelHtml : _renderIndicatorDonuts(pid)}
               </div>
             </div>
-            ${_renderNarrative(pid)}
+            ${pid === "daraja" ? "" : _renderNarrative(pid)}
         </div>
-        ${
-          pid === "jamii_tekelezi"
-            ? `
-        <div id="key-indicators-root" class="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm hp-slide-right hp-stagger-4 mt-5">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="text-lg">📊</span>
-            <span class="font-semibold text-sm text-slate-800">Key Indicators Drill Down</span>
-            <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Facility-level summary</span>
-          </div>
-          <div id="ki-loading" class="text-xs text-slate-400 py-6 text-center">Loading key indicators…</div>
-          <div id="ki-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 hidden"></div>
-          <div id="ki-error" class="text-xs text-red-500 hidden"></div>
-        </div>`
-            : ""
-        }
       </div>`;
   }
 
-  // ── Key Indicators are now rendered inside Jamii Tekelezi card body ──
+  // ── Key Indicators now only live on the Jamii Tekelezi overview page ──
 
   // ── Carousel: Other Projects (auto-scrolling conveyor belt) ──
   if (carouselPids.length) {
@@ -781,6 +897,67 @@ async function renderHomepageDashboard() {
           });
         }, 300);
       }
+    });
+  });
+
+  // ── Daraja milestone-health donut (Chart.js) + open-tracker action ──
+  if (milestonePlan) {
+    const msCanvas = document.getElementById("hp-ms-home-canvas");
+    if (msCanvas && window.Chart) {
+      const msBucket = _homeMsHealthCounts(milestonePlan);
+      const total = msBucket.total;
+      if (total) {
+        const msLabels = [];
+        const msData = [];
+        const msColors = [];
+        _HP_MS_ORDER.forEach(function (l, i) {
+          if (msBucket.counts[i] > 0) {
+            msLabels.push(l);
+            msData.push(msBucket.counts[i]);
+            msColors.push(msBucket.colors[i]);
+          }
+        });
+        new Chart(msCanvas, {
+          type: "doughnut",
+          data: {
+            labels: msLabels,
+            datasets: [
+              {
+                data: msData,
+                backgroundColor: msColors,
+                borderWidth: 2,
+                borderColor: "#ffffff",
+                hoverOffset: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "62%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) {
+                    const v = Number(ctx.parsed) || 0;
+                    const pct = total ? Math.round((v / total) * 100) : 0;
+                    return ` ${ctx.label}: ${v} (${pct}%)`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+  }
+  document.querySelectorAll(".hp-ms-open-tracker").forEach((btn) => {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      state.activeProject = "";
+      state.activePage = "milestone_tracker";
+      navigateTo("milestone_tracker");
     });
   });
 
@@ -1582,4 +1759,3 @@ function _renderPctLegend(mapId, metricLabel) {
   legendEl.innerHTML = html;
   legendEl.style.display = "block";
 }
-

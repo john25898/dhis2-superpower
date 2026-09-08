@@ -33,6 +33,103 @@ _MHU_FLEX_MATCH = {}
 # flex_index).  Built once and reused by the aggregate endpoint so we never
 # re-read + re-parse the 10k+ facility file per POST.
 _MHU_MAPPING_INDEX = None
+# Daraja (Jamii Tekelezi + CHAP Stawisha merged) census cache — the xlsx is
+# parsed once per process and reused by both facility-mapping and mhu-list.
+_DARJA_CACHE = None
+
+
+# ── Daraja merged-project census (Site_Census - Daraja.xlsx) ──────────
+def _county_center(county: str) -> dict:
+    """Return {lat, lng} for a county name, tolerating both key styles
+    ('Meru' from the census vs 'Meru County' in KENYA_COUNTY_CENTERS).
+    Falls back to a rough national centroid.
+    """
+    c = (county or "").strip()
+    center = KENYA_COUNTY_CENTERS.get(c) or KENYA_COUNTY_CENTERS.get(c + " County")
+    if center:
+        return dict(center)
+    return {"lat": 0.5, "lng": 38.0}
+
+
+def _load_daraja_census():
+    """Parse train/Site_Census - Daraja.xlsx once (module-cached).
+
+    Returns (unique_rows, facilities, counties):
+      unique_rows: mhu_list rows [{no, mfl, county, subcounty, ward,
+                   category, name}] deduped by MFL code.
+      facilities:  map markers keyed 'daraja-<MFL>' with real lat/lng when
+                   present, county-centre fallback otherwise.
+      counties:    sorted list of the county names present (15).
+    """
+    global _DARJA_CACHE
+    if _DARJA_CACHE is not None:
+        return _DARJA_CACHE
+    unique_rows = []
+    facilities = {}
+    counties = []
+    try:
+        import openpyxl  # lazy import keeps startup light
+
+        xlsx_path = BASE_DIR / "Site_Census - Daraja.xlsx"
+        if not xlsx_path.exists():
+            _DARJA_CACHE = (unique_rows, facilities, counties)
+            return _DARJA_CACHE
+        wb = openpyxl.load_workbook(xlsx_path, data_only=True, read_only=True)
+        ws = wb["Site_Census_Sep26"]
+        rows_iter = ws.iter_rows(min_row=2, values_only=True)
+        seen_mfl = set()
+        county_set = set()
+        for raw in rows_iter:
+            if not raw:
+                continue
+            mfl = str(raw[0]).strip() if raw[0] is not None else ""
+            county = (str(raw[1]).strip() if raw[1] is not None else "").strip()
+            subcounty = (str(raw[2]).strip() if raw[2] is not None else "").strip()
+            ward = (str(raw[3]).strip() if raw[3] is not None else "").strip()
+            name = (str(raw[5]).strip() if raw[5] is not None else "").strip()
+            if not mfl or mfl in seen_mfl:
+                continue
+            seen_mfl.add(mfl)
+            if county:
+                county_set.add(county)
+            try:
+                lat = float(raw[12]) if raw[12] is not None else None
+            except (TypeError, ValueError):
+                lat = None
+            try:
+                lng = float(raw[13]) if raw[13] is not None else None
+            except (TypeError, ValueError):
+                lng = None
+            unique_rows.append({
+                "no": len(unique_rows) + 1,
+                "mfl": mfl,
+                "county": county,
+                "subcounty": subcounty,
+                "ward": ward,
+                "category": "",
+                "name": name,
+            })
+            if lat is not None and lng is not None and -90 <= lat <= 90 and -180 <= lng <= 180:
+                facilities[f"daraja-{mfl}"] = {
+                    "name": name,
+                    "lat": lat,
+                    "lng": lng,
+                    "county": county,
+                }
+            else:
+                center = _county_center(county)
+                facilities[f"daraja-{mfl}"] = {
+                    "name": name,
+                    "lat": center["lat"],
+                    "lng": center["lng"],
+                    "county": county,
+                }
+        wb.close()
+        counties = sorted(county_set)
+    except Exception as exc:
+        print(f"[Daraja] census parse failed: {exc}")
+    _DARJA_CACHE = (unique_rows, facilities, counties)
+    return _DARJA_CACHE
 
 
 def _get_mhu_mapping_index():
@@ -226,6 +323,22 @@ def project_facility_mapping():
             "mhu_list": unique_fac,
         }
 
+    # ── Daraja: Jamii Tekelezi + CHAP Stawisha merged (Site Census) ──
+    # Added 2026 as the successor project. Facilities come from the
+    # Daraja site census workbook, not the confirmed JSON (which predates
+    # the merge); lat/lng are real coordinates with county-centre fallback.
+    daraja_rows, daraja_facilities, daraja_counties = _load_daraja_census()
+    result["daraja"] = {
+        "name": "Daraja",
+        "icon": "🌉",
+        "description": "Jamii Tekelezi + CHAP Stawisha merged — testing, treatment, PrEP & PMTCT.",
+        "facility_count": len(daraja_facilities),
+        "facilities": daraja_facilities,
+        "mhu_count": len(daraja_rows),
+        "counties": daraja_counties,
+        "mhu_list": daraja_rows,
+    }
+
     # ── Full confirmed MHU list (586 rows) for the "All MHUs" hero card ──
     all_mhus = []
     try:
@@ -266,6 +379,19 @@ def project_mhu_list():
                 "name": "All CHAK MHUs",
                 "count": len(rows),
                 "rows": rows,
+            }
+        )
+
+    # ── Daraja branch (merged census workbook, not in confirmed JSON) ──
+    if project_id == "daraja":
+        daraja_rows, _facilities, _counties = _load_daraja_census()
+        return jsonify(
+            {
+                "ok": True,
+                "project": "daraja",
+                "name": "Daraja",
+                "count": len(daraja_rows),
+                "rows": daraja_rows,
             }
         )
 

@@ -20,6 +20,9 @@ const state = {
   activeDashboardId: "",
   activeChakSubproject: "",
   activeMhuSubtab: "WORKLOAD",
+  milestoneMonth: "M1",
+  milestoneTier: "all",
+  milestonePayment: "all",
   playgroundMode: "finance",
   playgroundChart: null,
   playgroundFinanceData: null,
@@ -151,6 +154,8 @@ function applyHashRoute() {
     "chak_dataset",
     // CHAK dashboard detail pages
     "chak_dashboard",
+    // CHAK Daraka milestone tracker page
+    "milestone_tracker",
   ]);
   if (!validPages.has(pageId)) return;
 
@@ -590,6 +595,7 @@ function getPageMeta(pageId) {
       ],
     },
     overview: { title: "Home", subtabs: [] },
+    milestone_tracker: { title: "Milestone Tracker", subtabs: [] },
   };
   return pages[pageId] || { title: pageId, subtabs: ["Overview"] };
 }
@@ -1037,6 +1043,7 @@ function renderPageTabs() {
       { id: "financial_analysis", label: "Finance Analysis" },
       { id: "human_resource", label: "Human Resource" },
       { id: "cbsl", label: "CBSL" },
+      { id: "milestone_tracker", label: "Milestone Tracker" },
     ];
   }
 

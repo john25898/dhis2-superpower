@@ -342,6 +342,9 @@ def create_app() -> Flask:
     from blueprints.chak_explore import register_chak_explore_blueprint
     register_chak_explore_blueprint(app)
 
+    from blueprints.milestone import register_milestone_blueprint
+    register_milestone_blueprint(app)
+
     # ── Register PBIX Dashboard Blueprint (16 CHAK Visuals pages) ──
     try:
         from pbix_dashboards import register_pbix_blueprint

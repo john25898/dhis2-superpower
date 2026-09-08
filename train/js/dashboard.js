@@ -106,6 +106,13 @@ function renderCurrentView() {
     return;
   }
 
+  // ── Milestone Tracker (CHAK Daraka FAA milestone plan) ──
+  if (pageId === "milestone_tracker") {
+    hidePageContext();
+    renderMilestoneTrackerPage();
+    return;
+  }
+
   // Category pages with subtabs
   renderPageContext(pageId);
 
@@ -525,6 +532,8 @@ function updateChatWelcome() {
       "💊 Track ART initiation, VL suppression, and treatment outcomes.",
     reporting_rates: "📋 Check facility reporting completeness and rates.",
     profile: "🏥 View facility profiles and location hierarchy.",
+    milestone_tracker:
+      "🎯 Track CHAK Daraka FAA milestones month-by-month with payment status and tier filters.",
   };
   var hint =
     hints[state.activePage] || "📈 Ask questions or navigate to a page above.";
@@ -698,6 +707,17 @@ async function handleChatSubmit(event) {
       page: "overview",
       subtab: "",
       label: "Home",
+    },
+    {
+      words: [
+        "milestone",
+        "milestones",
+        "payment schedule",
+        "milestone tracker",
+      ],
+      page: "milestone_tracker",
+      subtab: "",
+      label: "Milestone Tracker",
     },
     { words: ["profile"], page: "profile", subtab: "", label: "Profile" },
     {

@@ -1139,6 +1139,30 @@
         background: transparent;
       }
 
+      /* ── Milestone-health panel open-tracker button ── */
+      .hp-ms-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        margin-top: 8px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent, #0f766e);
+        border: 1px solid transparent;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .hp-ms-btn:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+      }
+
       /* ── Performance section styles ── */
       .hp-perf-section {
         animation: hpFadeIn 0.4s ease both;
@@ -1284,6 +1308,7 @@
         <button class="chat-nav-btn" data-nav="financial_analysis">💰 Finance</button>
         <button class="chat-nav-btn" data-nav="human_resource">👥 HR</button>
         <button class="chat-nav-btn" data-nav="cbsl">🏛️ CBSL</button>
+        <button class="chat-nav-btn" data-nav="milestone_tracker">🎯 Milestones</button>
       </div>
 
       <div
@@ -1336,12 +1361,13 @@
     <script src="/projects/cdic_icare/config.js?v=20260826c"></script>
     <script src="/projects/internship/config.js?v=20260826c"></script>
     <script src="/projects/prep_tool/config.js?v=20260826c"></script>
-    <script src="/js/core.js?v=20260906e"></script>
-    <script src="/js/mhu.js?v=20260906f"></script>
+    <script src="/js/core.js?v=20260907a"></script>
+    <script src="/js/mhu.js?v=20260906i"></script>
+    <script src="/js/milestone-tracker.js?v=20260907b"></script>
     <script src="/js/playground.js?v=20260826c"></script>
-    <script src="/js/dashboard.js?v=20260906a"></script>
+    <script src="/js/dashboard.js?v=20260907a"></script>
     <script src="/js/nart-hiv.js?v=20260826c"></script>
-    <script src="/js/homepage.js?v=20260826c"></script>
+    <script src="/js/homepage.js?v=20260907b"></script>
     <script src="/js/overviews.js?v=20260826c"></script>
     <script src="/js/analytics.js?v=20260826c"></script>
     <script src="/projects/jamii_tekelezi/jamii.js?v=20260906b"></script>

@@ -2694,10 +2694,6 @@ const HIV_UIDS = [
   "QJX1IYymTwR", // HV01-11 Total Enrolled in Care
   "PLOzPReieli", // HV01-12 Total Currently in Care
   "RHyfJDq4FsT", // CHAK: TB_ICF OPD Screened for TB (was: HV04-01)
-  "pDoW8tq74Co", // HV01-14 Current on ART Female 15+
-  "KMWQGDpqPcJ", // HV01-13 Current on ART Male 15+
-  "FmEfFpTP1Tu", // HV01-15 Current on ART Male <15
-  "lOyMumfLe7d", // HV01-16 Current on ART Female <15
   "ezNx1i74mpa", // HV01-17 Starting ART Male 15+
   "TJxRQq9K8jl", // HV01-18 Starting ART Female 15+
   "CcOr3MB7Mh4", // HV01-19 Starting ART Pregnant
@@ -2715,10 +2711,6 @@ const HIV_LABELS = {
   QJX1IYymTwR: "Total Enrolled in Care",
   PLOzPReieli: "HIV Currently in Care (Total)",
   RHyfJDq4FsT: "TB Screened (OPD ICF)",
-  pDoW8tq74Co: "Current on ART (Female 15+)",
-  KMWQGDpqPcJ: "Current on ART (Male 15+)",
-  FmEfFpTP1Tu: "Current on ART (Male <15)",
-  lOyMumfLe7d: "Current on ART (Female <15)",
   ezNx1i74mpa: "Male 15+ Starting on ART",
   TJxRQq9K8jl: "Female 15+ Starting on ART",
   CcOr3MB7Mh4: "Pregnant Starting on ART",
@@ -2726,6 +2718,81 @@ const HIV_LABELS = {
   BPFYXYonMWF: "Female 15+ Revisit on ART",
   BdbVjZPWvYP: "Started on IPT (CCC)",
 };
+
+// ── TX_CURR (Current on ART) is a point-in-time count ───────────────────
+// Its trustworthy sex/age split lives in the category-option disaggregation
+// of DE aMp82zBYPnx ("Finer Age Bands and Gender"): 15 male + 15 female
+// bands (<1, 1-4, 5-9, 10-14 = children, then 15-19 … 65+). These category
+// options sum EXACTLY to the monthly TX_CURR total, so we query them
+// directly (DE.COC analytics) and rebuild the split from them.
+// (Same COC ids as the CHAK HIV C&T renderer in services/dhis2.py.)
+const TX_CURR_DE = "aMp82zBYPnx";
+const TX_CURR_MALE_COCS = [
+  "AwerOu6rx5q",
+  "g2zP3yNwOOa",
+  "WTfu1bBSG12",
+  "X65JamO5tyb",
+  "hKHprPKwjL6",
+  "uSDHHGh2DZo",
+  "sLaLEIDVusT",
+  "b91xfEPrY4D",
+  "EU7hVFz5Yyt",
+  "AR2E4Yiuo8Z",
+  "dfkyp7ZQZSr",
+  "lswMoqT008e",
+  "Z6zV5L8i14I",
+  "XIc55yRW4aQ",
+  "g5bVF4b8hmV",
+];
+const TX_CURR_FEMALE_COCS = [
+  "dcv8Lowu94w",
+  "D2aMSzo7SEw",
+  "HIS0TcFAoo8",
+  "Rr3uh3eAvKi",
+  "DYDpnZWu1XK",
+  "m7Y0ddB212k",
+  "qy1vJGvFJeB",
+  "sk5UiD3PrxH",
+  "Vb7KzTvF83C",
+  "dchngmvBGvb",
+  "VP1zCgdzuBb",
+  "uefSjW3VtZr",
+  "llt7APqVWyq",
+  "gs3y2muDLIK",
+  "YAtW6LDL24J",
+];
+
+function txCurrCocDxStr() {
+  const parts = [];
+  for (const coc of TX_CURR_MALE_COCS) parts.push(`${TX_CURR_DE}.${coc}`);
+  for (const coc of TX_CURR_FEMALE_COCS) parts.push(`${TX_CURR_DE}.${coc}`);
+  return parts.join(";");
+}
+
+// Sum the TX_CURR category options for one month into sex/age buckets.
+// Children = the first 4 bands of each sex (<1, 1-4, 5-9, 10-14).
+function txCurrSexAgeAt(disagg, monthLabel) {
+  const buckets = { mChild: 0, mAdult: 0, fChild: 0, fAdult: 0, total: 0 };
+  if (!disagg || !monthLabel) return buckets;
+  const get = (coc) => {
+    const row = disagg[`${TX_CURR_DE}.${coc}`];
+    const v = row ? row[monthLabel] : undefined;
+    return parseFloat(v) || 0;
+  };
+  TX_CURR_MALE_COCS.forEach((coc, i) => {
+    const v = get(coc);
+    buckets.total += v;
+    if (i < 4) buckets.mChild += v;
+    else buckets.mAdult += v;
+  });
+  TX_CURR_FEMALE_COCS.forEach((coc, i) => {
+    const v = get(coc);
+    buckets.total += v;
+    if (i < 4) buckets.fChild += v;
+    else buckets.fAdult += v;
+  });
+  return buckets;
+}
 
 async function renderMhuHivDashboard(container, facilityName, ouId) {
   // Look up the CHAK OU ID by facility name (CHAK uses different OU IDs than KHIS)
@@ -2745,15 +2812,43 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
   }
 
   const dxStr = HIV_UIDS.join(";");
+  // Follow the period card (1M/3M/6M/12M, single month or custom range)
+  const peParam = mhuTrendPe() || "202607";
 
   try {
     // Use CHAK DHIS endpoint (not KHIS)
     const resp = await fetch(
-      `/api/mhu/chak-data?dx=${encodeURIComponent(dxStr)}&ou=${encodeURIComponent(chakOuId)}&pe=LAST_12_MONTHS`,
+      `/api/mhu/chak-data?dx=${encodeURIComponent(dxStr)}&ou=${encodeURIComponent(chakOuId)}&pe=${encodeURIComponent(peParam)}`,
     );
     if (!resp.ok) throw new Error(`API returned ${resp.status}`);
     const result = await resp.json();
     const data = result.data || {};
+
+    // TX_CURR sex/age disaggregations (DE.COC) — the authoritative
+    // Current-on-ART breakdown. Used for the snapshot card and donut.
+    let disagg = {};
+    try {
+      const respCoc = await fetch(
+        `/api/mhu/chak-data?dx=${encodeURIComponent(txCurrCocDxStr())}&ou=${encodeURIComponent(chakOuId)}&pe=${encodeURIComponent(peParam)}`,
+      );
+      if (respCoc.ok) disagg = (await respCoc.json()).data || {};
+    } catch (e) {
+      console.warn("TX_CURR disaggregation fetch failed:", e);
+    }
+
+    // Fallback: rebuild a TX_CURR monthly series from the category options if
+    // the aggregate query returned nothing for the DE.
+    if (disagg && Object.keys(disagg).length) {
+      const txAgg = {};
+      for (const compKey of Object.keys(disagg)) {
+        if (!compKey.startsWith(TX_CURR_DE + ".")) continue;
+        for (const [m, v] of Object.entries(disagg[compKey])) {
+          txAgg[m] = (txAgg[m] || 0) + (parseFloat(v) || 0);
+        }
+      }
+      if (Object.keys(txAgg).length && !data[TX_CURR_DE])
+        data[TX_CURR_DE] = txAgg;
+    }
 
     const subtitleHtml = `<div class="text-[11px] text-slate-400">HIV Dashboard · CHAK DHIS (MER/C&T)</div>`;
 
@@ -2787,27 +2882,63 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
 
     const sortedPeriods = Array.from(allPeriods).sort(sortPeriodLabels);
 
-    // Compute derived KPIs (CHAK DHIS UIDs)
-    const totalOnArt = findValue(parsed, "aMp82zBYPnx");
+    // Current on ART is a point-in-time (stock) count: never sum it across
+    // months. Prefer the TX_CURR category-option disaggregations — the four
+    // sex/age buckets sum to the true monthly total (Maua: 2,550 as of
+    // July 2026). If no disaggregation is reported, fall back to the
+    // latest-month aggregate.
+    const txCurrItem = parsed.find((p) => p.id === TX_CURR_DE);
+    const txCurrLastValue =
+      txCurrItem && txCurrItem.values.length
+        ? txCurrItem.values[txCurrItem.values.length - 1]
+        : 0;
+
+    const disaggMonths = [];
+    if (disagg && Object.keys(disagg).length) {
+      for (const compKey of Object.keys(disagg)) {
+        if (!compKey.startsWith(TX_CURR_DE + ".")) continue;
+        for (const m of Object.keys(disagg[compKey]))
+          if (!disaggMonths.includes(m)) disaggMonths.push(m);
+      }
+    }
+    disaggMonths.sort(sortPeriodLabels);
+    const disaggMonth = disaggMonths.length
+      ? disaggMonths[disaggMonths.length - 1]
+      : null;
+    const sexAge = txCurrSexAgeAt(disagg, disaggMonth);
+
+    const totalOnArt = sexAge.total > 0 ? sexAge.total : txCurrLastValue;
+    const asOfLabel =
+      sexAge.total > 0
+        ? disaggMonth
+        : txCurrItem && txCurrItem.periods.length
+          ? txCurrItem.periods[txCurrItem.periods.length - 1]
+          : null;
+
+    // Flow indicators: summing over the selected window is meaningful.
     const totalStarting = findValue(parsed, "MQF59FTGl7N");
     const totalEver = findValue(parsed, "iZHADd1svrB");
     const totalRevisit = findValue(parsed, "yVSPslVCpu3");
     const totalEnrolled = findValue(parsed, "QJX1IYymTwR");
     const totalScreenedTb = findValue(parsed, "RHyfJDq4FsT");
 
-    // Current on ART by sex
-    const currFemale15 = findValue(parsed, "pDoW8tq74Co");
-    const currMale15 = findValue(parsed, "KMWQGDpqPcJ");
-    const currMaleChild = findValue(parsed, "FmEfFpTP1Tu");
-    const currFemaleChild = findValue(parsed, "lOyMumfLe7d");
-    const totalCurrBreakdown =
-      currMale15 + currFemale15 + currMaleChild + currFemaleChild;
+    // Current on ART by sex/age — from the TX_CURR disaggregation bands
+    // (children = <1, 1-4, 5-9, 10-14). Sums to the card total above.
+    const currFemale15 = sexAge.fAdult;
+    const currMale15 = sexAge.mAdult;
+    const currMaleChild = sexAge.mChild;
+    const currFemaleChild = sexAge.fChild;
+    const totalCurrBreakdown = sexAge.total;
 
-    // Starting on ART by sex
+    // Starting on ART by sex. Pregnant starts (HV01-19) are a separate MOH731
+    // row and may exist on their own even when the male/female + total rows are
+    // blank (as at Maua), so only treat the sex chart as meaningful when the
+    // male or female new-start rows are actually reported.
     const maleStart = findValue(parsed, "ezNx1i74mpa");
     const femaleStart = findValue(parsed, "TJxRQq9K8jl");
     const pregnantStart = findValue(parsed, "CcOr3MB7Mh4");
     const totalNewStart = maleStart + femaleStart + pregnantStart;
+    const hasSexStart = maleStart + femaleStart > 0;
 
     // IPT (CHAK DHIS — disaggregated by OPD/IPD)
     const iptTotal = findValue(parsed, "BdbVjZPWvYP");
@@ -2824,7 +2955,7 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
       <div class="mb-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
         <div class="rounded-xl border border-violet-200 bg-violet-50 p-3">
           <div class="text-[20px] font-bold text-violet-800">${totalOnArt.toLocaleString()}</div>
-          <div class="text-[10px] text-violet-600 leading-tight">Current on ART</div>
+          <div class="text-[10px] text-violet-600 leading-tight">Current on ART${asOfLabel ? ` · ${escapeHtml(asOfLabel)}` : ""}</div>
         </div>
         <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
           <div class="text-[20px] font-bold text-sky-800">${totalStarting.toLocaleString()}</div>
@@ -2849,17 +2980,30 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
       </div>
     `;
 
+    // Honest note: several CHAK facilities submit only the running TX_CURR
+    // total and no separate starting/new-on-ART (TX_New) figures.
+    if (totalOnArt > 0 && totalStarting === 0) {
+      html += `
+      <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800">
+        <b>New on ART is not reported here.</b> This facility submits the running TX_CURR total to CHAK but its male/female &ldquo;starting on ART&rdquo; rows are blank in the selected window — so Starting on ART shows 0 and the sex/age split below is taken from the TX_CURR report itself.
+      </div>`;
+    }
+
     // Trend chart
     if (parsed.length >= 2 && sortedPeriods.length > 0) {
       html += `<div class="mb-5"><div id="hivTrendChart" class="rounded-xl border border-slate-200 p-3"></div></div>`;
     }
 
-    // Breakdown charts (side by side)
-    const hasPieData = totalCurrBreakdown > 0 || totalNewStart > 0;
-    if (hasPieData) {
-      html += `<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div id="hivCurrChart" class="rounded-xl border border-slate-200 p-3"></div>
-        <div id="hivStartChart" class="rounded-xl border border-slate-200 p-3"></div>
+    // Breakdown charts (side by side). Current-on-ART donut always renders;
+    // the Starting-on-ART sex chart only when male/female rows were reported.
+    const hasCurrChart = totalCurrBreakdown > 0;
+    const hasStartChart = hasSexStart && totalNewStart > 0;
+    if (hasCurrChart || hasStartChart) {
+      const cols =
+        hasCurrChart && hasStartChart ? "lg:grid-cols-2" : "lg:grid-cols-1";
+      html += `<div class="mb-5 grid grid-cols-1 ${cols} gap-4">
+        ${hasCurrChart ? `<div id="hivCurrChart" class="rounded-xl border border-slate-200 p-3"></div>` : ""}
+        ${hasStartChart ? `<div id="hivStartChart" class="rounded-xl border border-slate-200 p-3"></div>` : ""}
       </div>`;
     }
 
@@ -2879,16 +3023,17 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
           <th class="px-3 py-2 font-semibold">Indicator</th>`;
     for (const m of sortedPeriods)
       html += `<th class="px-3 py-2 font-semibold text-right">${escapeHtml(m)}</th>`;
-    html += `<th class="px-3 py-2 font-semibold text-right">Total</th></tr></thead><tbody>`;
+    html += `</tr></thead><tbody>`;
     for (const item of parsed) {
       html += `<tr class="border-t border-slate-100 hover:bg-slate-50">`;
       html += `<td class="px-3 py-1.5 font-medium text-slate-700">${escapeHtml(item.name)}</td>`;
       for (const v of item.values)
         html += `<td class="px-3 py-1.5 text-right text-slate-600">${v.toLocaleString()}</td>`;
-      html += `<td class="px-3 py-1.5 text-right font-semibold text-slate-800">${item.total.toLocaleString()}</td>`;
       html += `</tr>`;
     }
-    html += `</tbody></table></div>`;
+    html += `</tbody></table>
+      <div class="px-3 py-2 text-[10px] leading-relaxed text-slate-400 border-t border-slate-100">TX_CURR (Current on ART) is a point-in-time count — the last month shown is the figure on the card, not a sum of months. Sex/age for it is read from TX_CURR&rsquo;s own finer age bands, so the donut sums to the card total.</div>
+    </div>`;
 
     container.innerHTML = html;
 
@@ -2955,7 +3100,7 @@ async function renderMhuHivDashboard(container, facilityName, ouId) {
     }
 
     // ── Starting on ART breakdown (column) ──
-    if (totalNewStart > 0) {
+    if (hasSexStart && totalNewStart > 0) {
       Highcharts.chart("hivStartChart", {
         chart: { type: "column" },
         title: { text: "Starting on ART by Sex" },
