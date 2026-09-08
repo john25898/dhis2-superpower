@@ -279,15 +279,8 @@ function msDonutBlock(title, emoji, sub, canvasId, legend) {
   </div>`;
 }
 
-function msAnalyticsCardHtml(
-  stats,
-  activeKey,
-  activeMonth,
-  months,
-  awardTotalNum,
-) {
+function msAnalyticsCardHtml(stats, activeKey, activeMonth) {
   const short = milestoneMonthShort(activeMonth);
-  const awardStr = fmtMoney(awardTotalNum);
 
   const healthSub =
     stats.assessed > 0
@@ -297,13 +290,9 @@ function msAnalyticsCardHtml(
     stats.settled > 0
       ? stats.settled + " of " + stats.total + " with a payment status"
       : "No payment statuses recorded yet";
-  const tierSub = stats.total + " milestones by tier";
-  const fundSub = stats.isFinalPay
-    ? "Max-annual caps — final pay set at close-out"
-    : fmtMoney(stats.fund.total) + " scheduled this month";
 
   const note =
-    "Donuts and trend include all " +
+    "Donuts include all " +
     stats.total +
     " milestones scheduled for " +
     activeKey +
@@ -312,7 +301,7 @@ function msAnalyticsCardHtml(
   const foot = [
     "Status buckets come from the Milestone Summary2 tracker: only M1 milestones 1–3 carry verified seeds so far, so everything else is shown grey as “Not yet assessed” until its month is verified.",
     stats.isFinalPay
-      ? "M6 (Final Pay) has no fixed schedule — its month total is $0 because final-pay amounts are performance-tiered and set at year-end close-out; the funding ring therefore shows Max-Annual caps."
+      ? "M6 (Final Pay) has no fixed schedule — its month total is $0 because final-pay amounts are performance-tiered and set at year-end close-out."
       : "",
   ]
     .filter(Boolean)
@@ -325,25 +314,28 @@ function msAnalyticsCardHtml(
         <span class="inline-block rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-semibold text-sky-700">${escapeHtml(activeKey)} · ${escapeHtml(short)}</span>
       </div>
       <div class="mb-3 text-[11px] text-slate-500">${escapeHtml(note)}</div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        ${msDonutBlock("Health Status", "🩺", healthSub, "msHealthDonut", msLegendHtml(stats.health.labels, stats.health.counts, stats.health.colors, stats.total, false))}
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        ${msDonutBlock("Milestone Status", "🩺", healthSub, "msHealthDonut", msLegendHtml(stats.health.labels, stats.health.counts, stats.health.colors, stats.total, false))}
         ${msDonutBlock("Payment Status", "💵", paySub, "msPayDonut", msLegendHtml(stats.pay.labels, stats.pay.counts, stats.pay.colors, stats.total, false))}
-        ${msDonutBlock("Tier Mix", "🧩", tierSub, "msTierDonut", msLegendHtml(stats.tier.labels, stats.tier.counts, stats.tier.colors, stats.total, false))}
-        ${msDonutBlock("Funding Share", "💰", fundSub, "msFundDonut", msLegendHtml(stats.fund.labels, stats.fund.amounts, stats.fund.colors, stats.fund.total, true))}
-      </div>
-      <div class="mt-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="text-[12px] font-bold text-slate-700">🗓 M1–M6 Schedule &amp; Cumulative Trend</div>
-          <span class="inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">Award total ${escapeHtml(awardStr)}</span>
-        </div>
-        <div class="mt-0.5 text-[10px] text-slate-400">Bars = monthly schedule payment · line = cumulative cash to award total.</div>
-        <div class="relative mt-2" style="height:230px"><canvas id="msTrendChart"></canvas></div>
       </div>
       <div class="mt-2 text-[10px] leading-relaxed text-slate-400">${escapeHtml(foot)}</div>
     </div>`;
 }
 
-function mountMsAnalyticsCharts(stats, months, awardTotalNum) {
+function msTrendCardHtml(awardTotalNum) {
+  const awardStr = fmtMoney(awardTotalNum);
+  return `
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-[13px] font-bold text-slate-800">🗓 M1–M6 Schedule &amp; Cumulative Trend</div>
+        <span class="inline-block rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">Award total ${escapeHtml(awardStr)}</span>
+      </div>
+      <div class="mt-0.5 text-[10px] text-slate-400">Bars = monthly schedule payment · line = cumulative cash to award total.</div>
+      <div class="relative mt-2" style="height:230px"><canvas id="msTrendChart"></canvas></div>
+    </div>`;
+}
+
+function mountMsAnalyticsCharts(stats) {
   if (!window.Chart) return;
 
   const makeDonut = function (canvasId, labels, values, colors, total, money) {
@@ -399,22 +391,10 @@ function mountMsAnalyticsCharts(stats, months, awardTotalNum) {
     stats.total,
     false,
   );
-  makeDonut(
-    "msTierDonut",
-    stats.tier.labels,
-    stats.tier.counts,
-    stats.tier.colors,
-    stats.total,
-    false,
-  );
-  makeDonut(
-    "msFundDonut",
-    stats.fund.labels,
-    stats.fund.amounts,
-    stats.fund.colors,
-    stats.fund.total,
-    true,
-  );
+}
+
+function mountMsTrendChart(months, awardTotalNum) {
+  if (!window.Chart) return;
 
   const tCanvas = document.getElementById("msTrendChart");
   if (!tCanvas) return;
@@ -573,9 +553,11 @@ async function renderMilestoneTrackerPage() {
 
   const months = data.months;
   let activeKey = state.milestoneMonth || "M1";
+  const isHomeView = activeKey === "home";
   const monthIndex = months.findIndex((m) => m.key === activeKey);
   const activeMonth = monthIndex >= 0 ? months[monthIndex] : months[0];
-  if (monthIndex < 0) activeKey = activeMonth ? activeMonth.key : "M1";
+  if (!isHomeView && monthIndex < 0)
+    activeKey = activeMonth ? activeMonth.key : "M1";
 
   const tierFilter = state.milestoneTier || "all";
   const payFilter = state.milestonePayment || "all";
@@ -603,17 +585,114 @@ async function renderMilestoneTrackerPage() {
   const monthCumulative = fmtMoney(activeMonth.cumulative);
   const awardTotal = fmtMoney(data.awardTotal);
 
-  const monthPills = months
-    .map(function (m) {
-      const active = m.key === activeKey;
-      return `
-        <button data-ms-month="${m.key}" class="px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
-          ${active ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-b-2 border-transparent"}"
-          title="${escapeHtml(m.period || m.sheet || m.key)}">
-          ${escapeHtml(m.key)} · ${escapeHtml(milestoneMonthShort(m))}
-        </button>`;
+  // ── Tab pills: 🏠 Home first, then M1–M6 ──
+  const monthPills =
+    `
+      <button data-ms-month="home" class="px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+        ${isHomeView ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-b-2 border-transparent"}"
+        title="Year 1 overview — all milestones across M1–M6">
+        🏠 Home
+      </button>` +
+    months
+      .map(function (m) {
+        const active = m.key === activeKey;
+        return `
+      <button data-ms-month="${m.key}" class="px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
+        ${active ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-b-2 border-transparent"}"
+        title="${escapeHtml(m.period || m.sheet || m.key)}">
+        ${escapeHtml(m.key)} · ${escapeHtml(milestoneMonthShort(m))}
+      </button>`;
+      })
+      .join("");
+
+  // ── Home overview rows: dedupe milestone ids across all months ──
+  const homeSeen = {};
+  months.forEach(function (m) {
+    (m.rows || []).forEach(function (r) {
+      if (r.id === null || r.id === undefined || r.id === "") return;
+      if (!homeSeen[r.id]) homeSeen[r.id] = r;
+    });
+  });
+  const homeRows = Object.keys(homeSeen)
+    .map(Number)
+    .sort(function (a, b) {
+      return a - b;
+    })
+    .map(function (k) {
+      return homeSeen[k];
+    });
+
+  const homeTableRows = homeRows
+    .map(function (row) {
+      const freq = String(row.frequency || "").trim();
+      const metaBits = [];
+      if (freq) metaBits.push(freq);
+      const due = row.requiredDue || row.suggestedDue || "";
+      if (due) metaBits.push("Due " + fmtDateIso(due));
+      return `<tr class="border-t border-slate-100 hover:bg-sky-50/40 transition">
+        <td class="px-3 py-2.5 align-top">
+          <div class="text-[11px] font-semibold text-slate-400">#${escapeHtml(String(row.id))}</div>
+        </td>
+        <td class="px-3 py-2.5 align-top min-w-[240px]">
+          <div class="text-[13px] font-semibold text-slate-800 leading-snug">${escapeHtml(row.name || row.masterName || "Milestone " + row.id)}</div>
+          <div class="mt-1 flex flex-wrap items-center gap-1">
+            ${milestoneTierChip(row.tier || row.milestoneType)}
+            ${freq ? `<span class="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">${escapeHtml(freq)}</span>` : ""}
+          </div>
+          ${metaBits.length ? `<div class="mt-1 text-[10px] font-medium text-slate-400">${escapeHtml(metaBits.join(" · "))}</div>` : ""}
+        </td>
+        <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-700 whitespace-nowrap">${fmtMoney(row.allocation)}</td>
+        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+      </tr>`;
     })
     .join("");
+
+  const homeEmptyRowHtml = `<tr><td colspan="7" class="px-3 py-8 text-center text-[13px] text-slate-400">
+    No milestones found for Year 1.
+  </td></tr>`;
+
+  const homeSummaryHtml = `
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div class="text-[15px] font-bold text-slate-800">🏠 Home — Year 1 Overview</div>
+          <div class="text-xs text-slate-500 mt-0.5">CHAK Daraka FAA plan across M1–M6 · master milestone list, one row per milestone.</div>
+          <div class="flex flex-wrap gap-2 mt-2 text-[11px] font-semibold">
+            <span class="text-slate-700 bg-slate-50 px-2.5 py-1 rounded-full">${homeRows.length} Milestones</span>
+            <span class="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Award Total: ${awardTotal}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const homeTableCardHtml = `
+    <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-2 text-[13px] font-bold text-slate-800">📋 General Milestone Table</div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[900px] border-collapse">
+          <thead>
+            <tr class="bg-slate-50">
+              <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">ID</th>
+              <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">Milestone</th>
+              <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">6-Month Allocation</th>
+              <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Earned</th>
+              <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Paid</th>
+              <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Balance</th>
+              <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Overall Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${homeRows.length ? homeTableRows : homeEmptyRowHtml}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-2 text-[10px] text-slate-400">
+        Placeholders (—) are populated after each month is verified.
+      </div>
+    </div>`;
 
   const countReal = rows.length;
   const allCount = (activeMonth.rows || []).length;
@@ -624,13 +703,6 @@ async function renderMilestoneTrackerPage() {
       const metaBits = [];
       const freq = String(row.frequency || "").trim();
       if (freq) metaBits.push(freq);
-      if (row.amount !== null && row.amount !== undefined) {
-        metaBits.push(
-          activeMonth.isFinalPay
-            ? "Max Annual " + fmtMoney(row.amount)
-            : "Max Monthly " + fmtMoney(row.amount),
-        );
-      }
       const due =
         row.requiredDue ||
         row.suggestedDue ||
@@ -677,15 +749,17 @@ async function renderMilestoneTrackerPage() {
       ? `${allCount} milestones`
       : `${countReal} of ${allCount} milestones`;
 
-  // Analytics card (charts reflect ALL rows of the active month).
+  // Analytics card (donuts reflect ALL rows of the active month).
   const msStats = msAnalyticsStats(activeMonth);
   const analyticsCardHtml = msAnalyticsCardHtml(
     msStats,
     activeKey,
     activeMonth,
-    months,
-    data.awardTotal,
   );
+
+  // M1–M6 trend chart now lives on the 🏠 Home tab.
+  const trendCardHtml = msTrendCardHtml(data.awardTotal);
+  const homeBodyHtml = homeSummaryHtml + homeTableCardHtml + trendCardHtml;
 
   elements.chartRoot.innerHTML = `
     <div class="space-y-5">
@@ -710,6 +784,10 @@ async function renderMilestoneTrackerPage() {
         </div>
       </div>
 
+      ${
+        isHomeView
+          ? homeBodyHtml
+          : `
       <!-- Active month summary + filters -->
       <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -773,6 +851,8 @@ async function renderMilestoneTrackerPage() {
           "Milestones Summary2" tracker layout. Placeholders (—) are populated after each month is verified.
         </div>
       </div>
+      `
+      }
     </div>
   `;
 
@@ -800,6 +880,7 @@ async function renderMilestoneTrackerPage() {
       renderMilestoneTrackerPage();
     });
 
-  // ── Mount analytics charts (after DOM is in place) ──
-  mountMsAnalyticsCharts(msStats, months, data.awardTotal);
+  // ── Mount charts (after DOM is in place) ──
+  if (isHomeView) mountMsTrendChart(months, data.awardTotal);
+  else mountMsAnalyticsCharts(msStats);
 }

@@ -20,7 +20,7 @@ const state = {
   activeDashboardId: "",
   activeChakSubproject: "",
   activeMhuSubtab: "WORKLOAD",
-  milestoneMonth: "M1",
+  milestoneMonth: "home",
   milestoneTier: "all",
   milestonePayment: "all",
   playgroundMode: "finance",
