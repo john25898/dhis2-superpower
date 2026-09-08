@@ -819,11 +819,15 @@ def _build_payload():
     award_total = months[-1]["cumulative"] if months else 0
 
     # Live performance (CHAK DHIS2 / Daraja baseline) for the six
-    # DHIS2-measurable milestones.  Same baseline is shown in every month
-    # tab until GOR verifies that month's confirmed values.
+    # DHIS2-measurable milestones.  The baseline is attached to the FIRST
+    # month only (M1) — it is a test of the indicator wiring, not yet the
+    # confirmed performance of any project month.  M2–M6 keep "—" until
+    # GOR verifies each project month's confirmed values.
     khis = _compute_khis_metrics()
     perf_by_id = {m["id"]: m for m in (khis.get("metrics") or [])}
     for month in months:
+        if month.get("key") != "M1":
+            continue
         for row in month["rows"]:
             perf = perf_by_id.get(row["id"])
             if perf:
