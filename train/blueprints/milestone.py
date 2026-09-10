@@ -279,40 +279,49 @@ def _parse_summary2(ws):
 #
 # Only milestones whose target is measurable from DHIS2 get real numbers
 # (ids 6, 7, 8, 9, 15, 16).  Every other milestone keeps "—" until its
-# record-based / EMR-based verification happens.  The data-element ids and
-# the ratio formulas below are the SAME proven set the app's Integrated
-# HIV Dashboard pages already publish (train/pbix_dashboards.py PAGE 2).
+# record-based / EMR-based verification happens.
 # ════════════════════════════════════════════════════════════════════
 
-# -- MOH 731 data-element ids (validated in pbix_dashboards.py) --------
-_DE_HTS_TESTED = [
-    "ymKviaHZtQN", "vFlUDposW0Y", "XKAlilawdhN", "THJbtDzxplR",
-    "Lwtqyjus0Mb", "QBsyLQZRdiH", "XYhYAMivUX5", "J4zibSjbBCt",
-]
-_DE_HTS_POSITIVE = "CcOr3MB7Mh4"
-_DE_HTS_LINKED_IN = ["wQ5AA7GTs9G", "YroUdlNVeR2", "h13L1gcUaCS"]
-_DE_HTS_LINKED_OUT = ["DdPzCAtN3J2", "ZnetI7sd8Ub", "BeO9dmxTBMg"]
-_DE_TX_CURR = "kgzd9LfXZXq"
-_DE_IIT_TOTAL = "G9HTTIls3L6"   # Tx_ML, COD (IIT total)
-_DE_TX_ML = "bv9nAL9x5Q5"       # Tx_ML, Outcomes (fallback numerator)
-_DE_VL_DONE = "JGd3MwmKBuM"     # TX_PVLS (D) Routine  == VL done / eligible
-_DE_VL_SUPPRESSED = "FloZph8hN9z"  # TX_PVLS (N) Routine
-_DE_PREP_NEW = [
-    "HmUEZ2yWtAE", "tSOqRYW3fUp", "CYLF8hUOHpv", "Q57YuHsnTKm",
-    "OOhFACMqmKp", "hxfjIrnxHBF", "EmzN6C78vFE", "BSx4nKKwK1r",
-    "mbSrJM6OvQo", "N3IsvP0sUF5", "DQR7sycvi6V", "JJsuQUWLYsD",
-    "qvhr1STgYAD", "N6iP1PPLmyX", "EX7lZNXZXDe",
-]
-_DE_TPT = "dysZutXWPTz"
+# -- CHAK DHIS2 sources, manager-confirmed 2026-09-10 ------------------
+#
+#  #6  HTS_TST / HTS_TST_POS   -> OFFICIAL indicators.  The old
+#                                 hand-assembled 8-element list missed the
+#                                 PMTCT and SNS entry points (MTRH Jul 2026:
+#                                 349 vs the official 499).
+#  #7  TX_NEW / HTS_TST_POS    -> "take the TX_NEW / hts pos * 100;
+#                                 thats the formula".
+#  #8  PrEP_New / 486          -> ONLY "PrEP_New: PrEP, New Clients".
+#  #9  IIT / [TX_CURR(previous quarter close) + sum TX_NEW(this quarter)]
+#  #15 TPT / TX_CURR
+#  #16 VL suppressed / VL done
+#
+# Retired: the MOH731_HV01-19 positive source (0 at the test sites), the
+# 15 "PREP_ALLMod * New F/M" elements (0 at the test sites), the six
+# legacy "... Linked within/outside" elements, and "C&T (facility) -
+# Tx_ML, COD" (G9HTTIls3L6) — that element's category combo is COD =
+# *Cause of Death*, not interruption in treatment.
+_IND_HTS_TESTED = "MSdR6p2OEmx"     # HTS_TST     : Numerator (indicator)
+_IND_HTS_POSITIVE = "smzxVpKXbR5"   # HTS_TST_POS : Numerator (indicator)
+_DE_TX_NEW = "vTTEybkXZ53"          # TX_NEW: Starting ART      (#7, #9)
+_DE_TX_CURR = "kgzd9LfXZXq"         # TX_CURR                   (#9, #15)
+_DE_PREP_NEW = "VIg3ciXYUQn"        # PrEP_New: PrEP, New Clients   (#8)
+_DE_TX_ML_OUTCOMES = "bv9nAL9x5Q5"  # C&T (facility) - Tx_ML, Outcomes
+_DE_VL_DONE = "JGd3MwmKBuM"         # TX_PVLS (D) Routine — VL done
+_DE_VL_SUPPRESSED = "FloZph8hN9z"   # TX_PVLS (N) Routine — VL suppressed
+_DE_TPT = "dysZutXWPTz"             # TPT TX_Curr Total (indicator)
 
-_ALL_METRIC_DE_IDS = sorted(
-    set(
-        [_DE_HTS_POSITIVE, _DE_TX_CURR, _DE_IIT_TOTAL, _DE_TX_ML,
-         _DE_VL_DONE, _DE_VL_SUPPRESSED, _DE_TPT]
-        + _DE_HTS_TESTED + _DE_HTS_LINKED_IN + _DE_HTS_LINKED_OUT
-        + _DE_PREP_NEW
-    )
-)
+# #9 numerator = the three "Interruption in Treatment" outcome options of
+# "C&T (facility) - Tx_ML, Outcomes".  Died / Transferred Out / Refused
+# (Stopped) Treatment are NOT interruption.  This DHIS2 build ignores
+# `co:<option-uid>` as a filter, so the element is pulled with the full
+# category-option breakdown and rows are matched on the option NAME.
+_IIT_OUTCOME_PREFIX = "Interruption"
+_IIT_OUTCOME_COCS = ["aYhgkCY97Ga", "EDiSGvvIfoN", "l2jNAuxJvg9"]
+
+_ALL_METRIC_DE_IDS = sorted({
+    _IND_HTS_TESTED, _IND_HTS_POSITIVE, _DE_TX_NEW, _DE_TX_CURR,
+    _DE_PREP_NEW, _DE_VL_DONE, _DE_VL_SUPPRESSED, _DE_TPT,
+})
 
 _MONTH_ORD = {
     m: i for i, m in enumerate(
@@ -474,14 +483,20 @@ def _fetch_chak_ou_by_code(codes):
 
 
 def _pe_key(pe):
-    """Sortable key for a DHIS2 period label ('202607', 'July 2026', …)."""
+    """Sortable key for a DHIS2 period label ('202607', 'July 2026', …).
+
+    Always returns (year, month) with month 1-12 so the same key can be
+    used for sorting and for the calendar-quarter maths.
+    """
     s = str(pe).strip()
     m = re.match(r"^(\d{4})(\d{2})$", s)
     if m:
         return (int(m.group(1)), int(m.group(2)))
     m = re.match(r"^([A-Za-z]+)[\s\-_/]*(\d{4})$", s)
     if m:
-        return (int(m.group(2)), _MONTH_ORD.get(m.group(1).lower()[:3], 0))
+        ord_ = _MONTH_ORD.get(m.group(1).lower()[:3])
+        if ord_ is not None:
+            return (int(m.group(2)), ord_ + 1)
     return (0, 0)
 
 
@@ -502,11 +517,62 @@ def _fetch_daraja_metrics_data(ou_ids):
         return {}
 
 
+def _fetch_iit_numerator(ou_ids):
+    """#9 numerator — the 'Interruption in Treatment' outcomes of Tx_ML.
+
+    Returns {period_label: value} across the last 12 months so the tracker
+    can pick the anchor month straight out of it.
+    """
+    try:
+        from services.dhis2 import _chak_analytics_fetch_coc
+
+        return _chak_analytics_fetch_coc(
+            _DE_TX_ML_OUTCOMES, list(ou_ids), "LAST_12_MONTHS",
+            name_prefixes=(_IIT_OUTCOME_PREFIX,),
+        ) or {}
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK IIT (Tx_ML outcomes) fetch failed: {exc}")
+        return {}
+
+
 def _period_sum(data, de_ids, period):
     total = 0.0
     for de in de_ids:
         total += float(data.get(de, {}).get(period, 0) or 0)
     return total
+
+
+def _pe_lookup(data):
+    """{(year, month): period_label} for every period present in `data`.
+
+    Lets the metric maths address months by calendar position without
+    guessing DHIS2's period-label format.
+    """
+    out = {}
+    for de_map in (data or {}).values():
+        for p in (de_map or {}):
+            key = _pe_key(p)
+            if key[0]:
+                out.setdefault(key, p)
+    return out
+
+
+def _prev_quarter_close(year, month):
+    """Last month of the calendar quarter BEFORE (year, month).
+
+    Quarters follow the FAA schedule: Jan-Mar · Apr-Jun · Jul-Sep ·
+    Oct-Dec.  So Aug -> Jun, Jul -> Jun, Jun -> Mar, Mar -> Dec.
+    """
+    q = (month - 1) // 3
+    if q == 0:
+        return year - 1, 12
+    return year, [3, 6, 9][q - 1]
+
+
+def _quarter_months_to(year, month):
+    """The current quarter's months, from its 1st month through (year, month)."""
+    start = ((month - 1) // 3) * 3 + 1
+    return [(year, mm) for mm in range(start, month + 1)]
 
 
 def _pick_anchor_period(data):
@@ -600,25 +666,45 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
     }
 
 
-def _compute_daraja_metrics(data, anchor):
-    """Compute the six DHIS2-measurable milestones for the anchor month."""
+def _compute_daraja_metrics(data, anchor, iit_by_period=None):
+    """Compute the six DHIS2-measurable milestones for the anchor month.
+
+    `iit_by_period` is the #9 numerator series ({period_label: value} of
+    the "Interruption in Treatment" outcomes) supplied by
+    `_fetch_iit_numerator`; it is a separate call because it needs the
+    category-option breakdown.
+    """
     if not data or not anchor:
         return [], None
 
-    tested = _period_sum(data, _DE_HTS_TESTED, anchor)
-    positive = float(data.get(_DE_HTS_POSITIVE, {}).get(anchor, 0) or 0)
-    linked = (
-        _period_sum(data, _DE_HTS_LINKED_IN, anchor)
-        + _period_sum(data, _DE_HTS_LINKED_OUT, anchor)
+    periods = _pe_lookup(data)
+
+    def val(de_id, year, month):
+        label = periods.get((year, month))
+        if not label:
+            return 0.0
+        return float(data.get(de_id, {}).get(label, 0) or 0)
+
+    year, month = _pe_key(anchor)
+    q_year, q_month = _prev_quarter_close(year, month)
+
+    tested = val(_IND_HTS_TESTED, year, month)
+    positive = val(_IND_HTS_POSITIVE, year, month)
+    tx_new = val(_DE_TX_NEW, year, month)
+    tx_curr = val(_DE_TX_CURR, year, month)
+    prep_new = val(_DE_PREP_NEW, year, month)
+    vl_done = val(_DE_VL_DONE, year, month)
+    vl_supp = val(_DE_VL_SUPPRESSED, year, month)
+    tpt = val(_DE_TPT, year, month)
+    iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0)
+
+    # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus
+    # every TX_NEW recorded so far in the CURRENT quarter.
+    tx_curr_prevq = val(_DE_TX_CURR, q_year, q_month)
+    tx_new_qtr = sum(
+        val(_DE_TX_NEW, y, m) for y, m in _quarter_months_to(year, month)
     )
-    tx_curr = float(data.get(_DE_TX_CURR, {}).get(anchor, 0) or 0)
-    iit_raw = float(data.get(_DE_IIT_TOTAL, {}).get(anchor, 0) or 0)
-    if not iit_raw:
-        iit_raw = float(data.get(_DE_TX_ML, {}).get(anchor, 0) or 0)
-    vl_done = float(data.get(_DE_VL_DONE, {}).get(anchor, 0) or 0)
-    vl_supp = float(data.get(_DE_VL_SUPPRESSED, {}).get(anchor, 0) or 0)
-    prep_new = _period_sum(data, _DE_PREP_NEW, anchor)
-    tpt = float(data.get(_DE_TPT, {}).get(anchor, 0) or 0)
+    iit_denom = tx_curr_prevq + tx_new_qtr
 
     def fmt(v):
         return f"{round(v):,}" if abs(v) >= 10 else f"{v:,.0f}"
@@ -636,24 +722,27 @@ def _compute_daraja_metrics(data, anchor):
             "21,584 tested · 306 positive / month",
             f"{fmt(tested)} tested · {fmt(positive)} positive",
             pct6, unlock, band,
-            "min(people tested ÷ 21,584, positives ÷ 306) — MOH 731 HTS "
-            "entry-point total & HTS_POS",
+            "min(people tested ÷ 21,584, positives ÷ 306) × 100 — CHAK DHIS2 "
+            "official indicators HTS_TST / HTS_TST_POS : Numerator",
         ))
 
     # ── #7 Linkage of HIV-positive clients to ART ──
-    #   Target ≥95% of newly identified positives linked to ART.
+    #   Manager ruling: TX_NEW ÷ HTS_TST_POS × 100.  Target ≥95%.
     if positive:
-        pct7 = min(100.0, linked / positive * 100.0)
+        pct7 = min(100.0, tx_new / positive * 100.0)
         unlock, band = _unlock_bands("linkage", pct7)
         metrics.append(_metric_doc(
             7, "Linkage of HIV Positive Clients to ART", anchor,
             "≥95% of newly diagnosed linked to ART",
-            f"{pct7:.1f}% · {fmt(linked)} of {fmt(positive)} linked",
+            f"{pct7:.1f}% · {fmt(tx_new)} started on ART of {fmt(positive)} "
+            "positive",
             pct7, unlock, band,
-            "linked (within + outside facility) ÷ HTS_POS × 100 — MOH 731",
+            "TX_NEW ÷ HTS_TST_POS × 100 — CHAK DHIS2 "
+            "(TX_NEW: Starting ART ÷ HTS_TST_POS : Numerator)",
         ))
 
     # ── #8 PrEP Initiation — monthly target 486 ──
+    #   Manager ruling: only "PrEP_New: PrEP, New Clients" counts.
     if prep_new:
         pct8 = min(100.0, prep_new / 486.0 * 100.0)
         unlock, band = _unlock_bands("count", pct8)
@@ -662,22 +751,28 @@ def _compute_daraja_metrics(data, anchor):
             "486 PrEP initiations / month (2,918 / 6)",
             f"{fmt(prep_new)} PrEP initiations",
             pct8, unlock, band,
-            "new PrEP starts ÷ 486 (FAA monthly target) — MOH 731 PrEP "
-            "modalities total",
+            "PrEP_New: PrEP, New Clients ÷ 486 (FAA monthly target) × 100 — "
+            "CHAK DHIS2",
         ))
 
     # ── #9 HIV Care, Treatment Continuity & Retention (IIT) ──
     #   Target: monthly IIT < 2.0% of patients on ART.
-    if tx_curr:
-        iit_pct = iit_raw / tx_curr * 100.0
+    #   Numerator = Tx_ML, Outcomes → only the "Interruption in Treatment"
+    #     options (<3 months · 3–5 months · 6+ months).
+    #   Denominator = TX_CURR (close of the previous quarter)
+    #               + Σ TX_NEW (current quarter, 1st month → anchor month).
+    #   Quarters: Jan–Mar · Apr–Jun · Jul–Sep · Oct–Dec.
+    if iit_denom:
+        iit_pct = iit_raw / iit_denom * 100.0
         unlock, band = _unlock_bands("iit", iit_pct)
         metrics.append(_metric_doc(
             9, "HIV Care, Treatment Continuity & Retention", anchor,
             "Monthly IIT < 2.0% of patients on ART",
-            f"{iit_pct:.2f}% · {fmt(iit_raw)} interrupted of {fmt(tx_curr)} "
-            "on ART",
+            f"{iit_pct:.2f}% · {fmt(iit_raw)} interrupted of {fmt(iit_denom)} "
+            f"on ART (TX_CURR {fmt(tx_curr_prevq)} + TX_NEW {fmt(tx_new_qtr)})",
             iit_pct, unlock, band,
-            "Tx_ML (IIT total) ÷ TX_CURR × 100 — MOH 731",
+            "Interruption in Treatment ÷ [TX_CURR(previous quarter close) + "
+            "TX_NEW(current quarter to date)] × 100 — CHAK DHIS2",
         ))
 
     # ── #15 TB Preventive Therapy — 90% of eligible initiated ──
@@ -743,7 +838,10 @@ def _compute_khis_metrics():
                 "matched Daraja facilities."
             )
             return khis
-        metrics, anchor = _compute_daraja_metrics(data, _pick_anchor_period(data))
+        iit_by_period = _fetch_iit_numerator(ou_ids)
+        metrics, anchor = _compute_daraja_metrics(
+            data, _pick_anchor_period(data), iit_by_period
+        )
         if not metrics:
             khis["status"] = "empty"
             khis["note"] = (

@@ -161,6 +161,88 @@ def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
         return {}
 
 
+def _chak_analytics_fetch_coc(dx_id, ou_ids, pe="LAST_12_MONTHS",
+                              name_prefixes=None, ou_chunk=100):
+    """Fetch one CHAK data element by category option and keep only the
+    options whose NAME starts with one of `name_prefixes`.
+
+    CHAK DHIS2 2.40 ignores `co:<option-uid>` as a dimension filter — it
+    returns the element's grand total regardless — so the element must be
+    pulled with `co:categoryOptions` and filtered client-side on the
+    category-option display name.
+
+    Used for #9 IIT: 'C&T (facility) - Tx_ML, Outcomes' splits into Died /
+    Transferred Out / Refused (Stopped) / Interruption (<3m, 3-5m, 6+m);
+    only the 'Interruption' options are IIT.
+
+    Returns {period_name: summed_value} — {} on any failure.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    import requests as _req
+    from requests.auth import HTTPBasicAuth
+
+    if isinstance(ou_ids, (list, set, tuple)):
+        ou_list = list(ou_ids)
+    else:
+        ou_list = [ou_ids]
+    ou_list = [str(o) for o in ou_list if o]
+    if not ou_list:
+        return {}
+
+    prefixes = tuple(name_prefixes or ())
+    cache_key = make_key(dx_id, ";".join(ou_list), pe, prefixes,
+                         namespace="chak_coc")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    url = CHAK_BASE.rstrip("/") + "/analytics.json"
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    out = {}
+    for i in range(0, len(ou_list), ou_chunk):
+        params = {
+            "dimension": [f"dx:{dx_id}", "co:categoryOptions", f"pe:{pe}",
+                          "ou:" + ";".join(ou_list[i:i + ou_chunk])],
+            "paging": "false",
+        }
+        try:
+            resp = _req.get(url, params=params, auth=auth, verify=False,
+                            timeout=240)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[DHIS2] CHAK COC fetch failed: {exc}")
+            return {}
+        if not resp.ok:
+            print(f"[DHIS2] CHAK COC fetch HTTP {resp.status_code}")
+            return {}
+        data = resp.json()
+        rows = data.get("rows", []) or []
+        if not rows:
+            continue
+        meta = data.get("metaData", {}).get("items", {})
+        hdrs = [h.get("name") for h in (data.get("headers") or [])]
+        try:
+            co_i, pe_i = hdrs.index("co"), hdrs.index("pe")
+            val_i = hdrs.index("value")
+        except ValueError:
+            co_i, pe_i, val_i = 1, 2, len(rows[0]) - 1
+        for row in rows:
+            if len(row) <= max(co_i, pe_i, val_i):
+                continue
+            name = (meta.get(str(row[co_i]), {}) or {}).get("name", "") or ""
+            if prefixes and not name.startswith(prefixes):
+                continue
+            pe_name = (meta.get(str(row[pe_i]), {}) or {}).get("name",
+                                                                str(row[pe_i]))
+            try:
+                val = float(row[val_i] or 0)
+            except (TypeError, ValueError):
+                continue
+            out[pe_name] = out.get(pe_name, 0) + val
+    cache_set(cache_key, out)
+    return out
+
+
 def _find_dx_by_pattern(prefix_pattern, age_bands):
     """Find male & female DX IDs from the data element dictionary.
     prefix_pattern: e.g. 'Tx_New STA' or 'TX_Curr STA'
