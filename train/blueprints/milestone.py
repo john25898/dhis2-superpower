@@ -292,7 +292,12 @@ def _parse_summary2(ws):
 #                                 thats the formula".
 #  #8  PrEP_New / 486          -> ONLY "PrEP_New: PrEP, New Clients".
 #  #9  IIT / [TX_CURR(previous quarter close) + sum TX_NEW(this quarter)]
-#  #15 TPT / TX_CURR
+#  #15 TB_PREV Numerator / TB_PREV Denominator   -> the official
+#                                 "proportion of eligible PLHIV initiated
+#                                 on TPT" indicator (WHO/NASCOP TB_PREV).
+#                                 The old "TPT TX_Curr Total / TX_CURR"
+#                                 proxy reported 6-9% where the real
+#                                 coverage is 92-100%.
 #  #16 VL suppressed / VL done
 #
 # Retired: the MOH731_HV01-19 positive source (0 at the test sites), the
@@ -308,7 +313,9 @@ _DE_PREP_NEW = "VIg3ciXYUQn"        # PrEP_New: PrEP, New Clients   (#8)
 _DE_TX_ML_OUTCOMES = "bv9nAL9x5Q5"  # C&T (facility) - Tx_ML, Outcomes
 _DE_VL_DONE = "JGd3MwmKBuM"         # TX_PVLS (D) Routine — VL done
 _DE_VL_SUPPRESSED = "FloZph8hN9z"   # TX_PVLS (N) Routine — VL suppressed
-_DE_TPT = "dysZutXWPTz"             # TPT TX_Curr Total (indicator)
+_DE_TPT = "dysZutXWPTz"             # TPT TX_Curr Total (indicator, unused)
+_IND_TB_PREV_NUM = "D73JcPGIIIA"    # TB_PREV Numerator Total   (#15)
+_IND_TB_PREV_DEN = "cJoXKb6p94M"    # TB_PREV Denominator Total (#15)
 
 # #9 numerator = the three "Interruption in Treatment" outcome options of
 # "C&T (facility) - Tx_ML, Outcomes".  Died / Transferred Out / Refused
@@ -321,6 +328,7 @@ _IIT_OUTCOME_COCS = ["aYhgkCY97Ga", "EDiSGvvIfoN", "l2jNAuxJvg9"]
 _ALL_METRIC_DE_IDS = sorted({
     _IND_HTS_TESTED, _IND_HTS_POSITIVE, _DE_TX_NEW, _DE_TX_CURR,
     _DE_PREP_NEW, _DE_VL_DONE, _DE_VL_SUPPRESSED, _DE_TPT,
+    _IND_TB_PREV_NUM, _IND_TB_PREV_DEN,
 })
 
 _MONTH_ORD = {
@@ -696,6 +704,8 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
     vl_done = val(_DE_VL_DONE, year, month)
     vl_supp = val(_DE_VL_SUPPRESSED, year, month)
     tpt = val(_DE_TPT, year, month)
+    tb_prev_num = val(_IND_TB_PREV_NUM, year, month)
+    tb_prev_den = val(_IND_TB_PREV_DEN, year, month)
     iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0)
 
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus
@@ -776,17 +786,22 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
         ))
 
     # ── #15 TB Preventive Therapy — 90% of eligible initiated ──
-    #   Proxy (same as the app's Integrated HIV Dashboard): TPT ÷ TX_CURR.
-    if tx_curr:
-        tpt_pct = tpt / tx_curr * 100.0
+    #   Official CHAK DHIS2 indicator pair "TB_PREV Numerator Total" /
+    #   "TB_PREV Denominator Total" = the WHO/NASCOP TPT coverage measure
+    #   (facilities report it in the TB_PREV section of the MOH 731).
+    #   Fractions, not counts: the denominator is small, so the value is
+    #   BLENDED across every OU in the chunk in _chak_analytics_fetch.
+    if tb_prev_den:
+        tpt_pct = tb_prev_num / tb_prev_den * 100.0
         unlock, band = _unlock_bands("tpt", tpt_pct)
         metrics.append(_metric_doc(
             15, "TB Preventive Therapy", anchor,
             "90% of eligible PLHIV initiated on TPT",
-            f"{fmt(tpt)} on TPT · {tpt_pct:.1f}% of TX_CURR "
-            f"({fmt(tx_curr)})",
+            f"{tpt_pct:.1f}% · {fmt(tb_prev_num)} of {fmt(tb_prev_den)} "
+            "eligible initiated",
             tpt_pct, unlock, band,
-            "TPT ÷ TX_CURR × 100 (eligible proxy) — MOH 731",
+            "TB_PREV Numerator Total ÷ TB_PREV Denominator Total × 100 "
+            "(CHAK DHIS2 official indicator)",
         ))
 
     # ── #16 Viral Load Suppression — ≥95% with documented VL ──
