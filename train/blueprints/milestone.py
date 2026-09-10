@@ -110,6 +110,65 @@ def _clean(value):
     return text.strip()
 
 
+class _ValueCell:
+    """Stand-in for an openpyxl Cell that only exposes .value."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+class _SheetView:
+    """Read a worksheet as plain values instead of openpyxl Cell objects.
+
+    Loading eagerly with ``openpyxl.load_workbook()`` materialises a Cell
+    instance per non-empty cell.  The FAA workbook's five ~4,000-row
+    payment schedules alone cost ~120 MB of RSS that way, which is a large
+    share of a 512 MB Render instance for data we immediately convert to
+    ints and strings.
+
+    This wraps a ``read_only=True`` worksheet, materialises each row once
+    with ``values_only=True``, and re-exposes the tiny slice of the
+    worksheet API the parsers use: ``max_row`` and ``cell(r, c).value``.
+    Out-of-range reads return an empty cell rather than raising, which
+    matches how the parsers already treat blank trailing columns.
+    """
+
+    __slots__ = ("_rows", "max_row")
+
+    def __init__(self, ws):
+        self._rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
+        self.max_row = len(self._rows)
+
+    def cell(self, row, column):
+        if 1 <= row <= self.max_row:
+            values = self._rows[row - 1]
+            if 1 <= column <= len(values):
+                return _ValueCell(values[column - 1])
+        return _ValueCell(None)
+
+
+def _open_for_values(path, sheets, *, read_only):
+    """Open `path` and return {sheet_name: worksheet} for `sheets`.
+
+    With ``read_only=True`` the returned views can be used after the
+    workbook is closed because the rows are already materialised.
+    """
+    wb = openpyxl.load_workbook(path, data_only=True, read_only=read_only)
+    try:
+        out = {}
+        for name in sheets:
+            if name not in wb.sheetnames:
+                continue
+            ws = wb[name]
+            out[name] = _SheetView(ws) if read_only else ws
+        return out
+    finally:
+        if read_only:
+            wb.close()
+
+
 def _iso(value):
     """datetime/date -> 'YYYY-MM-DD' string (else None)."""
     if isinstance(value, datetime):
@@ -979,11 +1038,24 @@ def _compute_khis_metrics():
 
 def _build_payload():
     """Parse the two workbooks once and shape the tracker API response."""
-    faa = openpyxl.load_workbook(FAA_XLSX, data_only=True)
-    summary = openpyxl.load_workbook(SUMMARY2_XLSX, data_only=True)
+    # Open in read-only streaming mode: the parsers only ever read values,
+    # and eager loading costs ~120 MB of Cell objects on the FAA workbook
+    # alone (see _SheetView).
+    faa_sheets = _open_for_values(
+        FAA_XLSX,
+        [
+            "Milestones_DataEntry",
+            "Payment Schedule_M1",
+            "Payment Schedule_M2",
+            "Payment Schedule_M3",
+            "Payment Schedule_M4",
+            "Payment Schedule_M5",
+            "V2 Payment Schedule_Final Pay",
+        ],
+        read_only=True,
+    )
 
-    master = _parse_master_registry(faa["Milestones_DataEntry"])
-    tracker_seeds = _parse_summary2(summary[summary.sheetnames[0]])
+    master = _parse_master_registry(faa_sheets["Milestones_DataEntry"])
 
     months = []
     for key, sheet_name in [
@@ -993,15 +1065,23 @@ def _build_payload():
         ("M4", "Payment Schedule_M4"),
         ("M5", "Payment Schedule_M5"),
     ]:
-        if sheet_name in faa.sheetnames:
-            month = _parse_months_schedule(faa[sheet_name], key, sheet_name)
+        if sheet_name in faa_sheets:
+            month = _parse_months_schedule(faa_sheets[sheet_name], key, sheet_name)
             if month:
                 months.append(month)
 
-    if "V2 Payment Schedule_Final Pay" in faa.sheetnames:
-        m6 = _parse_v2_final_pay(faa["V2 Payment Schedule_Final Pay"])
+    if "V2 Payment Schedule_Final Pay" in faa_sheets:
+        m6 = _parse_v2_final_pay(faa_sheets["V2 Payment Schedule_Final Pay"])
         if m6:
             months.append(m6)
+
+    # The seeds sheet is the only thing read from Summary2.
+    seeds_sheets = _open_for_values(
+        SUMMARY2_XLSX, ["Milestone Summary"], read_only=True
+    )
+    tracker_seeds = _parse_summary2(
+        next(iter(seeds_sheets.values()))
+    )
 
     # Enrich each month row with master allocation + Summary2 seeds.
     tier_set = set()

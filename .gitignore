@@ -34,7 +34,18 @@ _create_*.py
 _fetch_*.py
 _temp_*.py
 _test_*.py
+_probe_*.py
 train/_*.py
+_probe_*_out.txt
+_snapshot_payload.py
+_strip_summary2.py
+_payload_*.json
+
+# Local-only backups of large binaries
+*.orig-backup
+
+# Client document drop (never deploy)
+/PrEP/
 
 # Temp data / metadata CSVs
 _pmtct_data.json
