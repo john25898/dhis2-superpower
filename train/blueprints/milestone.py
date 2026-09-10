@@ -278,7 +278,7 @@ def _parse_summary2(ws):
 # LIVE PERFORMANCE — CHAK DHIS2 (ereporting · MOH 731) for DARAJA
 #
 # Only milestones whose target is measurable from DHIS2 get real numbers
-# (ids 6, 7, 8, 9, 15, 16).  Every other milestone keeps "—" until its
+# (ids 6, 7, 8, 9, 11, 15, 16).  Every other milestone keeps "—" until its
 # record-based / EMR-based verification happens.
 # ════════════════════════════════════════════════════════════════════
 
@@ -292,6 +292,17 @@ def _parse_summary2(ws):
 #                                 thats the formula".
 #  #8  PrEP_New / 486          -> ONLY "PrEP_New: PrEP, New Clients".
 #  #9  IIT / [TX_CURR(previous quarter close) + sum TX_NEW(this quarter)]
+#  #11 AHD -> manager ruling ("AHD is calculated by (TX_NEW CD4 < 200 +
+#                                 TX_NEW CD4 >=200) / TX_NEW").  The two
+#                                 CD4 buckets are the MOH 731 CD4
+#                                 disaggregation of TX_NEW: Starting ART.
+#                                 Reads as: "of every client newly started
+#                                 on ART, what share had their CD4
+#                                 established" = the FAA proxy for
+#                                 "% of adult PLHIV at risk of AHD
+#                                 screened using CD4 cell count".
+#                                 (CD4 "Unknown" is the not-screened
+#                                 remainder and is deliberately excluded.)
 #  #15 TB_PREV Numerator / TB_PREV Denominator   -> the official
 #                                 "proportion of eligible PLHIV initiated
 #                                 on TPT" indicator (WHO/NASCOP TB_PREV).
@@ -307,7 +318,9 @@ def _parse_summary2(ws):
 # *Cause of Death*, not interruption in treatment.
 _IND_HTS_TESTED = "MSdR6p2OEmx"     # HTS_TST     : Numerator (indicator)
 _IND_HTS_POSITIVE = "smzxVpKXbR5"   # HTS_TST_POS : Numerator (indicator)
-_DE_TX_NEW = "vTTEybkXZ53"          # TX_NEW: Starting ART      (#7, #9)
+_DE_TX_NEW = "vTTEybkXZ53"          # TX_NEW: Starting ART   (#7, #9, #11)
+_DE_TX_NEW_CD4_LT200 = "jbLj76PejpY"   # TX_NEW: Starting ART, CD4 <200  (#11)
+_DE_TX_NEW_CD4_GE200 = "DiriHmlA9te"   # TX_NEW: Starting ART, CD4 >=200 (#11)
 _DE_TX_CURR = "kgzd9LfXZXq"         # TX_CURR                   (#9, #15)
 _DE_PREP_NEW = "VIg3ciXYUQn"        # PrEP_New: PrEP, New Clients   (#8)
 _DE_TX_ML_OUTCOMES = "bv9nAL9x5Q5"  # C&T (facility) - Tx_ML, Outcomes
@@ -327,6 +340,7 @@ _IIT_OUTCOME_COCS = ["aYhgkCY97Ga", "EDiSGvvIfoN", "l2jNAuxJvg9"]
 
 _ALL_METRIC_DE_IDS = sorted({
     _IND_HTS_TESTED, _IND_HTS_POSITIVE, _DE_TX_NEW, _DE_TX_CURR,
+    _DE_TX_NEW_CD4_LT200, _DE_TX_NEW_CD4_GE200,
     _DE_PREP_NEW, _DE_VL_DONE, _DE_VL_SUPPRESSED, _DE_TPT,
     _IND_TB_PREV_NUM, _IND_TB_PREV_DEN,
 })
@@ -609,10 +623,18 @@ def _pick_anchor_period(data):
 def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
-    band: 'count' (id 6/8), 'linkage' (7), 'iit' (9),
+    band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11),
           'tpt' (15), 'vl' (16).  pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
+    if band == "ahd":  # id 11 — FAA: ≥90 / 70–89 / 60–69 / <60
+        if pct >= 90:
+            return 100, "≥90% of at-risk PLHIV evaluated"
+        if pct >= 70:
+            return 80, "70–89% evaluated"
+        if pct >= 60:
+            return 50, "60–69% evaluated"
+        return 0, "<60% evaluated — no payment"
     if band == "linkage":  # id 7
         if pct >= 95:
             return 100, "≥95% linked to ART"
@@ -675,7 +697,7 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
 
 
 def _compute_daraja_metrics(data, anchor, iit_by_period=None):
-    """Compute the six DHIS2-measurable milestones for the anchor month.
+    """Compute the seven DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
     the "Interruption in Treatment" outcomes) supplied by
@@ -783,6 +805,31 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             iit_pct, unlock, band,
             "Interruption in Treatment ÷ [TX_CURR(previous quarter close) + "
             "TX_NEW(current quarter to date)] × 100 — CHAK DHIS2",
+        ))
+
+    # ── #11 Advanced HIV Disease (AHD) identification & evaluation ──
+    #   Manager ruling:  (TX_NEW CD4 <200 + TX_NEW CD4 >=200) ÷ TX_NEW.
+    #   Numerator = the two MOH 731 CD4 disaggregations of "TX_NEW:
+    #   Starting ART"; denominator = TX_NEW: Starting ART itself.
+    #   Target ≥90% (FAA row 13: "Proportion of adult PLHIV at risk of
+    #   AHD who are screened for AHD using CD4 cell count or WHO staging
+    #   criteria").
+    if tx_new:
+        cd4_lt200 = val(_DE_TX_NEW_CD4_LT200, year, month)
+        cd4_ge200 = val(_DE_TX_NEW_CD4_GE200, year, month)
+        cd4_known = cd4_lt200 + cd4_ge200
+        ahd_pct = min(100.0, cd4_known / tx_new * 100.0)
+        unlock, band = _unlock_bands("ahd", ahd_pct)
+        metrics.append(_metric_doc(
+            11, "Advanced HIV Disease (AHD) identification and evaluation",
+            anchor,
+            "≥90% of adult PLHIV at risk of AHD identified & evaluated",
+            f"{ahd_pct:.1f}% · {fmt(cd4_known)} of {fmt(tx_new)} new ART "
+            f"clients with CD4 established (<200 {fmt(cd4_lt200)} · "
+            f"≥200 {fmt(cd4_ge200)})",
+            ahd_pct, unlock, band,
+            "(TX_NEW: Starting ART, CD4 <200 + CD4 >=200) ÷ TX_NEW: "
+            "Starting ART × 100 — MOH 731 CD4 disaggregation, CHAK DHIS2",
         ))
 
     # ── #15 TB Preventive Therapy — 90% of eligible initiated ──
@@ -931,7 +978,7 @@ def _build_payload():
     tiers = sorted(tier_set)
     award_total = months[-1]["cumulative"] if months else 0
 
-    # Live performance (CHAK DHIS2 / Daraja baseline) for the six
+    # Live performance (CHAK DHIS2 / Daraja baseline) for the seven
     # DHIS2-measurable milestones.  The baseline is attached to the FIRST
     # month only (M1) — it is a test of the indicator wiring, not yet the
     # confirmed performance of any project month.  M2–M6 keep "—" until
