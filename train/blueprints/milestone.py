@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import threading
 import time
 from datetime import date, datetime
 
@@ -36,6 +37,13 @@ _MILESTONE_CACHE_AT = 0.0
 # ~max(TTL, 300 s) per element.
 _MILESTONE_TTL = int(os.getenv("MILESTONE_CACHE_TTL", "300"))
 
+# Serialises payload builds.  Without it the boot pre-warm and the first
+# incoming request (or two concurrent requests) each load both workbooks
+# and hit CHAK DHIS2 at the same time — the quickest way to blow the
+# memory budget of a 512 MB Render instance.
+_BUILD_LOCK = threading.Lock()
+_PREWARM_STARTED = False
+
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 
@@ -51,6 +59,45 @@ def register_milestone_blueprint(app):
     _app = app
     app.register_blueprint(milestone_bp)
     print("[MILESTONE] Blueprint registered")
+    _start_prewarm()
+
+
+def _start_prewarm():
+    """Warm the payload cache in a daemon thread at boot.
+
+    A cold build loads both FAA workbooks and pulls LAST_12_MONTHS of
+    MOH 731 for all 259 Daraja org units from CHAK DHIS2 in one analytics
+    call (measured ~47 s locally, materially slower on a shared Render
+    CPU).  Running that inside the first browser request exceeded the
+    gunicorn worker timeout, Render answered 502, and the tracker page
+    showed "Failed to load milestone data".  Pre-warming moves the cost
+    off the request path so the first user request is a cache hit.
+
+    The thread is a daemon: a failed warm-up must never block or crash
+    boot, and the request path still rebuilds on demand if it is missed.
+    """
+    global _PREWARM_STARTED
+    if _PREWARM_STARTED:
+        return
+    _PREWARM_STARTED = True
+
+    def _warm():
+        # Let the WSGI server finish binding and answer the platform's
+        # first health checks before we start parsing Excel and hitting
+        # CHAK DHIS2, so a slow warm-up can never be mistaken for a
+        # failed boot and trigger a restart loop.
+        time.sleep(float(os.getenv("MILESTONE_PREWARM_DELAY", "10")))
+        t0 = time.time()
+        try:
+            _ensure_payload()
+            print(f"[MILESTONE] Pre-warm complete in {time.time() - t0:.1f}s")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[MILESTONE] Pre-warm failed after "
+                  f"{time.time() - t0:.1f}s: {exc}")
+
+    threading.Thread(
+        target=_warm, name="milestone-prewarm", daemon=True
+    ).start()
 
 
 # ── Small helpers ────────────────────────────────────────────────────
@@ -1005,6 +1052,102 @@ def _build_payload():
     }
 
 
+def _build_locked():
+    """Build and store the payload. Caller must already hold _BUILD_LOCK."""
+    global _MILESTONE_CACHE, _MILESTONE_CACHE_AT
+    try:
+        rebuilt = _build_payload()
+    except Exception as exc:  # noqa: BLE001
+        if _MILESTONE_CACHE is None:
+            raise
+        rebuilt = dict(_MILESTONE_CACHE)
+        khis = dict(rebuilt.get("khis") or {})
+        khis["status"] = "error"
+        khis["note"] = (khis.get("note") or "") + \
+            f" [auto-refresh failed: {exc}]"
+        rebuilt["khis"] = khis
+    # A transient CHAK DHIS2 hiccup must not blank a good baseline.  The
+    # analytics layer swallows failed calls and returns {}, which surfaces
+    # as khis.status == "empty" and would wipe every metric (including the
+    # M1 perf rows) for a whole TTL.  Keep the last good payload instead
+    # and disclose the skipped refresh in the note.
+    if (
+        (rebuilt.get("khis") or {}).get("status") != "ok"
+        and ((_MILESTONE_CACHE or {}).get("khis") or {}).get("status") == "ok"
+    ):
+        status = (rebuilt.get("khis") or {}).get("status")
+        reason = ((rebuilt.get("khis") or {}).get("note") or "").strip()
+        kept = dict(_MILESTONE_CACHE)
+        khis = dict(kept.get("khis") or {})
+        note = (khis.get("note") or "").rstrip()
+        note += (f" [Kept this baseline — the refresh returned "
+                 f"'{status}' from CHAK DHIS2")
+        if reason:
+            note += f": {reason}"
+        note += "]"
+        khis["note"] = note
+        kept["khis"] = khis
+        rebuilt = kept
+    _MILESTONE_CACHE = rebuilt
+    _MILESTONE_CACHE_AT = time.time()
+    return _MILESTONE_CACHE
+
+
+_BACKGROUND_REFRESH = False
+
+
+def _spawn_refresh():
+    """Rebuild the payload on a daemon thread so no request blocks on it."""
+    global _BACKGROUND_REFRESH
+    if _BACKGROUND_REFRESH:
+        return
+    _BACKGROUND_REFRESH = True
+
+    def _run():
+        global _BACKGROUND_REFRESH
+        try:
+            with _BUILD_LOCK:
+                _build_locked()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[MILESTONE] Background refresh failed: {exc}")
+        finally:
+            _BACKGROUND_REFRESH = False
+
+    threading.Thread(
+        target=_run, name="milestone-refresh", daemon=True
+    ).start()
+
+
+def _fresh(payload, at):
+    return payload is not None and (time.time() - at) <= _MILESTONE_TTL
+
+
+def _ensure_payload(force=False):
+    """Return the tracker payload, never making a request wait on a build.
+
+    Three cases:
+      * fresh cache           -> return it
+      * stale cache           -> return it now, refresh on a daemon thread
+      * no cache / ?refresh=1 -> build synchronously (cold start only;
+                                 _start_prewarm() normally prevents this)
+
+    Double-checked locking: a request that blocks behind the boot pre-warm
+    re-checks freshness once it owns the lock, so it returns the payload
+    the pre-warm just built instead of triggering a second full build.
+    """
+    if not force and _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
+        return _MILESTONE_CACHE
+    with _BUILD_LOCK:
+        has_cache = _MILESTONE_CACHE is not None
+        stale = not _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT)
+        if not (stale or force):
+            return _MILESTONE_CACHE
+        if has_cache and not force:
+            _spawn_refresh()
+            return _MILESTONE_CACHE
+        return _build_locked()
+
+
 @milestone_bp.get("/api/milestone/data")
 def milestone_data():
     """Return the full Milestone Tracker dataset (read-only).
@@ -1014,28 +1157,13 @@ def milestone_data():
     Append ?refresh=1 to force an immediate rebuild.  If a rebuild fails
     the last good payload is kept (never blank the dashboard on a DHIS2
     hiccup); the failure is surfaced in the khis note.
+
+    The cache is normally already warm thanks to _start_prewarm(); this
+    route only pays for a build on a genuinely cold cache (e.g. the
+    pre-warm failed) or an explicit ?refresh=1.
     """
-    global _MILESTONE_CACHE, _MILESTONE_CACHE_AT
     try:
         force = request.args.get("refresh") in ("1", "true", "yes")
-        stale = _MILESTONE_CACHE is None or (
-            time.time() - _MILESTONE_CACHE_AT > _MILESTONE_TTL
-        )
-        if stale or force:
-            try:
-                rebuilt = _build_payload()
-            except Exception as exc:  # noqa: BLE001
-                if _MILESTONE_CACHE is None:
-                    return jsonify({"ok": False, "error": str(exc)})
-                rebuilt = dict(_MILESTONE_CACHE)
-                khis = dict(rebuilt.get("khis") or {})
-                khis["status"] = "error"
-                khis["note"] = (khis.get("note") or "") + \
-                    f" [auto-refresh failed: {exc}]"
-                rebuilt["khis"] = khis
-            _MILESTONE_CACHE = rebuilt
-            _MILESTONE_CACHE_AT = time.time()
-        payload = dict(_MILESTONE_CACHE)
-        return jsonify(payload)
+        return jsonify(dict(_ensure_payload(force=force)))
     except Exception as exc:  # noqa: BLE001 - surface friendly error
         return jsonify({"ok": False, "error": str(exc)})

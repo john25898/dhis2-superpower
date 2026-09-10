@@ -4,14 +4,20 @@ services:
     env: python
     rootDir: train
     buildCommand: pip install -r requirements.txt
-    # --timeout must exceed the coldest /api/milestone/data build: it pulls
-    # LAST_12_MONTHS of MOH 731 for all 259 Daraja OUs from CHAK DHIS2 in a
-    # single analytics call (~47 s locally, materially slower on a shared
-    # Render CPU).  At --timeout 120 gunicorn killed the worker mid-build,
-    # Render served a 502, and the tracker page showed
-    # "Failed to load milestone data".  --preload loads the app once before
-    # forking so the first request only pays for the DHIS2 fetch.
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 300 --graceful-timeout 30
+    # Sizing notes for the free/Starter instance:
+    #   * ONE sync worker + 4 threads, not two workers.  The app holds a
+    #     large in-process payload cache plus two parsed Excel workbooks;
+    #     a second worker duplicates all of it and is the quickest way to
+    #     hit the instance memory ceiling.
+    #   * --timeout 300 is a safety net only.  The blueprint pre-warms its
+    #     cache on a daemon thread at boot and then serves stale-while-
+    #     revalidate, so no user request should ever wait on the ~47 s
+    #     CHAK DHIS2 build that (at --timeout 120) used to kill the worker,
+    #     return a 502, and surface as "Failed to load milestone data".
+    #   * Deliberately NO --preload: the app starts a background thread at
+    #     import time, so preloading would fork workers while the build lock
+    #     is held and leave a permanently locked mutex in every child.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 --graceful-timeout 30
     healthCheckPath: /
     envVars:
       - key: DHIS_BASE_URL
