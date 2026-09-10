@@ -4,7 +4,15 @@ services:
     env: python
     rootDir: train
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    # --timeout must exceed the coldest /api/milestone/data build: it pulls
+    # LAST_12_MONTHS of MOH 731 for all 259 Daraja OUs from CHAK DHIS2 in a
+    # single analytics call (~47 s locally, materially slower on a shared
+    # Render CPU).  At --timeout 120 gunicorn killed the worker mid-build,
+    # Render served a 502, and the tracker page showed
+    # "Failed to load milestone data".  --preload loads the app once before
+    # forking so the first request only pays for the DHIS2 fetch.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --preload --timeout 300 --graceful-timeout 30
+    healthCheckPath: /
     envVars:
       - key: DHIS_BASE_URL
         sync: false
