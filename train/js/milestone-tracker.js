@@ -200,13 +200,13 @@ function msKhisChipHtml(khis) {
 function msKhisNoteHtml(khis) {
   if (!khis || khis.status !== "ok") return "";
   return (
-    " The six DHIS2-measurable milestones (6–9, 15, 16) show a live baseline from the CHAK DHIS2 (MOH 731) " +
+    " The seven DHIS2-measurable milestones (6–9, 11, 15, 16) show a live baseline from the CHAK DHIS2 (MOH 731) " +
     escapeHtml(String(khis.asOf || "latest reporting month")) +
     " month across " +
     (Number(khis.matched) || 0) +
     " of " +
     (Number(khis.total) || 0) +
-    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Milestones without a DHIS2 source (DSD, AHD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification."
+    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Milestones without a DHIS2 source (DSD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification."
   );
 }
 
