@@ -998,7 +998,16 @@ def _compute_khis_metrics():
                 "No Daraja facility names matched CHAK DHIS2 org units."
             )
             return khis
-        data = _fetch_daraja_metrics_data(ou_ids)
+        # CHAK can briefly return an empty analytics response while the
+        # instance is under load. Do not turn that transient response into a
+        # blank five-minute dashboard cache.
+        data = {}
+        for attempt in range(3):
+            data = _fetch_daraja_metrics_data(ou_ids)
+            if data:
+                break
+            if attempt < 2:
+                time.sleep(2)
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
