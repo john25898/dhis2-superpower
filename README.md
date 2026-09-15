@@ -50,4 +50,4 @@ the app still runs but the AI query features degrade to direct DHIS2 calls.
 
 - `dictionaries/` — master data-element / facility lookups used by the app
 - `data.csv`, `data2.csv` — PBIX-exported facility data (MHU cascading filters)
-- `Key Indicators Drill down.csv` — key-indicator drill-down data
+- `Key Indicators Drill down.csv` — key-indicator drill-down data.
