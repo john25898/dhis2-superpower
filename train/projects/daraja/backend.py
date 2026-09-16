@@ -1,28 +1,28 @@
-"""Jamii Tekelezi domain: filter locations + TX_NEW CSV endpoints."""
+"""Daraja domain: filter locations + TX_NEW CSV endpoints."""
 from __future__ import annotations
 
 import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from services.common import json_safe
-from services.paths import JAMII_TEKELEZI_FILTERS_CSV
+from services.paths import BASE_DIR, DARAJA_FILTERS_CSV
 
-jt_bp = Blueprint("jt", __name__)
+daraja_bp = Blueprint("daraja", __name__)
 
-_app = None  # set by register_jt_blueprint
+_app = None  # set by register_daraja_blueprint
 
 
-def register_jt_blueprint(app):
+def register_daraja_blueprint(app):
     global _app
     _app = app
-    app.register_blueprint(jt_bp)
-    print("[JT] Blueprint registered")
+    app.register_blueprint(daraja_bp)
+    print("[DARAJA] Blueprint registered")
 
 
-@jt_bp.get("/api/jamii-tekelezi/locations")
-def jamii_tekelezi_locations() -> object:
-    """Return JT counties, sub-counties, and full facility hierarchy for global filters."""
-    jt_path = JAMII_TEKELEZI_FILTERS_CSV
+@daraja_bp.get("/api/daraja/locations")
+def daraja_locations() -> object:
+    """Return Daraja counties, sub-counties, and full facility hierarchy for global filters."""
+    jt_path = DARAJA_FILTERS_CSV
     if not jt_path.exists():
         return jsonify({"counties": [], "subcounties": [], "county_subcounties": {}, "facility_names": [], "facility_ids": [], "facility_id_name_map": {}, "facilities_by_subcounty": {}})
     try:
@@ -69,18 +69,18 @@ def jamii_tekelezi_locations() -> object:
         return jsonify({"error": str(e), "counties": [], "subcounties": [], "county_subcounties": {}, "facility_names": [], "facility_ids": [], "facility_id_name_map": {}, "facilities_by_subcounty": {}})
 
 
-@jt_bp.get("/api/hiv-treatment/newly-started-art/by-county")
+@daraja_bp.get("/api/hiv-treatment/newly-started-art/by-county")
 def newly_started_art_by_county() -> object:
-    """Return TX_NEW data for Jamii Tekelezi counties (Meru, Embu, Nyandarua, Tharaka Nithi).
-    Reads the raw DHIS analytics CSV, maps wards to counties, filters to JT counties only.
-    Also returns subcounty & facility filter data from the consolidated filters CSV.
-    Supports ?month=YYYYMM filter.
+    """Return TX_NEW data for the Daraja counties.
+    Reads the raw DHIS analytics CSV, maps wards to counties, filters to the
+    Daraja counties only. Also returns subcounty & facility filter data from the
+    consolidated Daraja filters CSV. Supports ?month=YYYYMM filter.
     """
     try:
-        # Load Jamii Tekelezi filter definitions
-        jt_path = BASE_DIR / "data" / "jamii_tekelezi_filters.csv"
+        # Load Daraja filter definitions
+        jt_path = DARAJA_FILTERS_CSV
         if not jt_path.exists():
-            return jsonify(json_safe({"error": "Jamii Tekelezi filters not found."})), 404
+            return jsonify(json_safe({"error": "Daraja filters not found."})), 404
         jt_df = pd.read_csv(jt_path)
         jt_counties = sorted(jt_df["county_name"].unique())
         # Build subcounty list per county
@@ -129,7 +129,7 @@ def newly_started_art_by_county() -> object:
 
         tx_new["county"] = tx_new["ou"].map(get_county)
 
-        # Filter to JT counties only
+        # Filter to Daraja counties only
         tx_new = tx_new[tx_new["county"].isin(jt_counties)]
 
         # Aggregate by county and month
@@ -161,7 +161,7 @@ def newly_started_art_by_county() -> object:
             "rows": grouped.to_dict(orient="records"),
             "months": months,
             "all_counties": jt_counties,
-            "default_counties": jt_counties,  # all JT counties shown by default
+            "default_counties": jt_counties,  # all Daraja counties shown by default
             "default_month": str(months_list[0]) if months_list else "",
             "subcounties": jt_subcounties,
             "facilities": jt_facilities,
@@ -170,10 +170,10 @@ def newly_started_art_by_county() -> object:
         return jsonify(json_safe({"error": str(exc)})), 500
 
 
-@jt_bp.get("/api/hiv-treatment/nart-trend")
+@daraja_bp.get("/api/hiv-treatment/nart-trend")
 def nart_trend() -> object:
     """Return monthly trend for three NART metrics (Total, Males, Adults 15+)
-    for a given Jamii Tekelezi county (default Meru County).
+    for a given Daraja county (default Meru County).
     """
     county_filter = (request.args.get("county") or "Meru County").strip()
 

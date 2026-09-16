@@ -101,19 +101,13 @@ function animateCardChips() {
 
 // ── Project accent colors ──
 const _PROJ_COLORS = {
-  jamii_tekelezi: {
-    border: "#a78bfa",
-    bg: "#f5f3ff",
-    accent: "#7c3aed",
-    gradient: "from-violet-500 to-purple-600",
-  },
   chap_stawisha: {
     border: "#10b981",
     bg: "#ecfdf5",
     accent: "#059669",
     gradient: "from-emerald-500 to-green-600",
   },
-  // Daraja — merged successor of Jamii Tekelezi + CHAP Stawisha (deep teal)
+  // Daraja — the CHAK Daraja site census project (259 facilities, deep teal)
   daraja: {
     border: "#0f766e",
     bg: "#f0fdfa",
@@ -501,10 +495,10 @@ async function renderHomepageDashboard() {
     return `<div class="hp-perf-section space-y-4">${ach}${donuts}${narr}</div>`;
   }
 
-  // Daraja is the merged successor of Jamii Tekelezi + CHAP Stawisha —
-  // remove the two legacy projects from the home dashboard (their
-  // consolidated overview remains reachable via the project dropdown/chat).
-  delete projectData["jamii_tekelezi"];
+  // Daraja is the CHAK Daraja project (the Daraja site census supersedes the
+  // legacy Jamii Tekelezi / CHAP Stawisha scopes).  CHAP Stawisha has been
+  // folded into it, so only that legacy card is hidden here; Daraja itself is
+  // the featured project on the home dashboard.
   delete projectData["chap_stawisha"];
 
   const projectIds = Object.keys(projectData);
@@ -660,7 +654,7 @@ async function renderHomepageDashboard() {
       </div>`;
   }
 
-  // ── Key Indicators now only live on the Jamii Tekelezi overview page ──
+  // ── Key Indicators now only live on the Daraja overview page ──
 
   // ── Carousel: Other Projects (auto-scrolling conveyor belt) ──
   if (carouselPids.length) {
@@ -979,10 +973,10 @@ async function renderHomepageDashboard() {
             ? this.closest("[data-project]")?.dataset.project
             : null);
         if (!pid) return;
-        if (pid === "jamii_tekelezi") {
-          state.activeProject = "jamii_tekelezi";
+        if (pid === "daraja") {
+          state.activeProject = "daraja";
           if (elements.projectFilter)
-            elements.projectFilter.value = "jamii-tekelezi";
+            elements.projectFilter.value = "daraja";
           state.activePage = "overview";
           setPageHash("overview");
           renderCurrentView();

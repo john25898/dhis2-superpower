@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from services.paths import BASE_DIR, JAMII_TEKELEZI_FILTERS_CSV
+from services.paths import BASE_DIR, DARAJA_FILTERS_CSV
 
 # ────────────────────────────────────────────────────────────
 # PROJECT PERFORMANCE MONITORING — Excel Data Loader
@@ -17,7 +17,10 @@ _PROJECT_CACHE: dict[str, Any] | None = None
 _PROJECT_CACHE_MTIME: float = 0
 
 PROJECT_SHEET_MAP = {
-    "jamii-tekelezi": "Jamii Tekelezi",
+    # Project slug -> sheet name in the topline Excel template. NOTE: the
+    # sheet itself is still called "Jamii Tekelezi" in the workbook; only the
+    # app-side slug changed when the project was renamed to Daraja.
+    "daraja": "Jamii Tekelezi",
     "chap-stawisha": "CHAP Stawisha",
     "eye-health": "Eye Health - ACSP & GitLab",
     "eis": "EIS",
@@ -298,9 +301,9 @@ _SEED_CACHE_PATH = BASE_DIR / "data" / "performance_seed.json"
 
 # Realistic Programme Manager's Narratives for each project
 PROJECT_NARRATIVES = {
-    "jamii-tekelezi": {
+    "daraja": {
         "key_achievements": "Key achievements during this reporting period: Successfully reached 85% of enrolled beneficiaries with comprehensive HIV prevention services. Conducted 12 community outreach campaigns across Meru and Tharaka Nithi counties. Trained 45 community health volunteers on client-centered HIV testing approaches.",
-        "narrative_text": "Programme Manager's Narrative: Jamii Tekelezi continues to show strong community engagement, though financial performance requires attention. The over-expenditure on Personnel (22% above plan) is due to the recruitment of additional outreach workers to cover hard-to-reach areas. Technical indicators are largely on track with 7 of 8 achieving targets. The project has strengthened linkages between community-based testing and facility-based ART initiation. Recommendation: Review personnel budget allocation for Q3 to align with actual staffing needs."
+        "narrative_text": "Programme Manager's Narrative: Daraja continues to show strong community engagement, though financial performance requires attention. The over-expenditure on Personnel (22% above plan) is due to the recruitment of additional outreach workers to cover hard-to-reach areas. Technical indicators are largely on track with 7 of 8 achieving targets. The project has strengthened linkages between community-based testing and facility-based ART initiation. Recommendation: Review personnel budget allocation for Q3 to align with actual staffing needs."
     },
     "chap-stawisha": {
         "key_achievements": "Key achievements: Launched the CHAP Stawisha program across 12 new facilities in Nyandarua County. Completed baseline assessment for 2,400 OVC caregivers. Established 8 community support groups for adolescent girls and young women (AGYW).",
@@ -342,8 +345,8 @@ PROJECT_NARRATIVES = {
 
 
 def _load_geography_hierarchy() -> dict:
-    """Load county/subcounty/facility hierarchy from jamii_tekelezi_filters.csv."""
-    jt_path = JAMII_TEKELEZI_FILTERS_CSV
+    """Load county/subcounty/facility hierarchy from daraja_filters.csv."""
+    jt_path = DARAJA_FILTERS_CSV
     if not jt_path.exists():
         return {"counties": [], "subcounties": [], "facilities": [], "hierarchy": {}}
     import pandas as _pd

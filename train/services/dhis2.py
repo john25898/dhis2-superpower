@@ -317,9 +317,9 @@ INDICATOR_SPECS = {
     },
 }
 
-# ── JTP (Jamii Tekelezi Program) Treatment subtab specs ────────────
-# Data elements from JTP Monthly HIV Care and Treatment dataset
-JTP_SPECS = {
+# ── Daraja Treatment subtab specs ──────────────────────────────────
+# Data elements from the JTP Monthly HIV Care and Treatment dataset
+DARAJA_SPECS = {
     "art_optimization": {
         "title": "ART Optimization",
         "metrics": {

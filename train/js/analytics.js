@@ -1,6 +1,6 @@
 // ============================================================
 // analytics.js  (extracted from main.js lines 9401-10880)
-// analytics renderers (gender/age/yearly/MMD/splits/JTP)
+// analytics renderers (gender/age/yearly/MMD/splits/Daraja)
 // ============================================================
 
 // ── Professional Dashboard Color Palette ──────────────────────────
@@ -806,7 +806,7 @@ function renderAgeSplitAnalytics(container, d, labelPrefix) {
   }
 }
 
-// ── JTP Regimen Distribution Donut Chart ───────────────────────────
+// ── Daraja Regimen Distribution Donut Chart ───────────────────────────
 function renderRegimensAnalytics(container, d) {
   if (!d.ok) {
     container.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Error: ${d.error || "Unknown"}</div>`;
@@ -839,7 +839,7 @@ function renderRegimensAnalytics(container, d) {
   container.innerHTML = `
     <div class="space-y-3">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-900">💊 JTP Regimen Distribution</h3>
+        <h3 class="text-sm font-semibold text-slate-900">💊 Daraja Regimen Distribution</h3>
         <span class="text-[10px] text-slate-400">${period}</span>
       </div>
       <div class="flex flex-col md:flex-row items-center gap-4">
@@ -1479,7 +1479,7 @@ function renderMonthlyGroupedChart(
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// JAMII TEKELEZI PAGE
+// DARAJA PAGE
 // ══════════════════════════════════════════════════════════════════════
 
 // ============================================================

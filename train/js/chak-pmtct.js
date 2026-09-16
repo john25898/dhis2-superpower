@@ -30,7 +30,7 @@ registerChakRenderer("pmtct", "pmtct", function (el, data) {
     existingHtml +
     `
     <div class="chak-page-info" style="margin-top:0">
-      <h2><i class="fas fa-baby"></i> PMTCT Cascade · Jamii Tekelezi</h2>
+      <h2><i class="fas fa-baby"></i> PMTCT Cascade · Daraja</h2>
       <p>Prevention of Mother-to-Child Transmission: Entry-to-Treatment cascade — 1st ANC → Tested → Positive → Total on ART</p>
     </div>
 

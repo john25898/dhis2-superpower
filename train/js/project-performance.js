@@ -765,7 +765,7 @@ function slugify(name) {
 
 function getProjectDisplayName(slug) {
   const names = {
-    "jamii-tekelezi": "Jamii Tekelezi (JTP)",
+    "daraja": "Daraja",
     "chap-stawisha": "CHAP Stawisha",
     eis: "EIS",
     "gf-mnch": "Gates Foundation MNCH",

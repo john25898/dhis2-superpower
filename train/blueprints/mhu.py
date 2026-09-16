@@ -15,7 +15,7 @@ from services.khis import (
     _khis_fetch,
     _khis_fetch_disaggregated,
 )
-from services.paths import BASE_DIR, JAMII_TEKELEZI_FILTERS_CSV, SUPERPOWER_DIR
+from services.paths import BASE_DIR, DARAJA_FILTERS_CSV, SUPERPOWER_DIR
 
 mhu_bp = Blueprint("mhu", __name__)
 
@@ -33,8 +33,9 @@ _MHU_FLEX_MATCH = {}
 # flex_index).  Built once and reused by the aggregate endpoint so we never
 # re-read + re-parse the 10k+ facility file per POST.
 _MHU_MAPPING_INDEX = None
-# Daraja (Jamii Tekelezi + CHAP Stawisha merged) census cache — the xlsx is
-# parsed once per process and reused by both facility-mapping and mhu-list.
+# Daraja (CHAK Daraja site census; formerly Jamii Tekelezi + CHAP Stawisha
+# merged) census cache — the xlsx is parsed once per process and reused by
+# both facility-mapping and mhu-list.
 _DARJA_CACHE = None
 
 
@@ -163,7 +164,7 @@ def register_mhu_blueprint(app):
 @mhu_bp.get("/api/khis/facility-locations")
 def khis_facility_locations():
     """Return facility locations from local mapping data with county centroids.
-    Uses jamii_tekelezi_filters.csv (project folder) and facility_ward_mapping.json.
+    Uses daraja_filters.csv (project folder) and facility_ward_mapping.json.
     """
     cache_key = "_khis_facility_locations"
     if cache_key in _app.config:
@@ -171,7 +172,7 @@ def khis_facility_locations():
 
     facilities = {}
     try:
-        jt_path = JAMII_TEKELEZI_FILTERS_CSV
+        jt_path = DARAJA_FILTERS_CSV
         if jt_path.exists():
             with open(jt_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
@@ -197,17 +198,13 @@ def khis_facility_locations():
 # ── Project-to-Facility Mapping (for homepage project cards) ──────
 @mhu_bp.get("/api/projects/facility-mapping")
 def project_facility_mapping():
-    """Return the 11 real CHAK projects with facility and MHU counts.
+    """Return the real CHAK projects with facility and MHU counts.
     MHU counts come from the confirmed per-project alignment
     (train/data/project_mhus_confirmed.json); facilities for the maps
-    are resolved from KHIS locations.
+    are resolved from KHIS locations.  The Daraja project is appended
+    from the Daraja site census instead (see below).
     """
     projects = {
-        "jamii_tekelezi": {
-            "name": "Jamii Tekelezi (JTP)",
-            "icon": "🩺",
-            "description": "Comprehensive HIV/AIDS program — Testing, Treatment, PrEP, PMTCT, TB.",
-        },
         "chap_stawisha": {
             "name": "CHAP Stawisha",
             "icon": "🌱",
@@ -323,15 +320,16 @@ def project_facility_mapping():
             "mhu_list": unique_fac,
         }
 
-    # ── Daraja: Jamii Tekelezi + CHAP Stawisha merged (Site Census) ──
-    # Added 2026 as the successor project. Facilities come from the
-    # Daraja site census workbook, not the confirmed JSON (which predates
-    # the merge); lat/lng are real coordinates with county-centre fallback.
+    # ── Daraja: CHAK Daraja site census (the 259-facility Daraja roster) ──
+    # The Daraja project supersedes the separate Jamii Tekelezi and CHAP
+    # Stawisha trackers. Facilities come from the Daraja site census
+    # workbook (259 rows), not the confirmed JSON (which predates the
+    # merge); lat/lng are real coordinates with county-centre fallback.
     daraja_rows, daraja_facilities, daraja_counties = _load_daraja_census()
     result["daraja"] = {
         "name": "Daraja",
         "icon": "🌉",
-        "description": "Jamii Tekelezi + CHAP Stawisha merged — testing, treatment, PrEP & PMTCT.",
+        "description": "CHAK Daraja — the 259-facility site census covering HIV testing, treatment, PrEP & PMTCT.",
         "facility_count": len(daraja_facilities),
         "facilities": daraja_facilities,
         "mhu_count": len(daraja_rows),

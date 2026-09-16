@@ -19,13 +19,13 @@ const state = {
   playgroundMode: "finance",
   playgroundChart: null,
   playgroundFinanceData: null,
-  jtCounties: [],
-  jtSubcounties: [],
-  jtSubcountyMap: {},
-  jtFacilityNames: [],
-  jtFacilityIds: [],
-  jtFacilityIdNameMap: {},
-  jtFacilitiesBySubcounty: {},
+  darajaCounties: [],
+  darajaSubcounties: [],
+  darajaSubcountyMap: {},
+  darajaFacilityNames: [],
+  darajaFacilityIds: [],
+  darajaFacilityIdNameMap: {},
+  darajaFacilitiesBySubcounty: {},
 };
 
 // ── CHAK DHIS2 Project Configuration ──
@@ -329,8 +329,8 @@ function applyHashRoute() {
   const parts = hash.split("/").filter(Boolean);
   if (!parts.length) return;
 
-  // Build project map: jamii_tekelezi + all CHAK projects
-  const projectMap = { jm: "jamii_tekelezi" };
+  // Build project map: daraja + all CHAK projects
+  const projectMap = { dr: "daraja" };
   Object.keys(CHAK_PROJECT_CODES).forEach(function (code) {
     projectMap[code] = CHAK_PROJECT_CODES[code];
   });
@@ -370,7 +370,7 @@ function applyHashRoute() {
     "case_surveillance",
     "facilities",
     "indicators",
-    "jamii",
+    "daraja",
     "all",
     // CHAK dataset detail pages
     "chak_dataset",
@@ -408,7 +408,7 @@ function toSlug(value) {
 }
 
 function getProjectHashPrefix() {
-  if (state.activeProject === "jamii_tekelezi") return "p/jm/";
+  if (state.activeProject === "daraja") return "p/dr/";
   var chakProj = getActiveChakProject();
   if (chakProj) return "p/" + chakProj.code + "/";
   return "";
@@ -431,11 +431,11 @@ function scrollToPageTop() {
   });
 }
 
-// ── Get subtabs filtered for current context (Jamii Tekelezi vs global) ──
+// ── Get subtabs filtered for current context (Daraja vs global) ──
 function getSubtabsForPage(pageId) {
   const meta = getPageMeta(pageId);
   let subtabs = Array.isArray(meta.subtabs) ? meta.subtabs : [];
-  if (state.activeProject === "jamii_tekelezi" && pageId === "hiv_treatment") {
+  if (state.activeProject === "daraja" && pageId === "hiv_treatment") {
     const exclude = new Set(["otz", "ovc", "covid-19", "care-treatment"]);
     subtabs = subtabs.filter(function (s) {
       return !exclude.has(toSlug(s));
@@ -626,8 +626,8 @@ function getPageMeta(pageId) {
       ],
     },
     playground: { title: "Playground", subtabs: [] },
-    jamii: {
-      title: "Jamii Tekelezi",
+    daraja: {
+      title: "Daraja",
       subtabs: [
         "Overview",
         "TX_CURR Analytics",
@@ -661,8 +661,8 @@ function renderPageContext(pageId) {
     state.activeSubtabs[pageId] = toSlug(subtabs[0]);
   }
 
-  // ── Project context mode (e.g., inside Jamii Tekelezi) ──
-  if (state.activeProject === "jamii_tekelezi") {
+  // ── Project context mode (e.g., inside Daraja) ──
+  if (state.activeProject === "daraja") {
     elements.pageContextBar.classList.remove("hidden");
     const activeSlug = state.activeSubtabs[pageId] || toSlug(subtabs[0] || "");
     const activeLabel =
@@ -673,7 +673,7 @@ function renderPageContext(pageId) {
           ← Back to Projects
         </button>
         <span class="text-slate-300">|</span>
-        <span class="font-semibold text-sky-700">🏥 Jamii Tekelezi</span>
+        <span class="font-semibold text-sky-700">🏥 Daraja</span>
         <span class="text-slate-400">/</span>
         <span>${escapeHtml(meta.title)}${activeLabel ? " / " + escapeHtml(activeLabel) : ""}</span>
       </div>
@@ -990,8 +990,8 @@ function renderPageTabs() {
   if (!elements.pageTabs) return;
 
   let tabs;
-  if (state.activeProject === "jamii_tekelezi") {
-    // Within Jamii Tekelezi project — show program navigation
+  if (state.activeProject === "daraja") {
+    // Within Daraja project — show program navigation
     tabs = [
       { id: "overview", label: "Home" },
       { id: "financial_analysis", label: "Finance Analysis" },
@@ -1156,7 +1156,7 @@ function populateFilterOptions() {
   if (elements.projectFilter && !elements.projectFilter.dataset.populated) {
     const projects = [
       { value: "all", label: "All Projects" },
-      { value: "jamii-tekelezi", label: "Jamii Tekelezi (JTP)" },
+      { value: "daraja", label: "Daraja" },
       { value: "chap-stawisha", label: "CHAP Stawisha" },
       { value: "eis", label: "EIS" },
       { value: "gf-mnch", label: "Gates Foundation MNCH" },
@@ -4046,8 +4046,8 @@ function renderProjectSelection() {
   // Static projects (non-CHAK)
   var staticProjects = [
     {
-      id: "jamii_tekelezi",
-      name: "Jamii Tekelezi",
+      id: "daraja",
+      name: "Daraja",
       desc: "Comprehensive HIV/AIDS program dashboard — Testing, Treatment, PrEP, PMTCT, TB, and more.",
       icon: "📊",
       color: "bg-sky-50 border-sky-200 hover:bg-sky-100",
@@ -4111,11 +4111,11 @@ function renderProjectSelection() {
     btn.addEventListener("click", function () {
       var projectId = btn.getAttribute("data-project") || "";
 
-      // Jamii Tekelezi — existing behavior
-      if (projectId === "jamii_tekelezi") {
-        state.activeProject = "jamii_tekelezi";
+      // Daraja — existing behavior
+      if (projectId === "daraja") {
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
         state.activePage = "overview";
         state.activeDatasetId = "";
         setPageHash("overview");
@@ -4165,13 +4165,13 @@ function renderPlaygroundPage() {
           <div class="rounded-2xl border border-slate-200 bg-white p-4">
             <div class="text-sm font-semibold text-slate-700">Ask a question</div>
             <p class="mt-1 text-xs text-slate-500">Finance mode reuses the project-performance dataset; DHIS2 mode sends the prompt through the main Groq SQL route.</p>
-            <textarea id="playgroundPrompt" class="mt-4 min-h-[130px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white" placeholder="Example: Show me the actual vs target for Jamii Tekelezi or visualize TX CURR for May">${escapeHtml(existingPrompt)}</textarea>
+            <textarea id="playgroundPrompt" class="mt-4 min-h-[130px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white" placeholder="Example: Show me the actual vs target for Daraja or visualize TX CURR for May">${escapeHtml(existingPrompt)}</textarea>
             <div class="mt-3 flex flex-wrap gap-2">
               <button type="button" data-playground-mode="finance" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "finance" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">Finance reports</button>
               <button type="button" data-playground-mode="dhis2" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "dhis2" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">DHIS2 reports</button>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button type="button" data-playground-example="Show me the actual vs target for Jamii Tekelezi" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">Finance example</button>
+              <button type="button" data-playground-example="Show me the actual vs target for Daraja" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">Finance example</button>
               <button type="button" data-playground-example="Visualize TX CURR for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TX_CURR example</button>
               <button type="button" data-playground-example="Give me TB for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TB example</button>
             </div>
@@ -4494,7 +4494,7 @@ function renderCurrentView() {
       state.activeSubtabs["health_programmes"] === "mhu";
     const isHomepage =
       state.activePage === "overview" &&
-      state.activeProject !== "jamii_tekelezi";
+      state.activeProject !== "daraja";
     if (isMhuPage || isHomepage) {
       topFilters.classList.add("hidden");
     } else {
@@ -4513,7 +4513,7 @@ function renderCurrentView() {
       renderChakProjectOverview();
       return;
     }
-    if (state.activeProject !== "jamii_tekelezi") {
+    if (state.activeProject !== "daraja") {
       hidePageContext();
       elements.chartRoot.innerHTML = `
         <div id="homepageRoot" class="space-y-5">
@@ -4527,11 +4527,11 @@ function renderCurrentView() {
       return;
     }
 
-    // Jamii Tekelezi project home should show the consolidated Jamii overview
+    // Daraja project home should show the consolidated Daraja overview
     renderPageContext(pageId);
-    elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6"><div id="jamiiContent" class="space-y-6"></div></div>`;
-    const jamiiContainer = document.getElementById("jamiiContent");
-    renderJamiiOverview(jamiiContainer);
+    elements.chartRoot.innerHTML = `<div id="darajaRoot" class="space-y-6"><div id="darajaContent" class="space-y-6"></div></div>`;
+    const darajaContainer = document.getElementById("darajaContent");
+    renderDarajaOverview(darajaContainer);
     return;
   }
 
@@ -4625,9 +4625,9 @@ function renderCurrentView() {
 
   // ── HIV Testing → Unified DHIS2 HTS Live Charts ──
   if (pageId === "hiv_testing" && SUBTAB_TYPE_MAP[activeSlug]) {
-    // In Jamii Tekelezi, HIV Testing Services Linkage → show global Linkage page
+    // In Daraja, HIV Testing Services Linkage → show global Linkage page
     if (
-      state.activeProject === "jamii_tekelezi" &&
+      state.activeProject === "daraja" &&
       activeSlug === "hiv-testing-services-linkage"
     ) {
       elements.chartRoot.innerHTML =
@@ -4714,13 +4714,13 @@ function renderCurrentView() {
     return;
   }
 
-  // ── Jamii Tekelezi Page ──
-  if (pageId === "jamii") {
-    elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6">
-      <div id="jamiiContent" class="space-y-6"></div>
+  // ── Daraja Page ──
+  if (pageId === "daraja") {
+    elements.chartRoot.innerHTML = `<div id="darajaRoot" class="space-y-6">
+      <div id="darajaContent" class="space-y-6"></div>
     </div>`;
-    const jamiiContainer = document.getElementById("jamiiContent");
-    renderJamiiPage(jamiiContainer, activeSlug);
+    const darajaContainer = document.getElementById("darajaContent");
+    renderDarajaPage(darajaContainer, activeSlug);
     return;
   }
 
@@ -4770,24 +4770,24 @@ async function loadDashboardData() {
       // non-critical
     }
 
-    // Load Jamii Tekelezi locations to restrict global filters
+    // Load Daraja locations to restrict global filters
     try {
-      const jtResp = await fetch("/api/jamii-tekelezi/locations");
-      if (jtResp.ok) {
-        const jt = await jtResp.json();
-        state.jtCounties = Array.isArray(jt.counties) ? jt.counties : [];
-        state.jtSubcounties = Array.isArray(jt.subcounties)
-          ? jt.subcounties
+      const darajaResp = await fetch("/api/daraja/locations");
+      if (darajaResp.ok) {
+        const darajaData = await darajaResp.json();
+        state.darajaCounties = Array.isArray(darajaData.counties) ? darajaData.counties : [];
+        state.darajaSubcounties = Array.isArray(darajaData.subcounties)
+          ? darajaData.subcounties
           : [];
-        state.jtSubcountyMap = jt.county_subcounties || {};
-        state.jtFacilityNames = Array.isArray(jt.facility_names)
-          ? jt.facility_names
+        state.darajaSubcountyMap = darajaData.county_subcounties || {};
+        state.darajaFacilityNames = Array.isArray(darajaData.facility_names)
+          ? darajaData.facility_names
           : [];
-        state.jtFacilityIds = Array.isArray(jt.facility_ids)
-          ? jt.facility_ids
+        state.darajaFacilityIds = Array.isArray(darajaData.facility_ids)
+          ? darajaData.facility_ids
           : [];
-        state.jtFacilityIdNameMap = jt.facility_id_name_map || {};
-        state.jtFacilitiesBySubcounty = jt.facilities_by_subcounty || {};
+        state.darajaFacilityIdNameMap = darajaData.facility_id_name_map || {};
+        state.darajaFacilitiesBySubcounty = darajaData.facilities_by_subcounty || {};
       }
     } catch (e) {
       // non-critical
@@ -4817,9 +4817,9 @@ function getLocationHierarchy() {
 }
 
 function getCountyOptions() {
-  // If JT counties are loaded, always show only the 4 Jamii Tekelezi counties
-  if (state.jtCounties.length) {
-    return state.jtCounties;
+  // If JT counties are loaded, always show only the 4 Daraja counties
+  if (state.darajaCounties.length) {
+    return state.darajaCounties;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -4841,14 +4841,14 @@ function getCountyOptions() {
 
 function getSubCountyOptions(selectedCounty = "all") {
   // If JT data is loaded and a specific county is selected, use JT mapping
-  if (state.jtCounties.length && selectedCounty && selectedCounty !== "all") {
-    const subs = state.jtSubcountyMap[selectedCounty] || [];
+  if (state.darajaCounties.length && selectedCounty && selectedCounty !== "all") {
+    const subs = state.darajaSubcountyMap[selectedCounty] || [];
     return subs;
   }
 
   // If JT data is loaded but "all" counties, return all JT sub-counties
-  if (state.jtSubcounties.length && selectedCounty === "all") {
-    return state.jtSubcounties;
+  if (state.darajaSubcounties.length && selectedCounty === "all") {
+    return state.darajaSubcounties;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -4880,7 +4880,7 @@ function getSubCountyOptions(selectedCounty = "all") {
 
 function getFacilityOptions(selectedCounty = "all", selectedSubCounty = "all") {
   // If JT data is loaded, use the JT facility hierarchy
-  if (state.jtCounties.length) {
+  if (state.darajaCounties.length) {
     // Specific county + subcounty: return facilities for that subcounty
     if (
       selectedCounty &&
@@ -4889,22 +4889,22 @@ function getFacilityOptions(selectedCounty = "all", selectedSubCounty = "all") {
       selectedSubCounty !== "all"
     ) {
       const key = `${selectedCounty}||${selectedSubCounty}`;
-      const facs = state.jtFacilitiesBySubcounty[key] || [];
+      const facs = state.darajaFacilitiesBySubcounty[key] || [];
       return facs.map((f) => f.name);
     }
     // Specific county only: return all facilities for that county
     if (selectedCounty && selectedCounty !== "all") {
-      const subs = state.jtSubcountyMap[selectedCounty] || [];
+      const subs = state.darajaSubcountyMap[selectedCounty] || [];
       const allFacs = [];
       for (const sc of subs) {
         const key = `${selectedCounty}||${sc}`;
-        const facs = state.jtFacilitiesBySubcounty[key] || [];
+        const facs = state.darajaFacilitiesBySubcounty[key] || [];
         allFacs.push(...facs.map((f) => f.name));
       }
       return [...new Set(allFacs)].sort();
     }
     // "All" selected: return all JT facility names
-    return state.jtFacilityNames;
+    return state.darajaFacilityNames;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -5139,16 +5139,16 @@ async function handleChatSubmit(event) {
       subtab: "overview",
       label: "Reporting Rates",
     },
-    // Jamii page — now enters Jamii Tekelezi project context
+    // Daraja page — now enters Daraja project context
     {
-      words: ["jamii", "tekelezi", "jamii tekelezi"],
+      words: ["daraja", "chak daraja", "daraja facilities"],
       page: "overview",
       subtab: "",
-      label: "Jamii Tekelezi Project",
+      label: "Daraja Project",
       callback: function () {
-        state.activeProject = "jamii_tekelezi";
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
       },
     },
     {
@@ -5157,9 +5157,9 @@ async function handleChatSubmit(event) {
       subtab: "",
       label: "TX_CURR Analytics",
       callback: function () {
-        state.activeProject = "jamii_tekelezi";
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
       },
     },
     // Other pages
@@ -5905,49 +5905,49 @@ const SUBTAB_TYPE_MAP = {
   "art-optimization": {
     type: "art_optimization",
     title: "ART Optimization",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   "adverse-events---ae": {
     type: "adverse_events",
     title: "Adverse Events (AE)",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   dsd: {
     type: "dsd",
     title: "Differentiated Service Delivery",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   "treatment-outcomes": {
     type: "treatment_outcomes",
     title: "Treatment Outcomes",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   otz: {
     type: "otz",
     title: "OTZ (O and Teen Club)",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   ovc: {
     type: "ovc",
     title: "OVC",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   "covid-19": {
     type: "covid",
     title: "COVID-19",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   ahd: {
     type: "ahd",
     title: "Advanced HIV Disease",
-    badge: "⚡ JTP Data",
+    badge: "⚡ Daraja Data",
     chartType: "multi-metric",
   },
   "hiv-testing-services-uptake": {
@@ -6073,7 +6073,7 @@ function animateCardChips() {
 
 // ── Project accent colors ──
 const _PROJ_COLORS = {
-  jamii_tekelezi: {
+  daraja: {
     border: "#a78bfa",
     bg: "#f5f3ff",
     accent: "#7c3aed",
@@ -6354,10 +6354,10 @@ async function renderHomepageDashboard() {
   }
 
   const projectIds = Object.keys(projectData);
-  const jamiiIdx = projectIds.indexOf("jamii_tekelezi");
-  if (jamiiIdx > 0) {
-    projectIds.splice(jamiiIdx, 1);
-    projectIds.unshift("jamii_tekelezi");
+  const darajaIdx = projectIds.indexOf("daraja");
+  if (darajaIdx > 0) {
+    projectIds.splice(darajaIdx, 1);
+    projectIds.unshift("daraja");
   }
   if (!projectIds.length) {
     root.innerHTML = `<div class="text-slate-500 text-sm py-8 text-center">No projects found.</div>`;
@@ -6433,7 +6433,7 @@ async function renderHomepageDashboard() {
   html += `<div id="hp-projects-view"><div class="space-y-5">`;
 
   // Separate featured projects (JT, Stawisha) from carousel projects
-  const featuredPids = ["jamii_tekelezi", "chap_stawisha"];
+  const featuredPids = ["daraja", "chap_stawisha"];
   const carouselPids = projectIds.filter((pid) => !featuredPids.includes(pid));
 
   // ── Featured Project Rows ──
@@ -6499,7 +6499,7 @@ async function renderHomepageDashboard() {
             ${_renderNarrative(pid)}
         </div>
         ${
-          pid === "jamii_tekelezi"
+          pid === "daraja"
             ? `
         <div id="key-indicators-root" class="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm hp-slide-right hp-stagger-4 mt-5">
           <div class="flex items-center gap-2 mb-4">
@@ -6516,7 +6516,7 @@ async function renderHomepageDashboard() {
       </div>`;
   }
 
-  // ── Key Indicators are now rendered inside Jamii Tekelezi card body ──
+  // ── Key Indicators are now rendered inside Daraja card body ──
 
   // ── Carousel: Other Projects (auto-scrolling conveyor belt) ──
   if (carouselPids.length) {
@@ -6774,10 +6774,10 @@ async function renderHomepageDashboard() {
             ? this.closest("[data-project]")?.dataset.project
             : null);
         if (!pid) return;
-        if (pid === "jamii_tekelezi") {
-          state.activeProject = "jamii_tekelezi";
+        if (pid === "daraja") {
+          state.activeProject = "daraja";
           if (elements.projectFilter)
-            elements.projectFilter.value = "jamii-tekelezi";
+            elements.projectFilter.value = "daraja";
           state.activePage = "overview";
           setPageHash("overview");
           renderCurrentView();
@@ -7671,7 +7671,7 @@ async function renderHivTreatmentOverview(container) {
               <div class="text-sm text-slate-500">A long-form landing page that summarizes the key treatment subtab areas with sectioned highlights for each main view.</div>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-700">
-              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Jamii Tekelezi overview
+              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Daraja overview
             </div>
           </div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -8320,7 +8320,7 @@ async function renderHivTestingOverview(container) {
               <div class="text-sm text-slate-500">A long-form overview that mirrors the HTS subtab areas with sectioned summaries for uptake, linkage, and PrEP.</div>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
-              <span class="h-2 w-2 rounded-full bg-cyan-500"></span> Jamii Tekelezi overview
+              <span class="h-2 w-2 rounded-full bg-cyan-500"></span> Daraja overview
             </div>
           </div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -9081,7 +9081,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
       "adverse_events",
     ].includes(type)
   ) {
-    // ═══════════ JTP MULTI-METRIC LAYOUT ═══════════
+    // ═══════════ Daraja MULTI-METRIC LAYOUT ═══════════
     const hasData = (trend || []).length > 0;
     const metricsList = data.metrics || [];
     const colors = [
@@ -9111,7 +9111,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
           <div class="flex items-center justify-between mb-3">
             <div>
               <div class="text-xs font-semibold text-slate-700">📊 Latest Values — ${escapeHtml(latest.label || "")}</div>
-              <div class="text-[10px] text-slate-400">Most recent month from DHIS2 JTP data</div>
+              <div class="text-[10px] text-slate-400">Most recent month from DHIS2 Daraja data</div>
             </div>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -9137,7 +9137,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
               <div class="text-[10px] text-slate-400">All metrics over time</div>
             </div>
           </div>
-          <div id="dhis-chart-jtp-trend" style="height:350px;width:100%"></div>
+          <div id="dhis-chart-daraja-trend" style="height:350px;width:100%"></div>
         </div>
       `;
 
@@ -9176,14 +9176,14 @@ function buildUnifiedDhisChart(wrapper, data, config) {
     wrapper.innerHTML = html;
 
     // ── Render Multi-line Highcharts ──
-    if (window.Highcharts && document.getElementById("dhis-chart-jtp-trend")) {
+    if (window.Highcharts && document.getElementById("dhis-chart-daraja-trend")) {
       const categories2 = trend.map((p) => p.label);
       const series = metricsList.map((m, i) => ({
         name: m.label,
         data: trend.map((p) => p[m.key] || 0),
         color: colors[i % colors.length],
       }));
-      Highcharts.chart("dhis-chart-jtp-trend", {
+      Highcharts.chart("dhis-chart-daraja-trend", {
         chart: { type: "spline", zoomType: "x" },
         title: { text: null },
         xAxis: {
@@ -9350,7 +9350,7 @@ function fetchAnalyticsView(container, view, params, config) {
     mom: "/api/hiv-treatment/tx-curr-mom",
     "gender-split": "/api/hiv-treatment/tx-curr-gender-split",
     "age-split": "/api/hiv-treatment/tx-curr-age-split",
-    regimens: "/api/hiv-treatment/jtp-regimens",
+    regimens: "/api/hiv-treatment/daraja-regimens",
   };
   const url = endpointMap[view];
   if (!url) {
@@ -10202,7 +10202,7 @@ function renderAgeSplitAnalytics(container, d, labelPrefix) {
   }
 }
 
-// ── JTP Regimen Distribution Donut Chart ───────────────────────────
+// ── Daraja Regimen Distribution Donut Chart ───────────────────────────
 function renderRegimensAnalytics(container, d) {
   if (!d.ok) {
     container.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Error: ${d.error || "Unknown"}</div>`;
@@ -10235,7 +10235,7 @@ function renderRegimensAnalytics(container, d) {
   container.innerHTML = `
     <div class="space-y-3">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-900">💊 JTP Regimen Distribution</h3>
+        <h3 class="text-sm font-semibold text-slate-900">💊 Daraja Regimen Distribution</h3>
         <span class="text-[10px] text-slate-400">${period}</span>
       </div>
       <div class="flex flex-col md:flex-row items-center gap-4">
@@ -10875,28 +10875,28 @@ function renderMonthlyGroupedChart(
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// JAMII TEKELEZI PAGE
+// DARAJA PAGE
 // ══════════════════════════════════════════════════════════════════════
 
-async function renderJamiiPage(container, activeSlug) {
+async function renderDarajaPage(container, activeSlug) {
   if (activeSlug === "overview") {
-    renderJamiiOverview(container);
+    renderDarajaOverview(container);
   } else if (activeSlug === "tx-curr-analytics") {
-    renderJamiiTxCurrAnalytics(container);
+    renderDarajaTxCurrAnalytics(container);
   } else if (activeSlug === "programme-highlights") {
-    renderJamiiProgrammeHighlights(container);
+    renderDarajaProgrammeHighlights(container);
   } else if (activeSlug === "workload-mhu") {
-    renderJamiiWorkloadPage(container);
+    renderDarajaWorkloadPage(container);
   } else {
     container.innerHTML = `<div class="text-center py-12 text-sm text-slate-500">Select a view above.</div>`;
   }
 }
 
-async function renderJamiiProgrammeHighlights(container) {
+async function renderDarajaProgrammeHighlights(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights</div>
-      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiHighlightsLoading">Loading snapshot…</div>
+      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="darajaHighlightsLoading">Loading snapshot…</div>
     </div>
   `;
 
@@ -10930,7 +10930,7 @@ async function renderJamiiProgrammeHighlights(container) {
     const htsMomentum =
       tested > 0 ? Math.round((tested / Math.max(1, txCurr)) * 100) : 0;
 
-    document.getElementById("jamiiHighlightsLoading").outerHTML = `
+    document.getElementById("darajaHighlightsLoading").outerHTML = `
       <div class="space-y-4">
         <div class="grid gap-3 md:grid-cols-2">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -10959,11 +10959,11 @@ async function renderJamiiProgrammeHighlights(container) {
   }
 }
 
-async function renderJamiiWorkloadPage(container) {
+async function renderDarajaWorkloadPage(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus</div>
-      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="jamiiWorkloadLoading">Loading workload view…</div>
+      <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="darajaWorkloadLoading">Loading workload view…</div>
     </div>
   `;
 
@@ -11001,7 +11001,7 @@ async function renderJamiiWorkloadPage(container) {
       Math.min(100, Math.round((txNew / Math.max(1, txCurr)) * 100)),
     );
 
-    document.getElementById("jamiiWorkloadLoading").outerHTML = `
+    document.getElementById("darajaWorkloadLoading").outerHTML = `
       <div class="space-y-4">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div class="text-sm font-semibold text-slate-700">Service workload summary</div>
@@ -11037,11 +11037,11 @@ async function renderJamiiWorkloadPage(container) {
   }
 }
 
-async function renderJamiiOverview(container) {
+async function renderDarajaOverview(container) {
   container.innerHTML = `
     <div class="flex items-center justify-center py-16 text-slate-500 text-sm gap-2">
       <div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
-      Loading Jamii Tekelezi overview…
+      Loading Daraja overview…
     </div>
   `;
 
@@ -11148,7 +11148,7 @@ async function renderJamiiOverview(container) {
         <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div class="text-2xl font-bold text-slate-800">Jamii Tekelezi overview</div>
+              <div class="text-2xl font-bold text-slate-800">Daraja overview</div>
               <div class="text-sm text-slate-500">A consolidated landing page that brings HIV Treatment and HIV Testing overview sections together with programme highlights and MHU workload signals.</div>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
@@ -11192,21 +11192,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">TX_CURR trend</div>
-                <canvas id="jamiiTreatmentCurrentLine"></canvas>
+                <canvas id="darajaTreatmentCurrentLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Month-on-month change</div>
-                <canvas id="jamiiTreatmentCurrentBar"></canvas>
+                <canvas id="darajaTreatmentCurrentBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Sex distribution</div>
-                <canvas id="jamiiTreatmentCurrentDonut"></canvas>
+                <canvas id="darajaTreatmentCurrentDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Continuity gauge</div>
-                <canvas id="jamiiTreatmentCurrentGauge"></canvas>
+                <canvas id="darajaTreatmentCurrentGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11224,21 +11224,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">TX_NEW trend</div>
-                <canvas id="jamiiTreatmentNewLine"></canvas>
+                <canvas id="darajaTreatmentNewLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">New starts volume</div>
-                <canvas id="jamiiTreatmentNewBar"></canvas>
+                <canvas id="darajaTreatmentNewBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Sex share</div>
-                <canvas id="jamiiTreatmentNewDonut"></canvas>
+                <canvas id="darajaTreatmentNewDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Uptake gauge</div>
-                <canvas id="jamiiTreatmentNewGauge"></canvas>
+                <canvas id="darajaTreatmentNewGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11256,21 +11256,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">VL uptake trend</div>
-                <canvas id="jamiiTreatmentVlLine"></canvas>
+                <canvas id="darajaTreatmentVlLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Uptake vs remaining</div>
-                <canvas id="jamiiTreatmentVlBar"></canvas>
+                <canvas id="darajaTreatmentVlBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">VL coverage split</div>
-                <canvas id="jamiiTreatmentVlDonut"></canvas>
+                <canvas id="darajaTreatmentVlDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Coverage gauge</div>
-                <canvas id="jamiiTreatmentVlGauge"></canvas>
+                <canvas id="darajaTreatmentVlGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11288,21 +11288,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Testing volume trend</div>
-                <canvas id="jamiiTestingUptakeLine"></canvas>
+                <canvas id="darajaTestingUptakeLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Tested vs positive</div>
-                <canvas id="jamiiTestingUptakeBar"></canvas>
+                <canvas id="darajaTestingUptakeBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Positivity split</div>
-                <canvas id="jamiiTestingUptakeDonut"></canvas>
+                <canvas id="darajaTestingUptakeDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Momentum gauge</div>
-                <canvas id="jamiiTestingUptakeGauge"></canvas>
+                <canvas id="darajaTestingUptakeGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11320,21 +11320,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Linkage acceptance trend</div>
-                <canvas id="jamiiTestingLinkageLine"></canvas>
+                <canvas id="darajaTestingLinkageLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Offered vs accepted</div>
-                <canvas id="jamiiTestingLinkageBar"></canvas>
+                <canvas id="darajaTestingLinkageBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Acceptance split</div>
-                <canvas id="jamiiTestingLinkageDonut"></canvas>
+                <canvas id="darajaTestingLinkageDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Linkage gauge</div>
-                <canvas id="jamiiTestingLinkageGauge"></canvas>
+                <canvas id="darajaTestingLinkageGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11352,21 +11352,21 @@ async function renderJamiiOverview(container) {
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">PrEP current trend</div>
-                <canvas id="jamiiTestingPrepLine"></canvas>
+                <canvas id="darajaTestingPrepLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">PrEP new versus current</div>
-                <canvas id="jamiiTestingPrepBar"></canvas>
+                <canvas id="darajaTestingPrepBar"></canvas>
               </div>
             </div>
             <div class="grid gap-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">Client split</div>
-                <canvas id="jamiiTestingPrepDonut"></canvas>
+                <canvas id="darajaTestingPrepDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
                 <div class="text-sm font-semibold text-slate-700 mb-2">PrEP coverage gauge</div>
-                <canvas id="jamiiTestingPrepGauge"></canvas>
+                <canvas id="darajaTestingPrepGauge"></canvas>
               </div>
             </div>
           </div>
@@ -11378,7 +11378,7 @@ async function renderJamiiOverview(container) {
               <div class="text-base font-semibold text-slate-800">Programme highlights</div>
               <div class="text-sm text-slate-500">A quick read on momentum, continuity and the signals that link the treatment and testing workstreams.</div>
             </div>
-            <button data-tab="jamii" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Refresh overview</button>
+            <button data-tab="daraja" class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Refresh overview</button>
           </div>
 
           <div class="mt-4 grid gap-4 lg:grid-cols-3">
@@ -11402,11 +11402,11 @@ async function renderJamiiOverview(container) {
           <div class="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div class="text-sm font-semibold text-slate-700">Workload pressure</div>
-              <div class="mt-3" style="height:220px"><canvas id="jamiiWorkloadPressureChart"></canvas></div>
+              <div class="mt-3" style="height:220px"><canvas id="darajaWorkloadPressureChart"></canvas></div>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div class="text-sm font-semibold text-slate-700">Service readiness</div>
-              <div class="mt-3" style="height:220px"><canvas id="jamiiWorkloadDonut"></canvas></div>
+              <div class="mt-3" style="height:220px"><canvas id="darajaWorkloadDonut"></canvas></div>
             </div>
           </div>
         </section>
@@ -11418,9 +11418,9 @@ async function renderJamiiOverview(container) {
         e.preventDefault();
         const tab = el.getAttribute("data-tab");
         if (!tab) return;
-        if (tab === "jamii") {
-          state.activePage = "jamii";
-          setPageHash("jamii", "overview");
+        if (tab === "daraja") {
+          state.activePage = "daraja";
+          setPageHash("daraja", "overview");
           renderCurrentView();
           return;
         }
@@ -11528,7 +11528,7 @@ async function renderJamiiOverview(container) {
       }
 
       const currentLineCtx = document.getElementById(
-        "jamiiTreatmentCurrentLine",
+        "darajaTreatmentCurrentLine",
       );
       if (currentLineCtx) {
         new Chart(currentLineCtx, {
@@ -11560,7 +11560,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const currentBarCtx = document.getElementById("jamiiTreatmentCurrentBar");
+      const currentBarCtx = document.getElementById("darajaTreatmentCurrentBar");
       if (currentBarCtx) {
         new Chart(currentBarCtx, {
           type: "bar",
@@ -11593,7 +11593,7 @@ async function renderJamiiOverview(container) {
       }
 
       const currentDonutCtx = document.getElementById(
-        "jamiiTreatmentCurrentDonut",
+        "darajaTreatmentCurrentDonut",
       );
       if (currentDonutCtx) {
         new Chart(currentDonutCtx, {
@@ -11628,9 +11628,9 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTreatmentCurrentGauge", currentGaugeValue, "#7c3aed");
+      drawGauge("darajaTreatmentCurrentGauge", currentGaugeValue, "#7c3aed");
 
-      const newLineCtx = document.getElementById("jamiiTreatmentNewLine");
+      const newLineCtx = document.getElementById("darajaTreatmentNewLine");
       if (newLineCtx) {
         new Chart(newLineCtx, {
           type: "line",
@@ -11661,7 +11661,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const newBarCtx = document.getElementById("jamiiTreatmentNewBar");
+      const newBarCtx = document.getElementById("darajaTreatmentNewBar");
       if (newBarCtx) {
         new Chart(newBarCtx, {
           type: "bar",
@@ -11691,7 +11691,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const newDonutCtx = document.getElementById("jamiiTreatmentNewDonut");
+      const newDonutCtx = document.getElementById("darajaTreatmentNewDonut");
       if (newDonutCtx) {
         new Chart(newDonutCtx, {
           type: "doughnut",
@@ -11725,9 +11725,9 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTreatmentNewGauge", newGaugeValue, "#0f766e");
+      drawGauge("darajaTreatmentNewGauge", newGaugeValue, "#0f766e");
 
-      const vlLineCtx = document.getElementById("jamiiTreatmentVlLine");
+      const vlLineCtx = document.getElementById("darajaTreatmentVlLine");
       if (vlLineCtx) {
         new Chart(vlLineCtx, {
           type: "line",
@@ -11758,7 +11758,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const vlBarCtx = document.getElementById("jamiiTreatmentVlBar");
+      const vlBarCtx = document.getElementById("darajaTreatmentVlBar");
       if (vlBarCtx) {
         new Chart(vlBarCtx, {
           type: "bar",
@@ -11788,7 +11788,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const vlDonutCtx = document.getElementById("jamiiTreatmentVlDonut");
+      const vlDonutCtx = document.getElementById("darajaTreatmentVlDonut");
       if (vlDonutCtx) {
         new Chart(vlDonutCtx, {
           type: "doughnut",
@@ -11818,10 +11818,10 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTreatmentVlGauge", vlGaugeValue, "#16a34a");
+      drawGauge("darajaTreatmentVlGauge", vlGaugeValue, "#16a34a");
 
       const testingUptakeLineCtx = document.getElementById(
-        "jamiiTestingUptakeLine",
+        "darajaTestingUptakeLine",
       );
       if (testingUptakeLineCtx) {
         new Chart(testingUptakeLineCtx, {
@@ -11854,7 +11854,7 @@ async function renderJamiiOverview(container) {
       }
 
       const testingUptakeBarCtx = document.getElementById(
-        "jamiiTestingUptakeBar",
+        "darajaTestingUptakeBar",
       );
       if (testingUptakeBarCtx) {
         new Chart(testingUptakeBarCtx, {
@@ -11886,7 +11886,7 @@ async function renderJamiiOverview(container) {
       }
 
       const testingUptakeDonutCtx = document.getElementById(
-        "jamiiTestingUptakeDonut",
+        "darajaTestingUptakeDonut",
       );
       if (testingUptakeDonutCtx) {
         new Chart(testingUptakeDonutCtx, {
@@ -11921,10 +11921,10 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTestingUptakeGauge", htsUptakeGauge, "#0891b2");
+      drawGauge("darajaTestingUptakeGauge", htsUptakeGauge, "#0891b2");
 
       const testingLinkageLineCtx = document.getElementById(
-        "jamiiTestingLinkageLine",
+        "darajaTestingLinkageLine",
       );
       if (testingLinkageLineCtx) {
         new Chart(testingLinkageLineCtx, {
@@ -11957,7 +11957,7 @@ async function renderJamiiOverview(container) {
       }
 
       const testingLinkageBarCtx = document.getElementById(
-        "jamiiTestingLinkageBar",
+        "darajaTestingLinkageBar",
       );
       if (testingLinkageBarCtx) {
         new Chart(testingLinkageBarCtx, {
@@ -11995,7 +11995,7 @@ async function renderJamiiOverview(container) {
       }
 
       const testingLinkageDonutCtx = document.getElementById(
-        "jamiiTestingLinkageDonut",
+        "darajaTestingLinkageDonut",
       );
       if (testingLinkageDonutCtx) {
         new Chart(testingLinkageDonutCtx, {
@@ -12027,10 +12027,10 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTestingLinkageGauge", linkageGaugeValue, "#2563eb");
+      drawGauge("darajaTestingLinkageGauge", linkageGaugeValue, "#2563eb");
 
       const testingPrepLineCtx = document.getElementById(
-        "jamiiTestingPrepLine",
+        "darajaTestingPrepLine",
       );
       if (testingPrepLineCtx) {
         new Chart(testingPrepLineCtx, {
@@ -12062,7 +12062,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const testingPrepBarCtx = document.getElementById("jamiiTestingPrepBar");
+      const testingPrepBarCtx = document.getElementById("darajaTestingPrepBar");
       if (testingPrepBarCtx) {
         new Chart(testingPrepBarCtx, {
           type: "bar",
@@ -12099,7 +12099,7 @@ async function renderJamiiOverview(container) {
       }
 
       const testingPrepDonutCtx = document.getElementById(
-        "jamiiTestingPrepDonut",
+        "darajaTestingPrepDonut",
       );
       if (testingPrepDonutCtx) {
         new Chart(testingPrepDonutCtx, {
@@ -12131,10 +12131,10 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      drawGauge("jamiiTestingPrepGauge", prepSplitGauge, "#16a34a");
+      drawGauge("darajaTestingPrepGauge", prepSplitGauge, "#16a34a");
 
       const workloadPressureCtx = document.getElementById(
-        "jamiiWorkloadPressureChart",
+        "darajaWorkloadPressureChart",
       );
       if (workloadPressureCtx) {
         new Chart(workloadPressureCtx, {
@@ -12176,7 +12176,7 @@ async function renderJamiiOverview(container) {
         });
       }
 
-      const workloadDonutCtx = document.getElementById("jamiiWorkloadDonut");
+      const workloadDonutCtx = document.getElementById("darajaWorkloadDonut");
       if (workloadDonutCtx) {
         new Chart(workloadDonutCtx, {
           type: "doughnut",
@@ -12206,17 +12206,17 @@ async function renderJamiiOverview(container) {
     }
   } catch (err) {
     container.innerHTML = `<div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-center">
-      <div class="text-red-500 text-sm">⚠️ Error loading Jamii overview: ${escapeHtml(err.message)}</div>
+      <div class="text-red-500 text-sm">⚠️ Error loading Daraja overview: ${escapeHtml(err.message)}</div>
     </div>`;
   }
 }
 
-async function renderJamiiTxCurrAnalytics(container) {
+async function renderDarajaTxCurrAnalytics(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="text-xs font-semibold text-slate-700 mb-1">💊 TX_CURR Analytics</div>
       <div class="text-[10px] text-slate-400 mb-3">Detailed TX_CURR analysis views powered by live DHIS2 data</div>
-      <div class="flex flex-wrap gap-1.5 mb-3" id="jamii-analytics-tabs">
+      <div class="flex flex-wrap gap-1.5 mb-3" id="daraja-analytics-tabs">
         <button class="dhis-analytics-btn active" data-view="trend">📈 Trend</button>
         <button class="dhis-analytics-btn" data-view="gender">👫 Gender</button>
         <button class="dhis-analytics-btn" data-view="age">👶 Age</button>
@@ -12224,15 +12224,15 @@ async function renderJamiiTxCurrAnalytics(container) {
         <button class="dhis-analytics-btn" data-view="mmd">💊 MMD</button>
         <button class="dhis-analytics-btn" data-view="mom">📊 MoM</button>
       </div>
-      <div id="jamii-analytics-container" class="min-h-[150px]">
+      <div id="daraja-analytics-container" class="min-h-[150px]">
         <div class="flex items-center justify-center py-10 text-slate-400 text-xs">Select a view above</div>
       </div>
     </div>
   `;
 
-  const tabsEl = document.getElementById("jamii-analytics-tabs");
+  const tabsEl = document.getElementById("daraja-analytics-tabs");
   const analyticsContainer = document.getElementById(
-    "jamii-analytics-container",
+    "daraja-analytics-container",
   );
   if (!tabsEl || !analyticsContainer) return;
 
@@ -12260,7 +12260,7 @@ async function renderJamiiTxCurrAnalytics(container) {
     analyticsContainer.innerHTML = `<div class="flex items-center justify-center py-10 text-slate-400 text-xs"><div class="w-5 h-5 border-2 border-sky-200 border-t-sky-600 rounded-full animate-spin mr-2"></div>Loading...</div>`;
 
     if (view === "trend") {
-      renderJamiiTrendView(analyticsContainer, locationParams.toString());
+      renderDarajaTrendView(analyticsContainer, locationParams.toString());
     } else {
       const endpointMap = {
         gender: "/api/hiv-treatment/tx-curr-gender",
@@ -12309,7 +12309,7 @@ async function renderJamiiTxCurrAnalytics(container) {
   }, 50);
 }
 
-async function renderJamiiTrendView(container, params) {
+async function renderDarajaTrendView(container, params) {
   try {
     const resp = await fetch(`/api/hiv-treatment/tx-curr-mom?${params}`);
     const d = await resp.json();
@@ -15551,7 +15551,7 @@ registerChakRenderer("pmtct", "pmtct", function (el, data) {
     existingHtml +
     `
     <div class="chak-page-info" style="margin-top:0">
-      <h2><i class="fas fa-baby"></i> PMTCT Cascade · Jamii Tekelezi</h2>
+      <h2><i class="fas fa-baby"></i> PMTCT Cascade · Daraja</h2>
       <p>Prevention of Mother-to-Child Transmission: Entry-to-Treatment cascade — 1st ANC → Tested → Positive → Total on ART</p>
     </div>
 
@@ -18405,7 +18405,7 @@ function slugify(name) {
 
 function getProjectDisplayName(slug) {
   const names = {
-    "jamii-tekelezi": "Jamii Tekelezi (JTP)",
+    "daraja": "Daraja",
     "chap-stawisha": "CHAP Stawisha",
     eis: "EIS",
     "gf-mnch": "Gates Foundation MNCH",

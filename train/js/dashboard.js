@@ -24,7 +24,7 @@ function renderCurrentView() {
       state.activeSubtabs["health_programmes"] === "mhu";
     const isHomepage =
       state.activePage === "overview" &&
-      state.activeProject !== "jamii_tekelezi";
+      state.activeProject !== "daraja";
     if (isMhuPage || isHomepage) {
       topFilters.classList.add("hidden");
     } else {
@@ -43,7 +43,7 @@ function renderCurrentView() {
       renderChakProjectOverview();
       return;
     }
-    if (state.activeProject !== "jamii_tekelezi") {
+    if (state.activeProject !== "daraja") {
       hidePageContext();
       elements.chartRoot.innerHTML = `
         <div id="homepageRoot" class="space-y-5">
@@ -57,11 +57,11 @@ function renderCurrentView() {
       return;
     }
 
-    // Jamii Tekelezi project home should show the consolidated Jamii overview
+    // Daraja project home should show the consolidated Daraja overview
     renderPageContext(pageId);
-    elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6"><div id="jamiiContent" class="space-y-6"></div></div>`;
-    const jamiiContainer = document.getElementById("jamiiContent");
-    renderJamiiOverview(jamiiContainer);
+    elements.chartRoot.innerHTML = `<div id="darajaRoot" class="space-y-6"><div id="darajaContent" class="space-y-6"></div></div>`;
+    const darajaContainer = document.getElementById("darajaContent");
+    renderDarajaOverview(darajaContainer);
     return;
   }
 
@@ -162,9 +162,9 @@ function renderCurrentView() {
 
   // ── HIV Testing → Unified DHIS2 HTS Live Charts ──
   if (pageId === "hiv_testing" && SUBTAB_TYPE_MAP[activeSlug]) {
-    // In Jamii Tekelezi, HIV Testing Services Linkage → show global Linkage page
+    // In Daraja, HIV Testing Services Linkage → show global Linkage page
     if (
-      state.activeProject === "jamii_tekelezi" &&
+      state.activeProject === "daraja" &&
       activeSlug === "hiv-testing-services-linkage"
     ) {
       elements.chartRoot.innerHTML =
@@ -251,13 +251,13 @@ function renderCurrentView() {
     return;
   }
 
-  // ── Jamii Tekelezi Page ──
-  if (pageId === "jamii") {
-    elements.chartRoot.innerHTML = `<div id="jamiiRoot" class="space-y-6">
-      <div id="jamiiContent" class="space-y-6"></div>
+  // ── Daraja Page ──
+  if (pageId === "daraja") {
+    elements.chartRoot.innerHTML = `<div id="darajaRoot" class="space-y-6">
+      <div id="darajaContent" class="space-y-6"></div>
     </div>`;
-    const jamiiContainer = document.getElementById("jamiiContent");
-    renderJamiiPage(jamiiContainer, activeSlug);
+    const darajaContainer = document.getElementById("darajaContent");
+    renderDarajaPage(darajaContainer, activeSlug);
     return;
   }
 
@@ -307,24 +307,24 @@ async function loadDashboardData() {
       // non-critical
     }
 
-    // Load Jamii Tekelezi locations to restrict global filters
+    // Load Daraja locations to restrict global filters
     try {
-      const jtResp = await fetch("/api/jamii-tekelezi/locations");
-      if (jtResp.ok) {
-        const jt = await jtResp.json();
-        state.jtCounties = Array.isArray(jt.counties) ? jt.counties : [];
-        state.jtSubcounties = Array.isArray(jt.subcounties)
-          ? jt.subcounties
+      const darajaResp = await fetch("/api/daraja/locations");
+      if (darajaResp.ok) {
+        const darajaData = await darajaResp.json();
+        state.darajaCounties = Array.isArray(darajaData.counties) ? darajaData.counties : [];
+        state.darajaSubcounties = Array.isArray(darajaData.subcounties)
+          ? darajaData.subcounties
           : [];
-        state.jtSubcountyMap = jt.county_subcounties || {};
-        state.jtFacilityNames = Array.isArray(jt.facility_names)
-          ? jt.facility_names
+        state.darajaSubcountyMap = darajaData.county_subcounties || {};
+        state.darajaFacilityNames = Array.isArray(darajaData.facility_names)
+          ? darajaData.facility_names
           : [];
-        state.jtFacilityIds = Array.isArray(jt.facility_ids)
-          ? jt.facility_ids
+        state.darajaFacilityIds = Array.isArray(darajaData.facility_ids)
+          ? darajaData.facility_ids
           : [];
-        state.jtFacilityIdNameMap = jt.facility_id_name_map || {};
-        state.jtFacilitiesBySubcounty = jt.facilities_by_subcounty || {};
+        state.darajaFacilityIdNameMap = darajaData.facility_id_name_map || {};
+        state.darajaFacilitiesBySubcounty = darajaData.facilities_by_subcounty || {};
       }
     } catch (e) {
       // non-critical
@@ -354,9 +354,9 @@ function getLocationHierarchy() {
 }
 
 function getCountyOptions() {
-  // If JT counties are loaded, always show only the 4 Jamii Tekelezi counties
-  if (state.jtCounties.length) {
-    return state.jtCounties;
+  // If JT counties are loaded, always show only the 4 Daraja counties
+  if (state.darajaCounties.length) {
+    return state.darajaCounties;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -378,14 +378,14 @@ function getCountyOptions() {
 
 function getSubCountyOptions(selectedCounty = "all") {
   // If JT data is loaded and a specific county is selected, use JT mapping
-  if (state.jtCounties.length && selectedCounty && selectedCounty !== "all") {
-    const subs = state.jtSubcountyMap[selectedCounty] || [];
+  if (state.darajaCounties.length && selectedCounty && selectedCounty !== "all") {
+    const subs = state.darajaSubcountyMap[selectedCounty] || [];
     return subs;
   }
 
   // If JT data is loaded but "all" counties, return all JT sub-counties
-  if (state.jtSubcounties.length && selectedCounty === "all") {
-    return state.jtSubcounties;
+  if (state.darajaSubcounties.length && selectedCounty === "all") {
+    return state.darajaSubcounties;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -417,7 +417,7 @@ function getSubCountyOptions(selectedCounty = "all") {
 
 function getFacilityOptions(selectedCounty = "all", selectedSubCounty = "all") {
   // If JT data is loaded, use the JT facility hierarchy
-  if (state.jtCounties.length) {
+  if (state.darajaCounties.length) {
     // Specific county + subcounty: return facilities for that subcounty
     if (
       selectedCounty &&
@@ -426,22 +426,22 @@ function getFacilityOptions(selectedCounty = "all", selectedSubCounty = "all") {
       selectedSubCounty !== "all"
     ) {
       const key = `${selectedCounty}||${selectedSubCounty}`;
-      const facs = state.jtFacilitiesBySubcounty[key] || [];
+      const facs = state.darajaFacilitiesBySubcounty[key] || [];
       return facs.map((f) => f.name);
     }
     // Specific county only: return all facilities for that county
     if (selectedCounty && selectedCounty !== "all") {
-      const subs = state.jtSubcountyMap[selectedCounty] || [];
+      const subs = state.darajaSubcountyMap[selectedCounty] || [];
       const allFacs = [];
       for (const sc of subs) {
         const key = `${selectedCounty}||${sc}`;
-        const facs = state.jtFacilitiesBySubcounty[key] || [];
+        const facs = state.darajaFacilitiesBySubcounty[key] || [];
         allFacs.push(...facs.map((f) => f.name));
       }
       return [...new Set(allFacs)].sort();
     }
     // "All" selected: return all JT facility names
-    return state.jtFacilityNames;
+    return state.darajaFacilityNames;
   }
 
   const hierarchy = getLocationHierarchy();
@@ -678,16 +678,16 @@ async function handleChatSubmit(event) {
       subtab: "overview",
       label: "Reporting Rates",
     },
-    // Jamii page — now enters Jamii Tekelezi project context
+    // Daraja page — now enters Daraja project context
     {
-      words: ["jamii", "tekelezi", "jamii tekelezi"],
+      words: ["daraja", "chak daraja", "daraja facilities"],
       page: "overview",
       subtab: "",
-      label: "Jamii Tekelezi Project",
+      label: "Daraja Project",
       callback: function () {
-        state.activeProject = "jamii_tekelezi";
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
       },
     },
     {
@@ -696,9 +696,9 @@ async function handleChatSubmit(event) {
       subtab: "",
       label: "TX_CURR Analytics",
       callback: function () {
-        state.activeProject = "jamii_tekelezi";
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
       },
     },
     // Other pages

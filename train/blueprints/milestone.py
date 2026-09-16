@@ -464,8 +464,9 @@ _DARJA_OUS_CACHE = None
 def _daraja_scope():
     """Resolve the Daraja facility roster to CHAK DHIS2 org-unit ids.
 
-    Reads train/Site_Census - Daraja.xlsx (the 259-facility merged
-    Jamii Tekelezi + CHAP Stawisha census).  Each census row carries the
+    Reads train/Site_Census - Daraja.xlsx (the CHAK Daraja site census,
+    259 facilities; supersedes the earlier Jamii Tekelezi + CHAP Stawisha
+    scopes).  Each census row carries the
     national MFL code (col A) and the CHAK ereporting org units store the
     same code, so we match by MFL code first — this also catches the
     ~19 facilities whose CHAK display name differs from the census name

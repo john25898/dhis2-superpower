@@ -118,7 +118,7 @@ async function renderHivTreatmentOverview(container) {
               <div class="text-sm text-slate-500">A long-form landing page that summarizes the key treatment subtab areas with sectioned highlights for each main view.</div>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-semibold text-purple-700">
-              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Jamii Tekelezi overview
+              <span class="h-2 w-2 rounded-full bg-purple-500"></span> Daraja overview
             </div>
           </div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -767,7 +767,7 @@ async function renderHivTestingOverview(container) {
               <div class="text-sm text-slate-500">A long-form overview that mirrors the HTS subtab areas with sectioned summaries for uptake, linkage, and PrEP.</div>
             </div>
             <div class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold text-cyan-700">
-              <span class="h-2 w-2 rounded-full bg-cyan-500"></span> Jamii Tekelezi overview
+              <span class="h-2 w-2 rounded-full bg-cyan-500"></span> Daraja overview
             </div>
           </div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1528,7 +1528,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
       "adverse_events",
     ].includes(type)
   ) {
-    // ═══════════ JTP MULTI-METRIC LAYOUT ═══════════
+    // ═══════════ Daraja MULTI-METRIC LAYOUT ═══════════
     const hasData = (trend || []).length > 0;
     const metricsList = data.metrics || [];
     const colors = [
@@ -1558,7 +1558,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
           <div class="flex items-center justify-between mb-3">
             <div>
               <div class="text-xs font-semibold text-slate-700">📊 Latest Values — ${escapeHtml(latest.label || "")}</div>
-              <div class="text-[10px] text-slate-400">Most recent month from DHIS2 JTP data</div>
+              <div class="text-[10px] text-slate-400">Most recent month from DHIS2 Daraja data</div>
             </div>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -1584,7 +1584,7 @@ function buildUnifiedDhisChart(wrapper, data, config) {
               <div class="text-[10px] text-slate-400">All metrics over time</div>
             </div>
           </div>
-          <div id="dhis-chart-jtp-trend" style="height:350px;width:100%"></div>
+          <div id="dhis-chart-daraja-trend" style="height:350px;width:100%"></div>
         </div>
       `;
 
@@ -1623,14 +1623,14 @@ function buildUnifiedDhisChart(wrapper, data, config) {
     wrapper.innerHTML = html;
 
     // ── Render Multi-line Highcharts ──
-    if (window.Highcharts && document.getElementById("dhis-chart-jtp-trend")) {
+    if (window.Highcharts && document.getElementById("dhis-chart-daraja-trend")) {
       const categories2 = trend.map((p) => p.label);
       const series = metricsList.map((m, i) => ({
         name: m.label,
         data: trend.map((p) => p[m.key] || 0),
         color: colors[i % colors.length],
       }));
-      Highcharts.chart("dhis-chart-jtp-trend", {
+      Highcharts.chart("dhis-chart-daraja-trend", {
         chart: { type: "spline", zoomType: "x" },
         title: { text: null },
         xAxis: {
@@ -1797,7 +1797,7 @@ function fetchAnalyticsView(container, view, params, config) {
     mom: "/api/hiv-treatment/tx-curr-mom",
     "gender-split": "/api/hiv-treatment/tx-curr-gender-split",
     "age-split": "/api/hiv-treatment/tx-curr-age-split",
-    regimens: "/api/hiv-treatment/jtp-regimens",
+    regimens: "/api/hiv-treatment/daraja-regimens",
   };
   const url = endpointMap[view];
   if (!url) {

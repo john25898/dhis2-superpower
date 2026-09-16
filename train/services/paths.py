@@ -16,11 +16,12 @@ TABLE_NAME = "clinics"
 MAX_RESULT_ROWS = 100
 
 # ── Per-project data paths ─────────────────────────────────────
-# jamii_tekelezi_filters.csv lives with the Jamii Tekelezi project
-# (frontend + backend + data together), but is also read by MHU,
-# OU resolver and portfolio services.
-JAMII_TEKELEZI_DIR = BASE_DIR / "projects" / "jamii_tekelezi"
-JAMII_TEKELEZI_FILTERS_CSV = JAMII_TEKELEZI_DIR / "jamii_tekelezi_filters.csv"
+# daraja_filters.csv lives with the Daraja project (frontend + backend +
+# data together), but is also read by MHU, OU resolver and portfolio
+# services. Daraja supersedes the earlier Jamii Tekelezi scope and covers
+# the full 259-facility CHAK Daraja site census.
+DARAJA_DIR = BASE_DIR / "projects" / "daraja"
+DARAJA_FILTERS_CSV = DARAJA_DIR / "daraja_filters.csv"
 
 # ── Superpower module for DHIS2 live queries ──────────────────────
 SUPERPOWER_DIR = BASE_DIR.parent  # ai_translator.py is in the repo root

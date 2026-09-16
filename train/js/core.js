@@ -26,13 +26,13 @@ const state = {
   playgroundMode: "finance",
   playgroundChart: null,
   playgroundFinanceData: null,
-  jtCounties: [],
-  jtSubcounties: [],
-  jtSubcountyMap: {},
-  jtFacilityNames: [],
-  jtFacilityIds: [],
-  jtFacilityIdNameMap: {},
-  jtFacilitiesBySubcounty: {},
+  darajaCounties: [],
+  darajaSubcounties: [],
+  darajaSubcountyMap: {},
+  darajaFacilityNames: [],
+  darajaFacilityIds: [],
+  darajaFacilityIdNameMap: {},
+  darajaFacilitiesBySubcounty: {},
 };
 
 // ── CHAK DHIS2 Project Configuration ──
@@ -107,8 +107,8 @@ function applyHashRoute() {
   const parts = hash.split("/").filter(Boolean);
   if (!parts.length) return;
 
-  // Build project map: jamii_tekelezi + all CHAK projects
-  const projectMap = { jm: "jamii_tekelezi" };
+  // Build project map: daraja + all CHAK projects
+  const projectMap = { dr: "daraja" };
   Object.keys(CHAK_PROJECT_CODES).forEach(function (code) {
     projectMap[code] = CHAK_PROJECT_CODES[code];
   });
@@ -148,7 +148,7 @@ function applyHashRoute() {
     "case_surveillance",
     "facilities",
     "indicators",
-    "jamii",
+    "daraja",
     "all",
     // CHAK dataset detail pages
     "chak_dataset",
@@ -188,7 +188,7 @@ function toSlug(value) {
 }
 
 function getProjectHashPrefix() {
-  if (state.activeProject === "jamii_tekelezi") return "p/jm/";
+  if (state.activeProject === "daraja") return "p/dr/";
   var chakProj = getActiveChakProject();
   if (chakProj) return "p/" + chakProj.code + "/";
   return "";
@@ -391,11 +391,11 @@ function destroyChartsIn(root) {
   }
 }
 
-// ── Get subtabs filtered for current context (Jamii Tekelezi vs global) ──
+// ── Get subtabs filtered for current context (Daraja vs global) ──
 function getSubtabsForPage(pageId) {
   const meta = getPageMeta(pageId);
   let subtabs = Array.isArray(meta.subtabs) ? meta.subtabs : [];
-  if (state.activeProject === "jamii_tekelezi" && pageId === "hiv_treatment") {
+  if (state.activeProject === "daraja" && pageId === "hiv_treatment") {
     const exclude = new Set(["otz", "ovc", "covid-19", "care-treatment"]);
     subtabs = subtabs.filter(function (s) {
       return !exclude.has(toSlug(s));
@@ -585,8 +585,8 @@ function getPageMeta(pageId) {
       ],
     },
     playground: { title: "Playground", subtabs: [] },
-    jamii: {
-      title: "Jamii Tekelezi",
+    daraja: {
+      title: "Daraja",
       subtabs: [
         "Overview",
         "TX_CURR Analytics",
@@ -621,8 +621,8 @@ function renderPageContext(pageId) {
     state.activeSubtabs[pageId] = toSlug(subtabs[0]);
   }
 
-  // ── Project context mode (e.g., inside Jamii Tekelezi) ──
-  if (state.activeProject === "jamii_tekelezi") {
+  // ── Project context mode (e.g., inside Daraja) ──
+  if (state.activeProject === "daraja") {
     elements.pageContextBar.classList.remove("hidden");
     const activeSlug = state.activeSubtabs[pageId] || toSlug(subtabs[0] || "");
     const activeLabel =
@@ -633,7 +633,7 @@ function renderPageContext(pageId) {
           ← Back to Projects
         </button>
         <span class="text-slate-300">|</span>
-        <span class="font-semibold text-sky-700">🏥 Jamii Tekelezi</span>
+        <span class="font-semibold text-sky-700">🏥 Daraja</span>
         <span class="text-slate-400">/</span>
         <span>${escapeHtml(meta.title)}${activeLabel ? " / " + escapeHtml(activeLabel) : ""}</span>
       </div>
@@ -947,8 +947,8 @@ function renderPageTabs() {
   if (!elements.pageTabs) return;
 
   let tabs;
-  if (state.activeProject === "jamii_tekelezi") {
-    // Within Jamii Tekelezi project — show program navigation
+  if (state.activeProject === "daraja") {
+    // Within Daraja project — show program navigation
     tabs = [
       { id: "overview", label: "Home" },
       { id: "financial_analysis", label: "Finance Analysis" },
@@ -1112,7 +1112,7 @@ function populateFilterOptions() {
   if (elements.projectFilter && !elements.projectFilter.dataset.populated) {
     const projects = [
       { value: "all", label: "All Projects" },
-      { value: "jamii-tekelezi", label: "Jamii Tekelezi (JTP)" },
+      { value: "daraja", label: "Daraja" },
       { value: "chap-stawisha", label: "CHAP Stawisha" },
       { value: "eis", label: "EIS" },
       { value: "gf-mnch", label: "Gates Foundation MNCH" },

@@ -11,7 +11,7 @@ import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from services.common import _period_sort_key, json_safe
-from services.dhis2 import HTS_SPECS, INDICATOR_SPECS, JTP_SPECS, _dhis2_fetch
+from services.dhis2 import HTS_SPECS, INDICATOR_SPECS, DARAJA_SPECS, _dhis2_fetch
 from services.ou_resolver import _resolve_ou_ids
 from services.paths import BASE_DIR
 from services.superpower import (
@@ -45,24 +45,24 @@ def hiv_treatment_dhis_live() -> object:
     sc_filter = request.args.get("subcounty", "").strip()
     fac_filter = request.args.get("facility", "").strip()
 
-    # ── Check both INDICATOR_SPECS and JTP_SPECS ──
+    # ── Check both INDICATOR_SPECS and DARAJA_SPECS ──
     spec = INDICATOR_SPECS.get(qtype)
-    jtp_spec = JTP_SPECS.get(qtype) if not spec else None
-    if not spec and not jtp_spec:
+    daraja_spec = DARAJA_SPECS.get(qtype) if not spec else None
+    if not spec and not daraja_spec:
         return jsonify(json_safe({
             "error": f"Unknown type '{qtype}'. Use: tx_new, tx_curr, vl, art_optimization, dsd, treatment_outcomes, otz, ovc, covid, ahd, adverse_events"
         })), 400
 
     ou_id, is_multi_ou = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    # ── JTP multi-metric type handling ──
-    if jtp_spec:
-        title = jtp_spec["title"]
+    # ── Daraja multi-metric type handling ──
+    if daraja_spec:
+        title = daraja_spec["title"]
         errors = []
         metrics_data = {}
         with ThreadPoolExecutor(max_workers=8) as ex:
             future_map = {}
-            for mkey, mmeta in jtp_spec["metrics"].items():
+            for mkey, mmeta in daraja_spec["metrics"].items():
                 dx_str = ";".join(mmeta["ids"])
                 fut = ex.submit(_dhis2_fetch, dx_str, ou_id, pe, None)
                 future_map[fut] = mkey
@@ -71,7 +71,7 @@ def hiv_treatment_dhis_live() -> object:
                 try:
                     metrics_data[mkey] = fut.result()
                 except Exception as exc:
-                    errors.append(f"{jtp_spec['metrics'][mkey]['label']}: {exc}")
+                    errors.append(f"{daraja_spec['metrics'][mkey]['label']}: {exc}")
                     metrics_data[mkey] = {}
 
         all_set = set()
@@ -79,18 +79,18 @@ def hiv_treatment_dhis_live() -> object:
             all_set.update(md.keys())
         all_periods = sorted(all_set, key=_period_sort_key)
 
-        def _jtp_label(p):
+        def _daraja_label(p):
             return f"{p[:4]}-{p[4:]}" if len(str(p)) == 6 else str(p)
 
         trend = []
         for p in all_periods:
-            entry = {"period": p, "label": _jtp_label(p)}
-            for mkey in jtp_spec["metrics"]:
+            entry = {"period": p, "label": _daraja_label(p)}
+            for mkey in daraja_spec["metrics"]:
                 entry[mkey] = round(float(metrics_data.get(mkey, {}).get(p, 0)), 1)
             trend.append(entry)
 
         metric_list = []
-        for mkey, mmeta in jtp_spec["metrics"].items():
+        for mkey, mmeta in daraja_spec["metrics"].items():
             metric_list.append({"key": mkey, "label": mmeta["label"]})
 
         return jsonify(json_safe({
@@ -835,10 +835,10 @@ def tx_curr_mom() -> object:
     return jsonify(json_safe({"ok": True, "changes": changes}))
 
 
-# ── JTP Regimen Distribution (like DHIS2 TX_Curr Regimens) ──────
-@hiv_bp.get("/api/hiv-treatment/jtp-regimens")
-def jtp_regimens() -> object:
-    """Fetches JTP regimen data for donut chart.
+# ── Daraja Regimen Distribution (like DHIS2 TX_Curr Regimens) ──────
+@hiv_bp.get("/api/hiv-treatment/daraja-regimens")
+def daraja_regimens() -> object:
+    """Fetches Daraja regimen data for donut chart.
     ?county=...&subcounty=...&facility=...&period=LAST_12_MONTHS
     Uses ART Optimization DX IDs: 1st Line, 2nd Line, 3rd Line, DTG
     Returns {ok, regimens: [{label, id, value}], latest_period}

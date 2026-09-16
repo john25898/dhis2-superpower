@@ -101,7 +101,7 @@ def js_assets(filename: str) -> object:
 
 @core_bp.get("/projects/<path:filename>")
 def project_assets(filename: str) -> object:
-    """Serve per-project files (train/projects/<slug>/*: config.js, jamii.js, CSVs).
+    """Serve per-project files (train/projects/<slug>/*: config.js, daraja.js, CSVs).
     No-cache so edits to any project file show up immediately on refresh."""
     response = send_from_directory(BASE_DIR / "projects", filename)
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

@@ -6,8 +6,8 @@ function renderProjectSelection() {
   // Static projects (non-CHAK)
   var staticProjects = [
     {
-      id: "jamii_tekelezi",
-      name: "Jamii Tekelezi",
+      id: "daraja",
+      name: "Daraja",
       desc: "Comprehensive HIV/AIDS program dashboard — Testing, Treatment, PrEP, PMTCT, TB, and more.",
       icon: "📊",
       color: "bg-sky-50 border-sky-200 hover:bg-sky-100",
@@ -71,11 +71,11 @@ function renderProjectSelection() {
     btn.addEventListener("click", function () {
       var projectId = btn.getAttribute("data-project") || "";
 
-      // Jamii Tekelezi — existing behavior
-      if (projectId === "jamii_tekelezi") {
-        state.activeProject = "jamii_tekelezi";
+      // Daraja — existing behavior
+      if (projectId === "daraja") {
+        state.activeProject = "daraja";
         if (elements.projectFilter)
-          elements.projectFilter.value = "jamii-tekelezi";
+          elements.projectFilter.value = "daraja";
         state.activePage = "overview";
         state.activeDatasetId = "";
         setPageHash("overview");
@@ -125,13 +125,13 @@ function renderPlaygroundPage() {
           <div class="rounded-2xl border border-slate-200 bg-white p-4">
             <div class="text-sm font-semibold text-slate-700">Ask a question</div>
             <p class="mt-1 text-xs text-slate-500">Finance mode reuses the project-performance dataset; DHIS2 mode sends the prompt through the main Groq SQL route.</p>
-            <textarea id="playgroundPrompt" class="mt-4 min-h-[130px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white" placeholder="Example: Show me the actual vs target for Jamii Tekelezi or visualize TX CURR for May">${escapeHtml(existingPrompt)}</textarea>
+            <textarea id="playgroundPrompt" class="mt-4 min-h-[130px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:bg-white" placeholder="Example: Show me the actual vs target for Daraja or visualize TX CURR for May">${escapeHtml(existingPrompt)}</textarea>
             <div class="mt-3 flex flex-wrap gap-2">
               <button type="button" data-playground-mode="finance" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "finance" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">Finance reports</button>
               <button type="button" data-playground-mode="dhis2" class="rounded-full border px-3 py-2 text-xs font-semibold transition ${state.playgroundMode === "dhis2" ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"}">DHIS2 reports</button>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
-              <button type="button" data-playground-example="Show me the actual vs target for Jamii Tekelezi" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">Finance example</button>
+              <button type="button" data-playground-example="Show me the actual vs target for Daraja" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">Finance example</button>
               <button type="button" data-playground-example="Visualize TX CURR for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TX_CURR example</button>
               <button type="button" data-playground-example="Give me TB for May" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:bg-slate-100">TB example</button>
             </div>
