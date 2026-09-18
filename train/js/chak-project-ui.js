@@ -384,7 +384,7 @@ function renderChakDashboardDetail() {
         "</div>" +
         "</div>" +
         "</div>" +
-        '<a href="http://ereporting.chak.or.ke:8500/dhis-web-data-visualizer/?type=CHART&id=' +
+        '<a href="https://ereporting.chak.or.ke/dhis-web-data-visualizer/?type=CHART&id=' +
         encodeURIComponent(viz.id) +
         '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline whitespace-nowrap">Open →</a>' +
         "</div>" +
@@ -423,7 +423,7 @@ function renderChakDashboardDetail() {
     "</div>" +
     // Link to full dashboard
     '<div class="mt-2">' +
-    '<a href="http://ereporting.chak.or.ke:8500/dhis-web-dashboard/#/' +
+    '<a href="https://ereporting.chak.or.ke/dhis-web-dashboard/#/' +
     escapeHtml(dbId) +
     '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline">🔗 Open full dashboard in CHAK DHIS2 →</a>' +
     "</div>" +

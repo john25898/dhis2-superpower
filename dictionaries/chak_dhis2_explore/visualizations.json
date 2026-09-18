@@ -1,0 +1,2952 @@
+{
+  "visualizations": [
+    {
+      "name": "AHD Totals",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "rm1OHIl6u9n"
+    },
+    {
+      "name": "CACX Finer Age Bands",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "vIbA44oNpTH"
+    },
+    {
+      "name": "CACX Screened Pos (copy)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "kGuikjEB8lQ"
+    },
+    {
+      "name": "CD4 Uptake",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "EXPRESSION_DIMENSION_ITEM"
+        },
+        {
+          "dataDimensionItemType": "EXPRESSION_DIMENSION_ITEM"
+        },
+        {
+          "dataDimensionItemType": "EXPRESSION_DIMENSION_ITEM"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "DVZ8yWaWEI6"
+    },
+    {
+      "name": "CD4 Uptake Trend",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "EXPRESSION_DIMENSION_ITEM"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [],
+      "type": "LINE",
+      "id": "Qd5jWxy9zRq"
+    },
+    {
+      "name": "CHAP STAWISHA FMAPS",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "FXXHYCFmqV6"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "k89tSFpfnsB"
+    },
+    {
+      "name": "DATIM_HTS_TST",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "Jvrxpjb5xYY"
+    },
+    {
+      "name": "HIV_ST Cascade",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "HAIfdabMw51"
+    },
+    {
+      "name": "HPV Vaccination",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "GjZXuwcLPEB"
+    },
+    {
+      "name": "HST_Self_Test Monthly Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "FXXHYCFmqV6"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Vjw25IHPzOl"
+    },
+    {
+      "name": "Index Case Testing - Adults Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "tKxyj6OuGwE"
+    },
+    {
+      "name": "Index Case Testing Children Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Zryen6biSFO"
+    },
+    {
+      "name": "JTP DATIM CXCA",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Z4acrvzOZX9"
+    },
+    {
+      "name": "JTP DATIM CXCA (TX)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "EopIZBZk0RP"
+    },
+    {
+      "name": "JTP DATIM EID Cascade",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "KWJIOzH8A8U"
+    },
+    {
+      "name": "JTP DATIM HIV_ST",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "p9Lr76y92xq"
+    },
+    {
+      "name": "JTP DATIM HIV_ST-Unassisted",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "T0f1LB7a870"
+        },
+        {
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "YTuV77LI8Lt"
+    },
+    {
+      "name": "JTP DATIM HTS_Excluding Index",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "AZ2yHrWXbp5"
+    },
+    {
+      "name": "JTP DATIM HTS_INDEX Cascade",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "CW7Nz5bk74u"
+    },
+    {
+      "name": "JTP DATIM PMTCT_FO",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "qgXTZXmK36Z"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "kA3H2bex2m2"
+    },
+    {
+      "name": "JTP DATIM PMTCT_STAT",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "HdD6orswcsy"
+    },
+    {
+      "name": "JTP DATIM Post ANC1",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "gXK9hrQIa5i"
+    },
+    {
+      "name": "JTP DATIM POST_RESP",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "VUvwVRj9Trj"
+    },
+    {
+      "name": "JTP DATIM PrEP_CT",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "KTRGjLOxUEZ"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Iy4q9wnbFoL"
+    },
+    {
+      "name": "JTP DATIM PrEP_CT (PG/BF)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "T0f1LB7a870"
+        },
+        {
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "r9ZQ5tct6pj"
+    },
+    {
+      "name": "JTP DATIM PrEP_New",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "KTRGjLOxUEZ"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "xPh7F4tfvRF"
+    },
+    {
+      "name": "JTP DATIM PrEP_New PG/BF",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "id": "T0f1LB7a870"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "WSyzZ8Zpkfq"
+    },
+    {
+      "name": "JTP DATIM TB_ART",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "q0cwRKKhfSY"
+    },
+    {
+      "name": "JTP DATIM TB_PREV",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "bm8AzTukkQ2"
+    },
+    {
+      "name": "JTP DATIM TB_STAT",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "C9cLFxyRg97"
+    },
+    {
+      "name": "JTP DATIM TX_CURR",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Tsz2wqG2yoW"
+    },
+    {
+      "name": "JTP DATIM TX_ML",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "dx"
+        },
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "G4w85JALlpn"
+    },
+    {
+      "name": "JTP DATIM TX ML (CoD)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "dx"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "IKuZM35n0K7"
+    },
+    {
+      "name": "JTP DATIM TX_NEW",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "zpXcW17dfW8"
+    },
+    {
+      "name": "JTP DATIM TX_new (BF)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "fr92r3NV7mH"
+    },
+    {
+      "name": "JTP DATIM TX_PVLS D",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "hgCJ876wLaD"
+    },
+    {
+      "name": "JTP DATIM TX_PVLS N",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Ua1nNbSbeW5"
+    },
+    {
+      "name": "JTP DATIM TX_PVLS (PG/BF)",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "jS9F5NgvHwF"
+    },
+    {
+      "name": "JTP DATIM TX_RTT",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "AjaHfenHMC2"
+    },
+    {
+      "name": "JTP DATIM TX_TB D Specimen and Results",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "fTM7WwGmrfZ"
+    },
+    {
+      "name": "JTP DATIM TX_TB Num",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "X9eni7U6Wlm"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "WnORk88Xpik"
+    },
+    {
+      "name": "JTP DATIM TX_TB presumptive",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "iJuA9Y2paV6"
+    },
+    {
+      "name": "JTP DATIM TX_TB screen pos",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "vr0lKaiU731"
+    },
+    {
+      "name": "JTP TX_CURR_MMD",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "JUArLx5D5HY"
+    },
+    {
+      "name": "JTP_TX_PVLS Cascade",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "X03B4UsZCJC"
+    },
+    {
+      "name": "Monthly 3PM_TB_ICF  Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "rhLsjoXplOt"
+    },
+    {
+      "name": "Monthly_HTS_TST_Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "AdrMAuL5HpZ"
+    },
+    {
+      "name": "Monthly Hypertension Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "iBJmnu3RpJw"
+    },
+    {
+      "name": "Monthly PMTCT_STAT",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "ipG7bceVzDb"
+    },
+    {
+      "name": "Monthly TB_ICF  Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "h17fKf3EOYW"
+    },
+    {
+      "name": "Monthly TB_Prev  Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "o1Eb0ZOjfcU"
+    },
+    {
+      "name": "Monthly TB_STAT  Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "tVOXkSJeY6c"
+    },
+    {
+      "name": "Monthly TX_Curr  Data",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "DMhsAXd3onZ"
+    },
+    {
+      "name": "Monthly TX_TB  Data",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "Ix9zTBmtwBA"
+    },
+    {
+      "name": "POS Vs TX NEW",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "INDICATOR"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "PI3eudzLppZ"
+    },
+    {
+      "name": "Stawisha CACX Eligible vs Screened",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "ys4SlKZVKry"
+    },
+    {
+      "name": "Tracking HTS Pos Report",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        }
+      ],
+      "type": "PIVOT_TABLE",
+      "id": "HHHis3Uvdfu"
+    },
+    {
+      "name": "TX_CURR by Gender",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [
+        {
+          "id": "pe"
+        },
+        {
+          "id": "dx"
+        },
+        {
+          "id": "X9eni7U6Wlm"
+        }
+      ],
+      "type": "PIE",
+      "id": "RWighqgWWAD"
+    },
+    {
+      "name": "TX_TB Cascade Kombo",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "B9yViwuaQzo"
+    },
+    {
+      "name": "UJTP HCA Martin",
+      "dataDimensionItems": [
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        },
+        {
+          "dataDimensionItemType": "DATA_ELEMENT_OPERAND"
+        }
+      ],
+      "filters": [],
+      "type": "PIVOT_TABLE",
+      "id": "w7h0af1OM5W"
+    }
+  ]
+}

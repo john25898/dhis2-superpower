@@ -13,7 +13,13 @@ from dotenv import load_dotenv
 
 # 1. Load Environment Variables
 load_dotenv()
-BASE_URL = os.getenv("DHIS_BASE_URL")
+# CHAK is served over TLS at ereporting.chak.or.ke (the old plain-HTTP port
+# has been retired).  Every URL below is built as f"{BASE_URL}analytics.json",
+# so BASE_URL MUST end with a single '/'.  Normalising here also fixes the
+# latent bug where DHIS_BASE_URL was set without a trailing slash and every
+# generated URL came out as ".../apianalytics.json".
+BASE_URL = (os.getenv("DHIS_BASE_URL")
+            or "https://ereporting.chak.or.ke/api").rstrip("/") + "/"
 USERNAME = os.getenv("DHIS_USERNAME")
 PASSWORD = os.getenv("DHIS_PASSWORD")
 

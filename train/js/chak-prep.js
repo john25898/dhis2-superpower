@@ -58,7 +58,10 @@ registerChakRenderer("prep_page", "prep", function (el, data) {
   // Chart 2: Typology donut (latest period)
   var typologyData = [
     { label: "PBFW", value: typologyLatest.prep_new_pbfw || 0 },
-    { label: "Pregnant", value: typologyLatest.prep_new_preg || 0 },
+    {
+      label: "Pregnant (PrEP Initiated ANC)",
+      value: typologyLatest.prep_new_preg || 0,
+    },
   ];
   chakCreateChart(
     "chakPrepTypology",

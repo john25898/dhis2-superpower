@@ -2,6 +2,67 @@
 // overviews.js  (extracted from main.js lines 7558-9400)
 // domain section 7558-9400
 // ============================================================
+
+/**
+ * Pick the month the "Latest" cards should render.
+ *
+ * DHIS2 keeps accepting data for the newest month long after it ends, so the
+ * last trend point is frequently a partial month — e.g. Aug 2026 HTS tested =
+ * 15,528 against a ~24,000 trailing median, while the PBIX book (captured
+ * mid-month) holds only 3,665. Comparing that partial month with the book is
+ * what makes a page "look wrong" even when the merge is correct.
+ *
+ * So: use the newest month unless it is more than 25% below the median of up
+to six preceding months, in which case fall back one month. A genuine decline
+ * is well under that threshold, and an explicitly selected period is always
+ * respected (a single-point trend is returned untouched).
+ *
+ * @returns {{row: object, dropped: string}} the row to render, plus the label
+ *   of the month that was excluded (empty string when nothing was dropped).
+ */
+function pickReportingMonth(trend, keys) {
+  const rows = (trend || []).filter((r) => r && r.label);
+  if (rows.length < 4) return { row: rows[rows.length - 1] || {}, dropped: "" };
+
+  const total = (r) => keys.reduce((sum, k) => sum + (Number(r[k]) || 0), 0);
+  const current = rows[rows.length - 1];
+  const prior = rows
+    .slice(-7, -1)
+    .map(total)
+    .filter((v) => v > 0);
+  if (prior.length < 3) return { row: current, dropped: "" };
+
+  const sorted = [...prior].sort((a, b) => a - b);
+  const median =
+    sorted.length % 2
+      ? sorted[(sorted.length - 1) / 2]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+
+  if (median > 0 && total(current) < median * 0.75) {
+    return {
+      row: rows[rows.length - 2],
+      dropped: String(current.label || current.period || ""),
+    };
+  }
+  return { row: current, dropped: "" };
+}
+
+/** The "month X is still being reported" disclosure, or "" when nothing was dropped. */
+function partialMonthNote(dropped, shownLabel) {
+  if (!dropped) return "";
+  return `<div class="mt-3 inline-flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-800"><span aria-hidden="true">&#8987;</span><span>Cards show <strong>${escapeHtml(String(shownLabel || "the last complete month"))}</strong>. ${escapeHtml(String(dropped))} is still being reported — its totals sit well below trend, so it is excluded from these cards. The trend chart below still includes it.</span></div>`;
+}
+
+/**
+ * Clients linked from the `/api/hiv-testing/dhis-live?type=hts_linkage`
+ * endpoint.  That endpoint reports `linked_within` + `linked_outside`;
+ * `index_accepted` / `index_offered` belong to the *partner notification*
+ * endpoint, so reading them here always produced 0.
+ */
+function linkedTotal(row) {
+  if (!row) return 0;
+  return (Number(row.linked_within) || 0) + (Number(row.linked_outside) || 0);
+}
 async function renderHivTreatmentOverview(container) {
   const wrapper = document.createElement("div");
   wrapper.className = "space-y-5";
@@ -13,8 +74,7 @@ async function renderHivTreatmentOverview(container) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -56,27 +116,33 @@ async function renderHivTreatmentOverview(container) {
     }
 
     const categories = (newJson.trend || []).map((p) => p.label);
-    const latestNew = (newJson.trend || []).slice(-1)[0] || {};
-    const latestCurr = (currJson.trend || []).slice(-1)[0] || {};
-    const latestVl = (vlJson.trend || []).slice(-1)[0] || {};
+    // Skip a still-being-reported newest month (see pickReportingMonth).
+    const newPick = pickReportingMonth(newJson.trend, ["total"]);
+    const currPick = pickReportingMonth(currJson.trend, ["total"]);
+    const vlPick = pickReportingMonth(vlJson.trend, ["tx_curr"]);
+    const latestNew = newPick.row;
+    const latestCurr = currPick.row;
+    const latestVl = vlPick.row;
+    const droppedMonth = currPick.dropped || newPick.dropped || vlPick.dropped;
+    const shownMonth = String(latestCurr.label || latestNew.label || "").trim();
 
     const cards = [
       {
         label: "New on ART",
         value: latestNew.total || 0,
-        hint: "Latest month starts",
+        hint: `Latest month starts${latestNew.label ? ` \u2022 ${latestNew.label}` : ""}`,
         color: "border-sky-200 bg-sky-50 text-sky-700",
       },
       {
         label: "Current on ART",
         value: latestCurr.total || 0,
-        hint: "Latest caseload",
+        hint: `Latest caseload${latestCurr.label ? ` \u2022 ${latestCurr.label}` : ""}`,
         color: "border-violet-200 bg-violet-50 text-violet-700",
       },
       {
         label: "VL uptake",
         value: `${latestVl.vl_uptake || 0}%`,
-        hint: "Latest coverage",
+        hint: `Latest coverage${latestVl.label ? ` \u2022 ${latestVl.label}` : ""}`,
         color: "border-emerald-200 bg-emerald-50 text-emerald-700",
       },
       {
@@ -134,6 +200,7 @@ async function renderHivTreatmentOverview(container) {
               )
               .join("")}
           </div>
+          ${partialMonthNote(droppedMonth, shownMonth)}
         </section>
 
         <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -653,8 +720,7 @@ async function renderHivTestingOverview(container) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -710,34 +776,51 @@ async function renderHivTestingOverview(container) {
     }
 
     const categories = (uptakeJson.trend || []).map((p) => p.label);
-    const latestUptake = (uptakeJson.trend || []).slice(-1)[0] || {};
-    const latestLinkage = (linkageJson.trend || []).slice(-1)[0] || {};
-    const latestPartner = (partnerJson.trend || []).slice(-1)[0] || {};
-    const latestPrep = (prepJson.trend || []).slice(-1)[0] || {};
+    // Skip a still-being-reported newest month (see pickReportingMonth).
+    const uptakePick = pickReportingMonth(uptakeJson.trend, ["hts_tested"]);
+    const linkagePick = pickReportingMonth(linkageJson.trend, [
+      "linked_within",
+      "linked_outside",
+    ]);
+    const partnerPick = pickReportingMonth(partnerJson.trend, [
+      "index_accepted",
+      "contacts_tested",
+    ]);
+    const prepPick = pickReportingMonth(prepJson.trend, ["prep_new"]);
+    const latestUptake = uptakePick.row;
+    const latestLinkage = linkagePick.row;
+    const latestPartner = partnerPick.row;
+    const latestPrep = prepPick.row;
+    const droppedMonth =
+      uptakePick.dropped ||
+      linkagePick.dropped ||
+      partnerPick.dropped ||
+      prepPick.dropped;
+    const shownMonth = String(latestUptake.label || "").trim();
 
     const cards = [
       {
         label: "Tested",
         value: latestUptake.hts_tested || 0,
-        hint: "Latest HTS tested",
+        hint: `HTS tested${latestUptake.label ? ` \u2022 ${latestUptake.label}` : ""}`,
         color: "border-sky-200 bg-sky-50 text-sky-700",
       },
       {
         label: "Positive",
         value: latestUptake.hts_positive || 0,
-        hint: "Latest positives",
+        hint: `Positives${latestUptake.label ? ` \u2022 ${latestUptake.label}` : ""}`,
         color: "border-rose-200 bg-rose-50 text-rose-700",
       },
       {
         label: "Linkage",
-        value: latestLinkage.index_accepted || 0,
-        hint: "Accepted linkage",
+        value: linkedTotal(latestLinkage),
+        hint: `Linked clients${latestLinkage.label ? ` \u2022 ${latestLinkage.label}` : ""}`,
         color: "border-emerald-200 bg-emerald-50 text-emerald-700",
       },
       {
         label: "PrEP current",
         value: latestPrep.prep_curr || 0,
-        hint: "Current PrEP clients",
+        hint: `Current PrEP clients${latestPrep.label ? ` \u2022 ${latestPrep.label}` : ""}`,
         color: "border-violet-200 bg-violet-50 text-violet-700",
       },
     ];
@@ -753,9 +836,7 @@ async function renderHivTestingOverview(container) {
       (p) => p.positivity_rate || 0,
     );
     const testedTrend = (uptakeJson.trend || []).map((p) => p.hts_tested || 0);
-    const linkageTrend = (linkageJson.trend || []).map(
-      (p) => p.index_accepted || 0,
-    );
+    const linkageTrend = (linkageJson.trend || []).map(linkedTotal);
     const prepTrend = (prepJson.trend || []).map((p) => p.prep_curr || 0);
 
     wrapper.innerHTML = `
@@ -783,6 +864,7 @@ async function renderHivTestingOverview(container) {
               )
               .join("")}
           </div>
+          ${partialMonthNote(droppedMonth, shownMonth)}
         </section>
 
         <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -798,7 +880,7 @@ async function renderHivTestingOverview(container) {
             <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <div class="text-sm font-semibold text-slate-700">Latest metrics</div>
               <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestUptake.hts_tested || 0))}</div>
-              <div class="text-sm text-slate-600">Tested this period • ${escapeHtml(String(latestUptake.hts_positive || 0))} positive</div>
+              <div class="text-sm text-slate-600">${escapeHtml(shownMonth || "Tested this period")} • ${escapeHtml(String(latestUptake.hts_positive || 0))} positive</div>
               <div class="text-xs text-slate-500">Positivity is ${escapeHtml(String(latestUptake.positivity_rate || 0))}% and drives the HTS performance narrative.</div>
             </div>
           </div>
@@ -816,8 +898,8 @@ async function renderHivTestingOverview(container) {
             <div id="hts-overview-linkage-chart" style="height:260px"></div>
             <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <div class="text-sm font-semibold text-slate-700">Latest linkage</div>
-              <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(latestLinkage.index_accepted || 0))}</div>
-              <div class="text-sm text-slate-600">Accepted index clients</div>
+              <div class="text-3xl font-bold text-slate-900">${escapeHtml(String(linkedTotal(latestLinkage)))}</div>
+              <div class="text-sm text-slate-600">Linked clients \u2022 ${escapeHtml(String(latestLinkage.linked_within || 0))} within CHAK, ${escapeHtml(String(latestLinkage.linked_outside || 0))} outside</div>
               <div class="text-xs text-slate-500">This section previews the partner notification cascade and referral follow-up.</div>
             </div>
           </div>
@@ -919,12 +1001,12 @@ async function renderHivTestingOverview(container) {
         series: [
           {
             name: "Offered",
-            data: (linkageJson.trend || []).map((p) => p.index_offered),
+            data: (partnerJson.trend || []).map((p) => p.index_offered),
             color: "#0f766e",
           },
           {
             name: "Accepted",
-            data: (linkageJson.trend || []).map((p) => p.index_accepted),
+            data: (partnerJson.trend || []).map((p) => p.index_accepted),
             color: "#2563eb",
           },
           {
@@ -984,8 +1066,7 @@ async function renderDhisLiveChart(container, pageId, slug) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -1036,8 +1117,7 @@ async function renderHtsLiveChart(container, pageId, slug) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -1623,7 +1703,10 @@ function buildUnifiedDhisChart(wrapper, data, config) {
     wrapper.innerHTML = html;
 
     // ── Render Multi-line Highcharts ──
-    if (window.Highcharts && document.getElementById("dhis-chart-daraja-trend")) {
+    if (
+      window.Highcharts &&
+      document.getElementById("dhis-chart-daraja-trend")
+    ) {
       const categories2 = trend.map((p) => p.label);
       const series = metricsList.map((m, i) => ({
         name: m.label,

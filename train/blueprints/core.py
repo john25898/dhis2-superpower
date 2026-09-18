@@ -1,7 +1,15 @@
 """Core routes: index, health, data, facilities, debug, and asset serving."""
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request, send_from_directory
+import gzip
+import hashlib
+
+from flask import Blueprint, Response, jsonify, request, send_from_directory
+
+try:  # Flask >= 2.2 exposes its own JSON provider; keep stdlib as fallback
+    from flask import json as flask_json
+except Exception:  # pragma: no cover
+    import json as flask_json
 
 from services.ai import genai
 from services.common import build_facility_page, json_safe
@@ -12,6 +20,17 @@ core_bp = Blueprint("core", __name__)
 
 _app = None  # set by register_core_blueprint
 _reload_csvs = None  # closure from create_app
+
+# Memo for /api/dashboard-data.  The body is ~9 MB, so rebuilding it per
+# request (`to_dict` + `json_safe` + `jsonify`) cost ~12 s on a cold worker.
+# Keyed on the dataframe OBJECT (`is`), not a timestamp: reload_csvs() does
+# `app.config["DATAFRAME"] = combined`, i.e. it REPLACES the frame, so the
+# identity check invalidates this cache automatically with no manual reset.
+# Holding the reference also pins the identity and prevents id() reuse.
+# `payload_gz` is the gzip encoding, cached for the same reason as in
+# mhu._county_geojson: the app-wide compress_response hook would otherwise
+# re-compress 9 MB on every request, 304 revalidations included.
+_DASH_CACHE = {"df": None, "payload": None, "payload_gz": None, "etag": None}
 
 
 def register_core_blueprint(app, reload_csvs=None):
@@ -44,16 +63,57 @@ def health() -> object:
 
 @core_bp.get("/api/dashboard-data")
 def dashboard_data() -> object:
-    return jsonify(
-        json_safe(
+    """Return the full source dataframe as JSON (~9 MB).
+
+    The serialized body is memoized against the dataframe object itself, so
+    a page load costs one dict rebuild and every later load is a memory
+    copy.  Cache invalidation is automatic: reload_csvs() replaces
+    app.config["DATAFRAME"] with a new object, so the identity check fails
+    and the body is rebuilt on the next request.  An ETag lets browsers
+    revalidate down to a 304 instead of re-downloading 9 MB, and the gzip
+    body is memoized so the app-wide compress_response hook has nothing left
+    to do.
+    """
+    df = _app.config["DATAFRAME"]
+    if _DASH_CACHE["df"] is df and _DASH_CACHE["payload"] is not None:
+        payload = _DASH_CACHE["payload"]
+        payload_gz = _DASH_CACHE["payload_gz"]
+        etag = _DASH_CACHE["etag"]
+    else:
+        body = json_safe(
             {
                 "table": TABLE_NAME,
-                "row_count": int(len(_app.config["DATAFRAME"])),
-                "columns": list(_app.config["DATAFRAME"].columns),
-                "data": _app.config["DATAFRAME"].to_dict(orient="records"),
+                "row_count": int(len(df)),
+                "columns": list(df.columns),
+                "data": df.to_dict(orient="records"),
             }
         )
-    )
+        payload = flask_json.dumps(
+            body, separators=(",", ":"), default=str
+        ).encode("utf-8")
+        # Compress once, here, instead of leaving it to the compress_response
+        # hook in app.py: that hook fires on every request (a 304 still holds
+        # its body server-side, so the hook re-gzipped all 9 MB each time).
+        payload_gz = gzip.compress(payload, compresslevel=6)
+        # Unquoted: werkzeug's quote_etag() adds the quotes itself.
+        etag = hashlib.sha1(payload).hexdigest()
+        # Pin the frame reference so the object identity stays stable.
+        _DASH_CACHE.update(
+            df=df, payload=payload, payload_gz=payload_gz, etag=etag
+        )
+
+    if "gzip" in (request.headers.get("Accept-Encoding") or "").lower():
+        resp = Response(payload_gz, mimetype="application/json")
+        # Setting Content-Encoding also makes the app-wide compress_response
+        # hook skip this response instead of re-compressing it.
+        resp.headers["Content-Encoding"] = "gzip"
+        resp.set_etag(etag + "-gz")
+    else:
+        resp = Response(payload, mimetype="application/json")
+        resp.set_etag(etag)
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["Vary"] = "Accept-Encoding"
+    return resp.make_conditional(request)
 
 
 @core_bp.get("/api/catalog")

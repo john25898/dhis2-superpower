@@ -1,5 +1,5 @@
 # MHU (Mobile Health Units) Classification Data
-# Source: CHAK DHIS2 (ereporting.chak.or.ke:8500) and CHAK Visuals (4) PBIX
+# Source: CHAK DHIS2 (ereporting.chak.or.ke) and CHAK Visuals (4) PBIX
 # Date: 2026-07-05
 #
 # The CHAK MHU project group (s2rT0VCU6VM) contains 11 facilities.

@@ -939,7 +939,7 @@ function parsePeriodLabel(label) {
 // ── Auto-load TX_CURR analytics charts (fires after HTML render) ──
 function loadTxCurrAnalytics(data) {
   const locationParams = new URLSearchParams();
-  locationParams.set("county", data.county || "Meru County");
+  locationParams.set("county", data.county || selectedCountyParam());
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
   if (state.projectFilter && state.projectFilter !== "all")
@@ -969,7 +969,7 @@ function loadTxCurrAnalytics(data) {
 // ── Auto-load TX_NEW analytics charts ────────────────────────────
 function loadTxNewAnalytics(data) {
   const locationParams = new URLSearchParams();
-  locationParams.set("county", data.county || "Meru County");
+  locationParams.set("county", data.county || selectedCountyParam());
   if (data.subcounty) locationParams.set("subcounty", data.subcounty);
   if (data.facility) locationParams.set("facility", data.facility);
   if (state.projectFilter && state.projectFilter !== "all")
@@ -1712,4 +1712,3 @@ function openAgeBandDataModal(data, key, title, config) {
     if (e.target === modal) modal.remove();
   });
 }
-

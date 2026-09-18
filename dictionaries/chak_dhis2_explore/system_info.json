@@ -1,0 +1,28 @@
+{
+  "contextPath": "https://ereporting.chak.or.ke",
+  "userAgent": "python-requests/2.32.3",
+  "calendar": "iso8601",
+  "dateFormat": "dd-mm-yyyy",
+  "serverDate": "2026-07-22T14:15:57.125",
+  "serverTimeZoneId": "Africa/Nairobi",
+  "serverTimeZoneDisplayName": "East Africa Time",
+  "lastAnalyticsTableSuccess": "2026-07-22T14:00:00.015",
+  "intervalSinceLastAnalyticsTableSuccess": "15 m, 57 s",
+  "lastAnalyticsTableRuntime": "00:11:55.766",
+  "lastAnalyticsTablePartitionSuccess": "2025-09-02T19:30:49.026",
+  "intervalSinceLastAnalyticsTablePartitionSuccess": "7746 h, 45 m, 8 s",
+  "lastAnalyticsTablePartitionRuntime": "00:00:10.280",
+  "version": "2.40.11.1",
+  "revision": "555afac",
+  "buildTime": "2026-06-10T12:15:23.000",
+  "databaseInfo": {
+    "spatialSupport": true
+  },
+  "encryption": false,
+  "emailConfigured": false,
+  "redisEnabled": false,
+  "systemId": "71cd41ee-5f45-4754-bded-45cf875cb18a",
+  "systemName": "CHAK Reporting Platform",
+  "instanceBaseUrl": "https://ereporting.chak.or.ke",
+  "isMetadataVersionEnabled": false
+}

@@ -5,10 +5,14 @@ services:
     rootDir: train
     buildCommand: pip install -r requirements.txt
     # Sizing notes for the free/Starter instance:
-    #   * ONE sync worker + 4 threads, not two workers.  The app holds a
-    #     large in-process payload cache plus two parsed Excel workbooks;
+    #   * ONE gthread worker + 4 threads, not two sync workers.  The app holds
+    #     a large in-process payload cache plus two parsed Excel workbooks;
     #     a second worker duplicates all of it and is the quickest way to
     #     hit the instance memory ceiling.
+    #   * --worker-class gthread is REQUIRED for --threads to mean anything.
+    #     The default `sync` worker ignores --threads completely, so this
+    #     used to run effectively single-threaded: one slow CHAK query
+    #     blocked every other request on the instance.
     #   * --timeout 300 is a safety net only.  The blueprint pre-warms its
     #     cache on a daemon thread at boot and then serves stale-while-
     #     revalidate, so no user request should ever wait on the ~47 s
@@ -17,7 +21,16 @@ services:
     #   * Deliberately NO --preload: the app starts a background thread at
     #     import time, so preloading would fork workers while the build lock
     #     is held and leave a permanently locked mutex in every child.
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 --graceful-timeout 30
+    #   * ⚠ THIS FILE IS ONLY THE BLUEPRINT.  If the Render dashboard carries
+    #     its own Start Command it overrides this line silently.  Confirm the
+    #     service's logged start command matches the string below.
+    #
+    # CHAK transport: CHAK retired port 8500; the instance is served over TLS
+    # at https://ereporting.chak.or.ke/api, which is now the built-in default
+    # in services/dhis2.py.  DHIS_BASE_URL is therefore optional — set it only
+    # to point at a different server, and if set it MUST be the TLS URL,
+    # because Render's egress is refused on port 8500.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --worker-class gthread --workers 1 --threads 4 --timeout 300 --graceful-timeout 30
     healthCheckPath: /
     envVars:
       - key: DHIS_BASE_URL
@@ -26,6 +39,15 @@ services:
         sync: false
       - key: DHIS_PASSWORD
         sync: false
+      # How long (seconds) a CHAK base that refused/timed out stays skipped
+      # before it is probed again.  A dead port costs ONE ~4 s connect
+      # attempt per window instead of ~4 s on every call.
+      - key: CHAK_BASE_COOLDOWN
+        value: "120"
+      # Connect timeout for a CHAK request.  Deliberately short: an
+      # unreachable host should fail fast, not consume the read budget.
+      - key: CHAK_CONNECT_TIMEOUT
+        value: "4"
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_API_KEY_BACKUP

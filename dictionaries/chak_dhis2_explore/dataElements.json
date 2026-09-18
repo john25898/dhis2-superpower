@@ -1,0 +1,2215 @@
+{
+  "pager": {
+    "page": 1,
+    "total": 5459,
+    "pageSize": 200,
+    "nextPage": "https://ereporting.chak.or.ke/api/dataElements.json?page=2&pageSize=200&fields=id%2Cname%2CshortName%2CdomainType%2CvalueType%2CformName%2CcategoryCombo%5Bid%2Cname%5D",
+    "pageCount": 28
+  },
+  "dataElements": [
+    {
+      "name": "15-24yrs Eligible for VL",
+      "shortName": "15-24yrs Eligible for VL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "Bi1S8egTAq5",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs TX_Curr",
+      "shortName": "15-24yrs TX_Curr",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "nAbyf6mu89W",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs VL <200",
+      "shortName": "15-24yrs VL <200",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "PASCKBHC2V4",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs VL <50 + LDL",
+      "shortName": "15-24yrs VL <50 + LDL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "CLKtouvHncQ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs VL Done",
+      "shortName": "15-24yrs VL Done",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "GlIVLmsyeYO",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs VL Suppression (<200)",
+      "shortName": "15-24yrs VL Suppression (<200)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "E4aw9GBFmdL",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15-24yrs VL Suppression (<50 + LDL)",
+      "shortName": "15-24yrs VL Suppression (<50 + LDL)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "qaT2dMI5AhL",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "15 - 24yrs % VL Uptake",
+      "shortName": "15 - 24yrs % VL Uptake",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "l7xzIVuGRK8",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs Eligible for VL",
+      "shortName": "<15yrs Eligible for VL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "M0NcJnEu2pg",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs TX_Curr",
+      "shortName": "<15yrs TX_Curr",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "ZVtoWT9fM9X",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs VL <200",
+      "shortName": "<15yrs VL <200",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "YAPYrN8Of5T",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs VL <50 + LDL",
+      "shortName": "<15yrs VL <50 + LDL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "wKsw5Lr5lXr",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs VL Done",
+      "shortName": "<15yrs VL Done",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "teRkOuY1DKn",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs VL Suppression (<200)",
+      "shortName": "<15yrs VL Suppression (<200)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "ZPpoe5NWV7k",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs VL Suppression (<50 + LDL)",
+      "shortName": "<15yrs VL Suppression (<50 + LDL)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "LLZ5ahd4jYL",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "<15yrs % VL Uptake",
+      "shortName": "<15yrs % VL Uptake",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "KhExTrMa9T2",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "1st ANC eligible",
+      "shortName": "1st ANC eligible",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "coybVr4mYpf",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC General pop issued self-test kits",
+      "shortName": "1st ANC General pop issued self-test kits",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "OtFPZYXmq29",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC Infant prophylaxis",
+      "shortName": "1st ANC Infant prophylaxis",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "PIOCGhO8eW3",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC known positive",
+      "shortName": "1st ANC known positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ylYJBde9kjh",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC KP on HAART",
+      "shortName": "1st ANC KP on HAART",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "p77nGFBZpdk",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC MNCH issued with self-test kits",
+      "shortName": "1st ANC MNCH issued with self-test kits",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "gqNkVlnojGL",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC MNCH positive self-test results",
+      "shortName": "1st ANC MNCH positive self-test results",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "mDEx7Lv33q8",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC newly identified positive",
+      "shortName": "1st ANC newly identified positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "WgrVvWg6CEI",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT_ART TLD",
+      "shortName": "1st ANC PMTCT_ART TLD",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Az5iVPsEygj",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT started ART Known Positive",
+      "shortName": "1st ANC PMTCT started ART Known Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "NnykwEj3zHu",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT started ART New Positive",
+      "shortName": "1st ANC PMTCT started ART New Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ExEtDH3cA9f",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT VL suppressed Known Positive",
+      "shortName": "1st ANC PMTCT VL suppressed Known Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jKM5owmocMF",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT VL suppressed New Positive",
+      "shortName": "1st ANC PMTCT VL suppressed New Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Pj0vRukjnn2",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT with valid VL results Known Positive",
+      "shortName": "1st ANC PMTCT with valid VL results Known Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "aOx0N0PDhMn",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC PMTCT with valid VL results New Positive",
+      "shortName": "1st ANC PMTCT with valid VL results New Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "uP4FDVycBnL",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC Post ANC1 Initial testing",
+      "shortName": "1st ANC Post ANC1 Initial testing",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "m0TGh0x0BKG",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC Post ANC1 Initial testing positive",
+      "shortName": "1st ANC Post ANC1 Initial testing positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "xZvJ5UT2EK2",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC Post ANC1 Negative",
+      "shortName": "1st ANC Post ANC1 Negative",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "B2SdTbg2Nz9",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC Post ANC1 Positive",
+      "shortName": "1st ANC Post ANC1 Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ShM1x557YCv",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC recent known negative",
+      "shortName": "1st ANC recent known negative",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "CToxPEYOvgu",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC seen",
+      "shortName": "1st ANC seen",
+      "formName": "PMTCT_STAT_D",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "B9j8Ik92ctF",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC started on HAART",
+      "shortName": "1st ANC started on HAART",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "OlUmAjQjKZ5",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC tested",
+      "shortName": "1st ANC tested",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "geC2CBzyQme",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC TX_Curr Known Positives",
+      "shortName": "1st ANC TX_Curr Known Positives",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "D3iDgpaDzzk",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "1st ANC TX_Curr New Positives",
+      "shortName": "1st ANC TX_Curr New Positives",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "SG48xQRmQa4",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "25+yrs Eligible for VL",
+      "shortName": "25+yrs Eligible for VL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "Uzt5BGcVlPt",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs TX_Curr",
+      "shortName": "25+yrs TX_Curr",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "Rdp6ejH0HY1",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs VL <200",
+      "shortName": "25+yrs VL <200",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "qYPVVpcanvd",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs VL <50 + LDL",
+      "shortName": "25+yrs VL <50 + LDL",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "vaEoCPA0XaU",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs VL Done",
+      "shortName": "25+yrs VL Done",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "PWotTTCtOo0",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs VL Suppression (<200)",
+      "shortName": "25+yrs VL Suppression (<200)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "HgfIEfLumeU",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs VL Suppression (<50 + LDL)",
+      "shortName": "25+yrs VL Suppression (<50 + LDL)",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "jSBlGM9Di4w",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "25+yrs % VL Uptake",
+      "shortName": "25+yrs % VL Uptake",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "t7yIBkDOtSN",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "2nd ANC Known Positive",
+      "shortName": "2nd ANC Known Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "LUhsPpmUHnm",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Known Positives on HAART",
+      "shortName": "2nd ANC Known Positives on HAART",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "go7gux0smei",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Newly Identified Positive",
+      "shortName": "2nd ANC Newly Identified Positive",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "BIQZfMkMzr6",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC New Positives on HAART",
+      "shortName": "2nd ANC New Positives on HAART",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "a1j4UBBBKHx",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Number Eligible",
+      "shortName": "2nd ANC Number Eligible",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "noKEvH9q02d",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Number of clients Screened",
+      "shortName": "2nd ANC Number of clients Screened",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "IYMIamgFOYd",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Number of Clients Seen",
+      "shortName": "2nd ANC Number of Clients Seen",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "vkAeNBec9xt",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "2nd ANC Number Tested",
+      "shortName": "2nd ANC Number Tested",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "JEOphdexA5h",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses",
+      "shortName": "acs_FirstTimeGlasses",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lqbNqu67hwH",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses30-40M",
+      "shortName": "acs_FirstTimeGlasses30-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "MK1DScN3SKX",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses<30F",
+      "shortName": "acs_FirstTimeGlasses<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "kU5jIlCnUOy",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses<30M",
+      "shortName": "acs_FirstTimeGlasses<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "BvbzmjwTBYX",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses40-50F",
+      "shortName": "acs_FirstTimeGlasses40-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "sWZFTJI1jTN",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses40-50M",
+      "shortName": "acs_FirstTimeGlasses40-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lN8tma26dqJ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses50-60F",
+      "shortName": "acs_FirstTimeGlasses50-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jUiB6iONgCe",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses50-60M",
+      "shortName": "acs_FirstTimeGlasses50-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lnuwlpbjaXn",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses>60F",
+      "shortName": "acs_FirstTimeGlasses>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "kxmQG4P4uLr",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_FirstTimeGlasses>60M",
+      "shortName": "acs_FirstTimeGlasses>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "BCtTa2z34fY",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1",
+      "shortName": "acs_GlassPower+1",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "O86ylqFJDCa",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower+130-40F",
+      "shortName": "acs_GlassPower+130-40F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "AskYoEhyLOC",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+130-40M",
+      "shortName": "acs_GlassPower+130-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "CVQD301nXuF",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1<30M",
+      "shortName": "acs_GlassPower+1<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Cbap3Dkdapi",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+140-50F",
+      "shortName": "acs_GlassPower+140-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "iVdB37sqmOw",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+140-50M",
+      "shortName": "acs_GlassPower+140-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lcKO9Nzhz13",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.5",
+      "shortName": "acs_GlassPower+1.5",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "pmwAH2JY8rg",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower+150-60F",
+      "shortName": "acs_GlassPower+150-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "dkWogI4jykU",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+150-60M",
+      "shortName": "acs_GlassPower+150-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "CHGekNtPOP5",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.530-40M",
+      "shortName": "acs_GlassPower+1.530-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "hFrscPoI1Ob",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.5<30F",
+      "shortName": "acs_GlassPower+1.5<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "dOG9O3VXcCh",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.5<30M",
+      "shortName": "acs_GlassPower+1.5<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "VEvNXPB38Xt",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.540-50F",
+      "shortName": "acs_GlassPower+1.540-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Ud35ln3xDKL",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.540-50M",
+      "shortName": "acs_GlassPower+1.540-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "w0I0o7r5cXZ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.550-60F",
+      "shortName": "acs_GlassPower+1.550-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "j5jSVW4ZEJp",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.550-60M",
+      "shortName": "acs_GlassPower+1.550-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "SXcNpLNgjbc",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.5>60F",
+      "shortName": "acs_GlassPower+1.5>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "fMSHBgrXGGu",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1.5>60M",
+      "shortName": "acs_GlassPower+1.5>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "AZhXa3PbQhD",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1>60F",
+      "shortName": "acs_GlassPower+1>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "vQSRbQKOrzn",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+1>60M",
+      "shortName": "acs_GlassPower+1>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Tdl1emVCRcH",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2",
+      "shortName": "acs_GlassPower+2",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "cBAq4wbBOHa",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower+230-40F",
+      "shortName": "acs_GlassPower+230-40F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "uGbLUjBhqVr",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+230-40M",
+      "shortName": "acs_GlassPower+230-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "RXQVv29fTs7",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2<30M",
+      "shortName": "acs_GlassPower+2<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "s4rBUYmfpRP",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+240-50F",
+      "shortName": "acs_GlassPower+240-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "bbCHIud4zcs",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+240-50M",
+      "shortName": "acs_GlassPower+240-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "CD1pSWQKkod",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.5",
+      "shortName": "acs_GlassPower+2.5",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "qVlrtsE07I7",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower+250-60F",
+      "shortName": "acs_GlassPower+250-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "cKtxjsBRPXA",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+250-60M",
+      "shortName": "acs_GlassPower+250-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "VZyuvD1MxSK",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.530-40M",
+      "shortName": "acs_GlassPower+2.530-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "GrdyvWJgO4O",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.5<30F",
+      "shortName": "acs_GlassPower+2.5<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "IqbwAI5y8Th",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.5<30M",
+      "shortName": "acs_GlassPower+2.5<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "sq2Eyz7iUkh",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.540-50F",
+      "shortName": "acs_GlassPower+2.540-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "efpaLVNPOg1",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.540-50M",
+      "shortName": "acs_GlassPower+2.540-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "GQ1oUR9jiip",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.550-60F",
+      "shortName": "acs_GlassPower+2.550-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "EDfWhWXHug4",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.550-60M",
+      "shortName": "acs_GlassPower+2.550-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "M9TOphRRVl4",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.5>60F",
+      "shortName": "acs_GlassPower+2.5>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "UNiAipm0b9y",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2.5>60M",
+      "shortName": "acs_GlassPower+2.5>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "FhO6n2AmrZv",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2>60F",
+      "shortName": "acs_GlassPower+2>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "boJAsePsvRI",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+2>60M",
+      "shortName": "acs_GlassPower+2>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "z5A5johF2gO",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+3",
+      "shortName": "acs_GlassPower+3",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "nnHVWHBhBWJ",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower>3",
+      "shortName": "acs_GlassPower>3",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "cWpsM9L7iQW",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_GlassPower>330-40F",
+      "shortName": "acs_GlassPower>330-40F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "vKKgmTRJCvs",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+330-40M",
+      "shortName": "acs_GlassPower+330-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "k0E9zUInYZz",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>330-40M",
+      "shortName": "acs_GlassPower>330-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "F0BUq7awOsG",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+3<30F",
+      "shortName": "acs_GlassPower+3<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "fAtCu25FVmO",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+3<30M",
+      "shortName": "acs_GlassPower+3<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "alziFzrcmxP",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>3<30M",
+      "shortName": "acs_GlassPower>3<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lslBXx243t8",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+340-50F",
+      "shortName": "acs_GlassPower+340-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "BD4ueWzjAdF",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>340-50F",
+      "shortName": "acs_GlassPower>340-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "PcrM9i8A6gi",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+340-50M",
+      "shortName": "acs_GlassPower+340-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "NRApvb3rQf2",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>340-50M",
+      "shortName": "acs_GlassPower>340-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "j77gbywUVrV",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+350-60F",
+      "shortName": "acs_GlassPower+350-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "XHpHhyB0vRr",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>350-60F",
+      "shortName": "acs_GlassPower>350-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "zneWbW9PBuY",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+350-60M",
+      "shortName": "acs_GlassPower+350-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jqfxTbGMeM4",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>350-60M",
+      "shortName": "acs_GlassPower>350-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Zlmt2oVL0T9",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+3>60F",
+      "shortName": "acs_GlassPower+3>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "SCIwJzuCcGh",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>3>60F",
+      "shortName": "acs_GlassPower>3>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "JWtgbr0v612",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower+3>60M",
+      "shortName": "acs_GlassPower+3>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "QqbUo3AIPXb",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_GlassPower>3>60M",
+      "shortName": "acs_GlassPower>3>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "O2zs9p9DSt1",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_location",
+      "shortName": "acs_location",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "UxZfmKW87V0",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_other",
+      "shortName": "acs_other",
+      "valueType": "LONG_TEXT",
+      "domainType": "AGGREGATE",
+      "id": "CIp3xnDAD1u",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_providerCategory",
+      "shortName": "acs_providerCategory",
+      "valueType": "NUMBER",
+      "domainType": "AGGREGATE",
+      "id": "Wc6VD2U1CDA",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred",
+      "shortName": "acs_Referred",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "d4FZJb4Acua",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_Referred30-40M",
+      "shortName": "acs_Referred30-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "sKHoIbZdU2X",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred<30F",
+      "shortName": "acs_Referred<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "XfiJlprYddw",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred<30M",
+      "shortName": "acs_Referred<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ASPd5feWfHg",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred40-50F",
+      "shortName": "acs_Referred40-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jFcCfHtbzSi",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred40-50M",
+      "shortName": "acs_Referred40-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jWxYrUECRLR",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred50-60F",
+      "shortName": "acs_Referred50-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "lax3z7778VI",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred50-60M",
+      "shortName": "acs_Referred50-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ycKXH9ab7UP",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred>60F",
+      "shortName": "acs_Referred>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "tBRB7h51ZQS",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_Referred>60M",
+      "shortName": "acs_Referred>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "brKHUX16jSI",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia",
+      "shortName": "acs_ScreenedPresbyopia",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "KCzZWdmqO1W",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia30-40M",
+      "shortName": "acs_ScreenedPresbyopia30-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "T4Ai4chZRvg",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia<30F",
+      "shortName": "acs_ScreenedPresbyopia<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "hKkEXjQIV2F",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia<30M",
+      "shortName": "acs_ScreenedPresbyopia<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "dWYR576R0e7",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia40-50F",
+      "shortName": "acs_ScreenedPresbyopia40-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "dyA7dmtKxil",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia40-50M",
+      "shortName": "acs_ScreenedPresbyopia40-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "AdM7PKUCtOU",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia50-60F",
+      "shortName": "acs_ScreenedPresbyopia50-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "UWM7TjyaCwE",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia50-60M",
+      "shortName": "acs_ScreenedPresbyopia50-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "PfnBOVlZ5RY",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia>60F",
+      "shortName": "acs_ScreenedPresbyopia>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "CBQMtRwlS2u",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_ScreenedPresbyopia>60M",
+      "shortName": "acs_ScreenedPresbyopia>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "YxEONCQW2v5",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia",
+      "shortName": "acs_WithPresbyopia",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Vux6ydOxo07",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia30-40M",
+      "shortName": "acs_WithPresbyopia30-40M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "f2zOMIV3ONy",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia<30F",
+      "shortName": "acs_WithPresbyopia<30F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "gAZnNnClIdy",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia<30M",
+      "shortName": "acs_WithPresbyopia<30M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "bjJn6CdZXWj",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia40-50F",
+      "shortName": "acs_WithPresbyopia40-50F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "eqjT6OcS99U",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia40-50M",
+      "shortName": "acs_WithPresbyopia40-50M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "vKqAgwKcdG1",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia50-60F",
+      "shortName": "acs_WithPresbyopia50-60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "MY8ovbwX2OT",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia50-60M",
+      "shortName": "acs_WithPresbyopia50-60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "H5EbD1Y5lbJ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia>60F",
+      "shortName": "acs_WithPresbyopia>60F",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "LI3WmTQaInb",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "acs_WithPresbyopia>60M",
+      "shortName": "acs_WithPresbyopia>60M",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "D21IVD1HVTz",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adolescent checklist",
+      "shortName": "Adolescent checklist",
+      "formName": "Adolescent checklist",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "OQc2QOcYrBk",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "Adolescent transition completed",
+      "shortName": "Adolescent transition completed",
+      "formName": "Adolescent transition completed",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "NfRJHjaO33A",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "Adolescent transition started",
+      "shortName": "Adolescent transition started",
+      "formName": "Adolescent transition started",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "jpCzs2Zyfdu",
+      "categoryCombo": {
+        "name": "Finer Age Bands and Gender",
+        "id": "Xl44oF9oRGM"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS BB",
+      "shortName": "Adult ARVTBMEDS BB",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "AQTkPq3BqIq",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS DOFS",
+      "shortName": "Adult ARVTBMEDS DOFS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ezQiXHlHu9T",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS EMPSC",
+      "shortName": "Adult ARVTBMEDS EMPSC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "VFQaQtpyW8g",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS LW",
+      "shortName": "Adult ARVTBMEDS LW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "VxRBbDTBCir",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS NA",
+      "shortName": "Adult ARVTBMEDS NA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "IHHUeMnMibv",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS PA",
+      "shortName": "Adult ARVTBMEDS PA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Uiq2uFGWGr1",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS QE",
+      "shortName": "Adult ARVTBMEDS QE",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "GT0OhfUz17N",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS QROS",
+      "shortName": "Adult ARVTBMEDS QROS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "RdzWFhIAtN7",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS QRR",
+      "shortName": "Adult ARVTBMEDS QRR",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "s1v38drzvZe",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS TQC",
+      "shortName": "Adult ARVTBMEDS TQC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "mOnmLnQsTfQ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult ARVTBMEDS TQRCW",
+      "shortName": "Adult ARVTBMEDS TQRCW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "g4WrCx38y5B",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 BB",
+      "shortName": "Adult TDF3TCDTG 30 BB",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "GFNaxafX2yY",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 DOFS",
+      "shortName": "Adult TDF3TCDTG 30 DOFS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "sMEBGqxmVP9",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 EMPSC",
+      "shortName": "Adult TDF3TCDTG 30 EMPSC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "MzvE0kWbjxy",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 LW",
+      "shortName": "Adult TDF3TCDTG 30 LW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "zYg0HLe2LHH",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 NA",
+      "shortName": "Adult TDF3TCDTG 30 NA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "sQlEv9LY3oS",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 PA",
+      "shortName": "Adult TDF3TCDTG 30 PA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "V08lWiOtza6",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 QE",
+      "shortName": "Adult TDF3TCDTG 30 QE",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "UHnPv0c8QGi",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 QROS",
+      "shortName": "Adult TDF3TCDTG 30 QROS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "E8XBt5g2qxm",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 QRR",
+      "shortName": "Adult TDF3TCDTG 30 QRR",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Ji6l5FTG8mK",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 TQC",
+      "shortName": "Adult TDF3TCDTG 30 TQC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "i7RCAKiBOxo",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 30 TQRCW",
+      "shortName": "Adult TDF3TCDTG 30 TQRCW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ZOoH3vTUrS0",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 BB",
+      "shortName": "Adult TDF3TCDTG 90 BB",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "QjR0wEKQx4V",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 DOFS",
+      "shortName": "Adult TDF3TCDTG 90 DOFS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "XpGbzSvlZoi",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 EMPSC",
+      "shortName": "Adult TDF3TCDTG 90 EMPSC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "W6A5zwu5m10",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 LW",
+      "shortName": "Adult TDF3TCDTG 90 LW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "GVALTBJwLhJ",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 NA",
+      "shortName": "Adult TDF3TCDTG 90 NA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "YqFsJv6dF2a",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 PA",
+      "shortName": "Adult TDF3TCDTG 90 PA",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "zVI1UCn2gou",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 QE",
+      "shortName": "Adult TDF3TCDTG 90 QE",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ivCou7OUNHF",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 QROS",
+      "shortName": "Adult TDF3TCDTG 90 QROS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "uYGjSXvvPhG",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 QRR",
+      "shortName": "Adult TDF3TCDTG 90 QRR",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "X1tN5x4spGD",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 TQC",
+      "shortName": "Adult TDF3TCDTG 90 TQC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "Nk7QB1Wlngg",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCDTG 90 TQRCW",
+      "shortName": "Adult TDF3TCDTG 90 TQRCW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "leC642glZry",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCEFV 30 BB",
+      "shortName": "Adult TDF3TCEFV 30 BB",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "bdVebpzA7zf",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCEFV 30 DOFS",
+      "shortName": "Adult TDF3TCEFV 30 DOFS",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "ZGqlN4UE5Py",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCEFV 30 EMPSC",
+      "shortName": "Adult TDF3TCEFV 30 EMPSC",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "v6b8AkE8T9J",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    },
+    {
+      "name": "Adult TDF3TCEFV 30 LW",
+      "shortName": "Adult TDF3TCEFV 30 LW",
+      "valueType": "INTEGER_ZERO_OR_POSITIVE",
+      "domainType": "AGGREGATE",
+      "id": "BBWQMKwSyNK",
+      "categoryCombo": {
+        "name": "default",
+        "id": "bjDvmb4bfuf"
+      }
+    }
+  ]
+}

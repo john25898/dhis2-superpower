@@ -5,6 +5,7 @@ import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from services.common import json_safe
+from services.ou_resolver import _ALL_SENTINELS
 from services.paths import BASE_DIR, DARAJA_FILTERS_CSV
 
 daraja_bp = Blueprint("daraja", __name__)
@@ -172,10 +173,13 @@ def newly_started_art_by_county() -> object:
 
 @daraja_bp.get("/api/hiv-treatment/nart-trend")
 def nart_trend() -> object:
-    """Return monthly trend for three NART metrics (Total, Males, Adults 15+)
-    for a given Daraja county (default Meru County).
+    """Return monthly trend for three NART metrics (Total, Males, Adults 15+).
+
+    ``county`` may be a single Daraja county, or an "all" sentinel meaning the
+    whole project across every county on the roster.
     """
     county_filter = (request.args.get("county") or "Meru County").strip()
+    all_counties = county_filter.lower() in _ALL_SENTINELS
 
     # ── Male Tx_New STA IDs (all age groups) ──
     MALE_DX = {
@@ -211,7 +215,10 @@ def nart_trend() -> object:
             return "Unknown"
 
         df["county"] = df["ou"].map(get_county)
-        df = df[df["county"] == county_filter]
+        # "all" means every county on the roster, not a county literally named
+        # "all" — filtering on that string matched nothing and returned zeros.
+        if not all_counties:
+            df = df[df["county"] == county_filter]
 
         # Total TX_NEW
         total = df[df["dx"] == "gv7bbGesTTJ"]

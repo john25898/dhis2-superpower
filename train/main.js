@@ -4114,8 +4114,7 @@ function renderProjectSelection() {
       // Daraja — existing behavior
       if (projectId === "daraja") {
         state.activeProject = "daraja";
-        if (elements.projectFilter)
-          elements.projectFilter.value = "daraja";
+        if (elements.projectFilter) elements.projectFilter.value = "daraja";
         state.activePage = "overview";
         state.activeDatasetId = "";
         setPageHash("overview");
@@ -4493,8 +4492,7 @@ function renderCurrentView() {
       state.activePage === "health_programmes" &&
       state.activeSubtabs["health_programmes"] === "mhu";
     const isHomepage =
-      state.activePage === "overview" &&
-      state.activeProject !== "daraja";
+      state.activePage === "overview" && state.activeProject !== "daraja";
     if (isMhuPage || isHomepage) {
       topFilters.classList.add("hidden");
     } else {
@@ -4775,7 +4773,9 @@ async function loadDashboardData() {
       const darajaResp = await fetch("/api/daraja/locations");
       if (darajaResp.ok) {
         const darajaData = await darajaResp.json();
-        state.darajaCounties = Array.isArray(darajaData.counties) ? darajaData.counties : [];
+        state.darajaCounties = Array.isArray(darajaData.counties)
+          ? darajaData.counties
+          : [];
         state.darajaSubcounties = Array.isArray(darajaData.subcounties)
           ? darajaData.subcounties
           : [];
@@ -4787,7 +4787,8 @@ async function loadDashboardData() {
           ? darajaData.facility_ids
           : [];
         state.darajaFacilityIdNameMap = darajaData.facility_id_name_map || {};
-        state.darajaFacilitiesBySubcounty = darajaData.facilities_by_subcounty || {};
+        state.darajaFacilitiesBySubcounty =
+          darajaData.facilities_by_subcounty || {};
       }
     } catch (e) {
       // non-critical
@@ -4841,7 +4842,11 @@ function getCountyOptions() {
 
 function getSubCountyOptions(selectedCounty = "all") {
   // If JT data is loaded and a specific county is selected, use JT mapping
-  if (state.darajaCounties.length && selectedCounty && selectedCounty !== "all") {
+  if (
+    state.darajaCounties.length &&
+    selectedCounty &&
+    selectedCounty !== "all"
+  ) {
     const subs = state.darajaSubcountyMap[selectedCounty] || [];
     return subs;
   }
@@ -5147,8 +5152,7 @@ async function handleChatSubmit(event) {
       label: "Daraja Project",
       callback: function () {
         state.activeProject = "daraja";
-        if (elements.projectFilter)
-          elements.projectFilter.value = "daraja";
+        if (elements.projectFilter) elements.projectFilter.value = "daraja";
       },
     },
     {
@@ -5158,8 +5162,7 @@ async function handleChatSubmit(event) {
       label: "TX_CURR Analytics",
       callback: function () {
         state.activeProject = "daraja";
-        if (elements.projectFilter)
-          elements.projectFilter.value = "daraja";
+        if (elements.projectFilter) elements.projectFilter.value = "daraja";
       },
     },
     // Other pages
@@ -6776,8 +6779,7 @@ async function renderHomepageDashboard() {
         if (!pid) return;
         if (pid === "daraja") {
           state.activeProject = "daraja";
-          if (elements.projectFilter)
-            elements.projectFilter.value = "daraja";
+          if (elements.projectFilter) elements.projectFilter.value = "daraja";
           state.activePage = "overview";
           setPageHash("overview");
           renderCurrentView();
@@ -9176,7 +9178,10 @@ function buildUnifiedDhisChart(wrapper, data, config) {
     wrapper.innerHTML = html;
 
     // ── Render Multi-line Highcharts ──
-    if (window.Highcharts && document.getElementById("dhis-chart-daraja-trend")) {
+    if (
+      window.Highcharts &&
+      document.getElementById("dhis-chart-daraja-trend")
+    ) {
       const categories2 = trend.map((p) => p.label);
       const series = metricsList.map((m, i) => ({
         name: m.label,
@@ -11560,7 +11565,9 @@ async function renderDarajaOverview(container) {
         });
       }
 
-      const currentBarCtx = document.getElementById("darajaTreatmentCurrentBar");
+      const currentBarCtx = document.getElementById(
+        "darajaTreatmentCurrentBar",
+      );
       if (currentBarCtx) {
         new Chart(currentBarCtx, {
           type: "bar",
@@ -18405,7 +18412,7 @@ function slugify(name) {
 
 function getProjectDisplayName(slug) {
   const names = {
-    "daraja": "Daraja",
+    daraja: "Daraja",
     "chap-stawisha": "CHAP Stawisha",
     eis: "EIS",
     "gf-mnch": "Gates Foundation MNCH",
@@ -20052,7 +20059,7 @@ function renderChakDashboardDetail() {
         "</div>" +
         "</div>" +
         "</div>" +
-        '<a href="http://ereporting.chak.or.ke:8500/dhis-web-data-visualizer/?type=CHART&id=' +
+        '<a href="https://ereporting.chak.or.ke/dhis-web-data-visualizer/?type=CHART&id=' +
         encodeURIComponent(viz.id) +
         '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline whitespace-nowrap">Open →</a>' +
         "</div>" +
@@ -20091,7 +20098,7 @@ function renderChakDashboardDetail() {
     "</div>" +
     // Link to full dashboard
     '<div class="mt-2">' +
-    '<a href="http://ereporting.chak.or.ke:8500/dhis-web-dashboard/#/' +
+    '<a href="https://ereporting.chak.or.ke/dhis-web-dashboard/#/' +
     escapeHtml(dbId) +
     '" target="_blank" class="text-xs text-sky-600 hover:text-sky-800 underline">🔗 Open full dashboard in CHAK DHIS2 →</a>' +
     "</div>" +

@@ -915,7 +915,11 @@
           "prepTypology",
           barChart(trend, [
             { key: "prep_new_pbfw", label: "PBFW", color: COLORS.pink },
-            { key: "prep_new_preg", label: "Pregnant", color: COLORS.purple },
+            {
+              key: "prep_new_preg",
+              label: "Pregnant (PrEP Initiated ANC)",
+              color: COLORS.purple,
+            },
           ]),
         );
         createChart(
@@ -1476,16 +1480,16 @@
         el.innerHTML = `
                 <div class="page-info">
                     <h2><i class="fas fa-lungs"></i> TB/HIV</h2>
-                    <p>TB screening, diagnosis, and ART among TB patients</p>
+                    <p>TB cases with known HIV status, and ART among HIV-positive TB patients</p>
                 </div>
                 <div class="kpi-grid">
-                    <div class="kpi-card"><div class="kpi-label">TB Screened</div>
+                    <div class="kpi-card"><div class="kpi-label">TB · HIV Status Known</div>
                         <div class="kpi-value blue">${fmt(sum(trend, "tb_screened"))}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">TB Positive</div>
+                    <div class="kpi-card"><div class="kpi-label">HIV+ TB Cases</div>
                         <div class="kpi-value red">${fmt(sum(trend, "tb_pos"))}</div></div>
-                    <div class="kpi-card"><div class="kpi-label">TB Positivity</div>
+                    <div class="kpi-card"><div class="kpi-label">TB Positivity (%TB Pos)</div>
                         <div class="kpi-value orange">${avg(trend, "tb_positivity_pct")}%</div></div>
-                    <div class="kpi-card"><div class="kpi-label">On ART Among TB</div>
+                    <div class="kpi-card"><div class="kpi-label">On ART Among HIV+ TB</div>
                         <div class="kpi-value green">${avg(trend, "tb_art_uptake_pct")}%</div></div>
                 </div>
                 <div class="chart-grid">
@@ -1499,7 +1503,7 @@
                   [
                     "label",
                     "tb_screened",
-                    "tb_presumptive",
+                    "tb_stat_den",
                     "tb_pos",
                     "tb_positivity_pct",
                     "tb_on_art",
@@ -1507,10 +1511,10 @@
                   ],
                   [
                     "Month",
-                    "Screened",
-                    "Presumptive",
-                    "TB+",
-                    "% TB+",
+                    "Known Status",
+                    "STAT Den",
+                    "HIV+",
+                    "%TB Pos",
                     "On ART",
                     "% on ART",
                   ],
@@ -1519,8 +1523,12 @@
         createChart(
           "tbCascade",
           lineChart(trend, [
-            { key: "tb_screened", label: "Screened", color: COLORS.blue },
-            { key: "tb_pos", label: "TB+", color: COLORS.red },
+            {
+              key: "tb_screened",
+              label: "Known HIV Status",
+              color: COLORS.blue,
+            },
+            { key: "tb_pos", label: "HIV Positive", color: COLORS.red },
             { key: "tb_on_art", label: "On ART", color: COLORS.green },
           ]),
         );
@@ -1529,10 +1537,14 @@
           lineChart(trend, [
             {
               key: "tb_art_uptake_pct",
-              label: "% on ART",
+              label: "% TB on ART",
               color: COLORS.green,
             },
-            { key: "tb_positivity_pct", label: "% TB+", color: COLORS.orange },
+            {
+              key: "tb_positivity_pct",
+              label: "%TB Pos",
+              color: COLORS.orange,
+            },
           ]),
         );
       }

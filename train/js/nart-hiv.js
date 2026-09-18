@@ -18,8 +18,7 @@ async function renderNartTrendChart(container) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -262,8 +261,7 @@ async function renderNartDhisLiveChart(container) {
   `;
   container.appendChild(wrapper);
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -575,4 +573,3 @@ const SUBTAB_TYPE_MAP = {
 };
 
 let _dhisLiveData = null; // cached data for current view
-

@@ -12,6 +12,7 @@ Serves a single read-only API:  GET /api/milestone/data
 from __future__ import annotations
 
 import csv
+import json
 import os
 import re
 import threading
@@ -384,7 +385,7 @@ def _parse_summary2(ws):
 # LIVE PERFORMANCE — CHAK DHIS2 (ereporting · MOH 731) for DARAJA
 #
 # Only milestones whose target is measurable from DHIS2 get real numbers
-# (ids 6, 7, 8, 9, 11, 15, 16).  Every other milestone keeps "—" until its
+# (ids 6, 7, 8, 9, 11, 14, 15, 16, 21).  Every other milestone keeps "—" until its
 # record-based / EMR-based verification happens.
 # ════════════════════════════════════════════════════════════════════
 
@@ -416,6 +417,12 @@ def _parse_summary2(ws):
 #                                 proxy reported 6-9% where the real
 #                                 coverage is 92-100%.
 #  #16 VL suppressed / VL done
+#  #14 TX_TB Denominator / TX_CURR -> "% of PLHIV screened for TB".
+#                                 The TX_TB denominator (screened negative
+#                                 + positive, already-on-ART + new-on-ART)
+#                                 over TX_CURR.  Summed across the Jamii
+#                                 Tekelezi and CHAP Stawisha TX_TB quartets
+#                                 (verified disjoint).
 #
 # Retired: the MOH731_HV01-19 positive source (0 at the test sites), the
 # 15 "PREP_ALLMod * New F/M" elements (0 at the test sites), the six
@@ -436,6 +443,160 @@ _DE_TPT = "dysZutXWPTz"             # TPT TX_Curr Total (indicator, unused)
 _IND_TB_PREV_NUM = "D73JcPGIIIA"    # TB_PREV Numerator Total   (#15)
 _IND_TB_PREV_DEN = "cJoXKb6p94M"    # TB_PREV Denominator Total (#15)
 
+# #14 TB/HIV Case Identification — "% of PLHIV screened for TB".
+# Numerator = the TX_TB *denominator* (every ART client screened for TB:
+# negative + positive, already-on-ART + newly-on-ART) = the PBIX
+# "TX_TB(Denominator)" arm.  Denominator = TX_CURR.
+# Each namespace carries its own TX_TB denominator quartet:
+#   Jamii Tekelezi (MER Indicator Reporting Tool / JTP Monthly HIV
+#     Prevention and Testing / JTP Monthly HIV Care and Treatment):
+#     TX_TB : Already on ART (TX_CURR) - Screened Negative / Positive
+#     TX_TB : NEW on ART              - Screened Negative / Positive
+#   CHAP Stawisha (Stawisha TB Reports, xGYwTcfvEH5):
+#     TX_TB Denominator Negative Screen Already on ART / New on ART
+#     TX_TB Denominator Positive Screen Already on ART / New on ART
+# Verified live 202608: Jamii 36,777 + Stawisha 31,744 = 68,521 against
+# TX_CURR 81,042 => 84.5%.  Disjointness proven: across the 259-facility
+# roster 159 are Jamii-only and 62 Stawisha-only, 0 report into both,
+# and each subset reproduces only its own arm (36,777 / 0 and 0 / 31,744).
+# NOTE: deliberately NOT clamped to 100 — the FAA workbook warns this
+# measure can exceed 100% when screened counts outrun the TX_CURR
+# snapshot, so the raw percentage is shown as-is.
+_DE_TX_TB_DEN_JTP = [
+    "RhjKYAbimpZ",   # TX_TB : Already on ART (TX_CURR) - Screened Negative
+    "Vgjf2ORAriB",   # TX_TB : Already on ART (TX_CURR) - Screened Positive
+    "YuumdQIr0Pm",   # TX_TB : NEW on ART - Screened Negative
+    "KAA3P0ab7op",   # TX_TB : NEW on ART - Screened Positive
+]
+_DE_TX_TB_DEN_62 = [
+    "s5a2vLWGSai",   # TX_TB Denominator Negative Screen Already on ART
+    "T5Tx34HORt4",   # TX_TB Denominator Negative Screen New on ART
+    "WzklwQABYGE",   # TX_TB Denominator Positive Screen Already on ART
+    "Z6j8WOPI3eL",   # TX_TB Denominator Positive Screen New on ART
+]
+
+# ══════════════════════════════════════════════════════════════════
+# #21 Commodity Security — KHIS (NATIONAL) reporting rates
+# ══════════════════════════════════════════════════════════════════
+# 🔥 SOURCE IS KHIS, *NOT* CHAK DHIS2.
+#   https://hiskenya.dha.go.ke/api   (DHIS2 2.40.9.1)
+# The three Revision-2023 monthly commodity returns are national MOH forms;
+# the CHAK ereporting instance does not carry them.  The July 2026 measurements
+# below were taken straight off KHIS and reconcile with the independent
+# `jt_reporting_rates/` app, which reads the same endpoint.
+#
+# "Reporting rate" here is measured from the DATA, not from KHIS's
+# `completeDataSetRegistration` flag: a facility counts as having reported a
+# form when it submitted at least ONE of the regimen rows that prove the form
+# was filled in.  Requiring ALL of them would conflate *stocking* with
+# *reporting* — a site that stocks no infant AZT/NVP regimen still correctly
+# files MOH 729 with a zero (that is why "all three" collapses from ~195 to
+# ~126 facilities on the ARV forms while the form was plainly filed).
+#
+# The denominator is the KHIS-ASSIGNED facility set
+# (`dataSets/{id}/organisationUnits`), never the raw roster: only 212 of the
+# 262 Daraja facilities are assigned MOH 729B/730B, so a roster denominator
+# would penalise ~50 non-ART sites for not filing an ART return.
+_KHIS_MOH_FORMS = [
+    {
+        "key": "moh643",
+        "short": "MOH 643B",
+        "title": "MOH 643 B - 2023 (FCDRR / laboratory)",
+        "ds_id": "NQNojl5zVko",
+        "detect": ["YOEPZvsPFPY", "NGzQCnV1mAG", "gSdD0f5RQuw"],
+        "detect_label": "Rapid HIV 1+2 Test 1 / 2 / 3",
+    },
+    {
+        "key": "moh730",
+        "short": "MOH 730B",
+        "title": "MOH 730 B - 2023 (CDRR / ARV & OI)",
+        "ds_id": "UDZ4RKvvYRt",
+        "detect": ["Sc9m3vXuCtU", "i63W5Q15kKC", "CALM061sapC"],
+        "detect_label": ("ABC/3TC 600/300mg 30s · ABC/3TC/DTG 60/30/5mg 90s · "
+                         "TAFLD 25/300/50mg 90s"),
+    },
+    {
+        "key": "moh729",
+        "short": "MOH 729",
+        "title": "MOH 729 - 2023 (ART / F'MAPS)",
+        "ds_id": "BD4tTSw9y64",
+        "detect": ["pnJ2jrHU9Y3", "NeZ1cr1YTP0", "asTTgEPjTmu"],
+        "detect_label": ("PC8 AZT liq + NVP liq · CF2G ABC+3TC+DTG · "
+                         "PM12 PMTCT TAF+3TC+DTG"),
+    },
+]
+# The KHIS Daraja roster (262 facilities, all national UIDs) — the same
+# census the Daraja milestone is scored against.  Authored by the
+# jt_reporting_rates app; read-only here.
+# A copy of that roster ships INSIDE this app on purpose.  The sibling
+# `jt_reporting_rates/` folder is a SEPARATE git repository with its own
+# deployment, so it is NOT part of this repo's Render clone - reading only the
+# sibling path silently yields an EMPTY roster in production, which zeroes
+# milestone #21.  The sibling path is kept as a fallback for a dev checkout
+# that does not have the in-app copy.
+_KHIS_DARAJA_ROSTER_CANDIDATES = (
+    BASE_DIR / "data" / "khis_daraja_roster.csv",
+    BASE_DIR.parent / "jt_reporting_rates" / "data" / "daraja_filters.csv",
+)
+_KHIS_DARAJA_ROSTER = next(
+    (p for p in _KHIS_DARAJA_ROSTER_CANDIDATES if p.exists()),
+    _KHIS_DARAJA_ROSTER_CANDIDATES[0],
+)
+
+# CHAK org-unit name index (uid -> facility name), used as the fallback when an
+# MFL code cannot be resolved from live metadata.  `CHAK_Visuals_4_explore/` is
+# git-ignored (it is the PBIX exploration workspace), so a copy ships inside
+# the app for the same reason as the roster above.
+_CHAK_FACILITY_INDEX_CANDIDATES = (
+    BASE_DIR / "data" / "all_chak_facilities.csv",
+    BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv",
+)
+_CHAK_FACILITY_INDEX = next(
+    (p for p in _CHAK_FACILITY_INDEX_CANDIDATES if p.exists()),
+    _CHAK_FACILITY_INDEX_CANDIDATES[0],
+)
+_KHIS_COMMODITY_CACHE = BASE_DIR / "data" / "_khis_commodity_rates.json"
+_KHIS_COMMODITY_TTL = 6 * 3600   # KHIS is a national server — be gentle
+
+# ── Jamii Tekelezi (previous project) ↔ CHAP Stawisha (62) twins ──
+# The Daraja roster reports into two mutually-exclusive DHIS2 attribute
+# option combos (funding mechanisms), so every metric below is the SUM of
+# both namespaces — mirroring the PBIX COALESCE(a,0)+COALESCE(b,0) DAX.
+# All ids verified live against CHAK DHIS2 (period 202608).
+# NOTE: #15 TB_PREV and TPT TX_Curr are reported *only* by the Stawisha
+# dataset — no Jamii twin exists in this DHIS2 build.
+_DE_TX_NEW_62_CD4_LT200 = "Syg8KH15VW6"   # TX_New CD4<200         (#11)
+_DE_TX_NEW_62_CD4_GE200 = "gxEX3f1Wi4i"   # TX_New CD4>200         (#11)
+_DE_TX_NEW_62_CD4_UNK   = "r2X4WnVpKQG"   # TX_New CD4 unknown   (#7, #9)
+_DE_TX_CURR_62 = "aMp82zBYPnx"            # TX_CURR Patients on Care (#9)
+_DE_TX_IIT_62 = "DzgJFEbnElF"             # TX_IIT STA              (#9)
+_DE_VL_62 = ["XfG4IcrxsAL", "ya8yqHMBz1z",    # VL <50 | 50-199
+             "JkR9WcfccpF", "Ub1rdwX3AQK"]     # 200-399 | >1000 cps/ml
+_DE_VL_62_SUPPRESSED = ["XfG4IcrxsAL", "ya8yqHMBz1z", "JkR9WcfccpF"]
+_DE_PREP_NEW_62 = ["KFp4UYTJ4Q6", "S8VvgOzJRkX", "Nz7EhR18YMK",
+                   "mSLKtkUIiXu", "ZVlWaa7hQyp", "EYOQtTc1Luo",
+                   "KUfbLJCGou7"]
+_HTS_TESTED_62 = [
+    "FeL9n4JPBwR", "U5p3md08al7", "z4SijuAuj8u", "EBUHaKNgr76",
+    "m0TGh0x0BKG", "eIgi7HI0dHC", "EbemQ1YUsS4", "geC2CBzyQme",
+    "JEOphdexA5h", "oRcQ7WvMSbg", "GpUsEYocjeF", "n1gIS3iRf5b",
+    "iWTSCEnAzth", "ZMvTVuvnujj", "sE6Fiu7oCWG", "dkX4EY6cwl9",
+    "U60JE807fKl", "Zc6u4IbiDtI", "DR7CJrCb99O", "qfGXWJ4dyfq",
+    "lU61bvd4vFS", "qrOHMHfq6vW", "fan1vuTrnfZ", "lm2vXVEzxgd",
+    "WFBz2SqHikz", "F2vqHaV3SIV", "DDYp26Y2pLU", "j1Ovy0UzWKC",
+]
+_HTS_POSITIVE_62 = [
+    "AqIZwh2gOUs", "FNCubo2RFGW", "Cwn1ZLCXt6B", "fryB6XsrdEX",
+    "WgrVvWg6CEI", "xZvJ5UT2EK2", "BIQZfMkMzr6", "ObNBXpybAaC",
+    "FX0DHPMp83V", "BhnzHXFnEM3", "iOfdKICx6r9", "b6RjSYPtLvy",
+    "ztdFfMQWrSF", "S6KQd8Rmjad", "doYJQ4Ieqc7", "g3NOJTsqayy",
+    "LdO5qX5j238", "SBGWvCJYoHl", "wrU23YQYX0l", "wuNiGmPCvjF",
+    "MADCCrhi2wC", "jO8zNMIrakZ", "hzRWjr4PtME", "BpItig3EWij",
+    "R9mc3S56hWD", "jbyp2irkHnt", "KhG8T1IxFNF", "HvXNwm2FiDE",
+]
+_TX_NEW_62_ALL = [_DE_TX_NEW_62_CD4_LT200, _DE_TX_NEW_62_CD4_GE200,
+                  _DE_TX_NEW_62_CD4_UNK]
+
 # #9 numerator = the three "Interruption in Treatment" outcome options of
 # "C&T (facility) - Tx_ML, Outcomes".  Died / Transferred Out / Refused
 # (Stopped) Treatment are NOT interruption.  This DHIS2 build ignores
@@ -449,7 +610,12 @@ _ALL_METRIC_DE_IDS = sorted({
     _DE_TX_NEW_CD4_LT200, _DE_TX_NEW_CD4_GE200,
     _DE_PREP_NEW, _DE_VL_DONE, _DE_VL_SUPPRESSED, _DE_TPT,
     _IND_TB_PREV_NUM, _IND_TB_PREV_DEN,
-})
+    # CHAP Stawisha (62) twins
+    _DE_TX_NEW_62_CD4_LT200, _DE_TX_NEW_62_CD4_GE200, _DE_TX_NEW_62_CD4_UNK,
+    _DE_TX_CURR_62, _DE_TX_IIT_62,
+} | set(_DE_VL_62) | set(_DE_PREP_NEW_62)
+  | set(_HTS_TESTED_62) | set(_HTS_POSITIVE_62)
+  | set(_DE_TX_TB_DEN_JTP) | set(_DE_TX_TB_DEN_62))
 
 _MONTH_ORD = {
     m: i for i, m in enumerate(
@@ -509,7 +675,7 @@ def _daraja_scope():
     # CHAK DHIS2 org-unit index (uid, lower-name) for name fallback
     index = []
     try:
-        csv_path = BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv"
+        csv_path = _CHAK_FACILITY_INDEX
         if csv_path.exists():
             with open(csv_path, encoding="utf-8-sig") as f:
                 for row in csv.DictReader(f):
@@ -570,15 +736,17 @@ def _fetch_chak_ou_by_code(codes):
     """
     mapping = {}
     try:
-        import requests as _req
         from requests.auth import HTTPBasicAuth
 
-        from services.dhis2 import CHAK_PASS, CHAK_USER
+        from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
 
-        base = "http://ereporting.chak.or.ke:8500/api"
-        url = base + "/organisationUnits.json"
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
-        # Chunk below URL-length comfort; retry transient resets.
+        # Chunk below URL-length comfort.  A *connection* failure is NOT retried:
+        # `chak_get` already walks every candidate transport, so an outer retry
+        # could only re-pay a port that is provably dead.  The old shape was
+        # 3 chunks x 3 attempts x timeout=90 = 810 s of worst case, which on its
+        # own exceeded Render's worker timeout and got the worker SIGKILLed.
+        # Now the first refused chunk costs one ~4 s connect attempt per base.
         for i in range(0, len(codes), 100):
             chunk = codes[i:i + 100]
             params = {
@@ -586,25 +754,20 @@ def _fetch_chak_ou_by_code(codes):
                 "fields": "id,code,level",
                 "paging": "false",
             }
-            for attempt in range(3):
-                try:
-                    resp = _req.get(url, params=params, auth=auth,
-                                    timeout=90, verify=False)
-                except Exception as exc:  # noqa: BLE001
-                    if attempt == 2:
-                        print(f"[MILESTONE] CHAK OU-by-code fetch "
-                              f"failed (attempt {attempt + 1}): {exc}")
-                        return {}
-                    continue
-                if not resp.ok:
-                    print(f"[MILESTONE] CHAK OU-by-code HTTP "
-                          f"{resp.status_code} on chunk {i // 100}")
-                    return {}
-                for ou in resp.json().get("organisationUnits", []) or []:
-                    c = (ou.get("code") or "").strip()
-                    if c and ou.get("level") == 5 and c not in mapping:
-                        mapping[c] = ou["id"]
-                break
+            try:
+                resp = chak_get("/organisationUnits.json", params,
+                                read_timeout=20, auth=auth)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK OU-by-code fetch failed: {exc}")
+                return {}
+            if not resp.ok:
+                print(f"[MILESTONE] CHAK OU-by-code HTTP "
+                      f"{resp.status_code} on chunk {i // 100}")
+                return {}
+            for ou in resp.json().get("organisationUnits", []) or []:
+                c = (ou.get("code") or "").strip()
+                if c and ou.get("level") == 5 and c not in mapping:
+                    mapping[c] = ou["id"]
         return mapping
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK OU-by-code fetch failed: {exc}")
@@ -664,6 +827,158 @@ def _fetch_iit_numerator(ou_ids):
         return {}
 
 
+def _khis_commodity_reporting(period):
+    """#21 — Daraja reporting rates for the three national MOH commodity forms.
+
+    Reads **KHIS** (hiskenya.dha.go.ke), *not* CHAK DHIS2 — these Revision-2023
+    returns are national forms the CHAK instance does not carry.
+
+    `period` is a DHIS2 month id ('202608').  Returns
+        {"period":…, "forms": [{key, short, title, expected, reporters,
+                                assigned, rate, detect_label}, …], "avg": float}
+    or {} when KHIS is unreachable / the roster is unreadable.  Disk-cached
+    for _KHIS_COMMODITY_TTL so a flapping national server cannot stall the
+    milestone payload.
+    """
+    if not period:
+        return {}
+
+    try:
+        if _KHIS_COMMODITY_CACHE.exists():
+            cached = json.loads(
+                _KHIS_COMMODITY_CACHE.read_text(encoding="utf-8"))
+            if (cached.get("period") == period
+                    and (time.time() - cached.get("ts", 0))
+                    < _KHIS_COMMODITY_TTL):
+                return cached.get("payload") or {}
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        import requests
+        from requests.auth import HTTPBasicAuth
+
+        from services.khis import KHIS_BASE, KHIS_PASS, KHIS_USER
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] KHIS import failed: {exc}")
+        return {}
+
+    fac_county = {}
+    try:
+        with open(_KHIS_DARAJA_ROSTER, encoding="utf-8-sig") as fh:
+            for row in csv.DictReader(fh):
+                fid = (row.get("facility_id") or "").strip()
+                if fid:
+                    fac_county[fid] = (row.get("county_id") or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] KHIS Daraja roster read failed: {exc}")
+        return {}
+    if not fac_county:
+        return {}
+
+    roster = set(fac_county)
+    county_ids = sorted({c for c in fac_county.values() if c})
+    auth = HTTPBasicAuth(KHIS_USER, KHIS_PASS)
+    base = KHIS_BASE.rstrip("/")
+
+    def _get(path, params, timeout=180, attempts=3):
+        """GET with retries.  KHIS is a national server and occasionally
+        returns a truncated/partial `dataValueSets` page under load, which
+        would silently UNDER-count reporters — so never accept a partial
+        read as final."""
+        for i in range(attempts):
+            try:
+                resp = requests.get(f"{base}/{path}", params=params,
+                                    auth=auth, timeout=timeout)
+                if resp.status_code == 200:
+                    return resp.json()
+            except Exception:  # noqa: BLE001
+                pass
+            if i < attempts - 1:
+                time.sleep(1.5 * (i + 1))
+        return None
+
+    forms = []
+    for form in _KHIS_MOH_FORMS:
+        # Facilities KHIS *expects* to file this dataset nationally.
+        assigned = set()
+        page = 1
+        while True:
+            d = _get(f"dataSets/{form['ds_id']}/organisationUnits.json",
+                     {"fields": "id", "page": page, "pageSize": 2000})
+            if not d:
+                break
+            ous = d.get("organisationUnits") or []
+            assigned.update(o["id"] for o in ous if o.get("id"))
+            total = (d.get("pager") or {}).get("total", len(assigned))
+            if len(assigned) >= total or not ous:
+                break
+            page += 1
+        if not assigned:
+            print(f"[MILESTONE] KHIS {form['short']}: no assigned OUs — skipped")
+            continue
+
+        # Facilities that actually submitted one of the proving regimen rows.
+        # A failed county read poisons the whole form (it can only lose
+        # reporters), so abort the form rather than publish a low number.
+        detect = set(form["detect"])
+        reporters = set()
+        failed = 0
+        for cid in county_ids:
+            d = _get("dataValueSets.json",
+                     {"dataSet": form["ds_id"], "period": period,
+                      "orgUnit": cid, "children": "true", "paging": "false"})
+            if d is None:
+                failed += 1
+                continue
+            for v in (d.get("dataValues") or []):
+                if v.get("dataElement") in detect:
+                    ou = v.get("orgUnit")
+                    if ou:
+                        reporters.add(ou)
+        if failed or len(assigned) == 0:
+            print(f"[MILESTONE] KHIS {form['short']}: {failed}/"
+                  f"{len(county_ids)} county reads failed — form withheld")
+            continue
+
+        expected = len(assigned & roster)
+        report_n = len(reporters & assigned & roster)
+        forms.append({
+            "key": form["key"],
+            "short": form["short"],
+            "title": form["title"],
+            "expected": expected,
+            "assigned": len(assigned),
+            "reporters": report_n,
+            "detect_label": form["detect_label"],
+            "rate": round(100.0 * report_n / expected, 1) if expected else None,
+        })
+
+    rated = [f["rate"] for f in forms if f.get("rate") is not None]
+    if len(rated) < 2:
+        print("[MILESTONE] KHIS commodity rates: fewer than 2 forms resolved "
+              "— #21 withheld for this build")
+        return {}
+
+    payload = {
+        "period": period,
+        "forms": forms,
+        "avg": round(sum(rated) / len(rated), 1),
+        "source": f"{KHIS_BASE} (KHIS national, Revision 2023)",
+    }
+    try:
+        _KHIS_COMMODITY_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        _KHIS_COMMODITY_CACHE.write_text(
+            json.dumps({"ts": time.time(), "period": period,
+                        "payload": payload}, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    print(f"[MILESTONE] KHIS commodity {period}: "
+          + " ".join(f"{f['short']}={f['rate']}%" for f in forms)
+          + f" avg={payload['avg']}%")
+    return payload
+
+
 def _period_sum(data, de_ids, period):
     total = 0.0
     for de in de_ids:
@@ -721,7 +1036,8 @@ def _pick_anchor_period(data):
         return None
     tx_periods = [
         p for p in periods
-        if float(data.get(_DE_TX_CURR, {}).get(p, 0) or 0) > 0
+        if (float(data.get(_DE_TX_CURR, {}).get(p, 0) or 0)
+            + float(data.get(_DE_TX_CURR_62, {}).get(p, 0) or 0)) > 0
     ]
     ordered = sorted(tx_periods or periods, key=_pe_key)
     return ordered[-1] if ordered else None
@@ -730,8 +1046,8 @@ def _pick_anchor_period(data):
 def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
-    band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11),
-          'tpt' (15), 'vl' (16).  pct is the 0–100 achievement measure.
+    band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
+          'tpt' (15), 'vl' (16), 'commodity' (21).  pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
     if band == "ahd":  # id 11 — FAA: ≥90 / 70–89 / 60–69 / <60
@@ -768,6 +1084,14 @@ def _unlock_bands(band, pct):
         if pct >= 60:
             return 70, "60–69% of target"
         return 0, "<60% of target — no payment"
+    if band == "tb":  # id 14 — FAA: >90 / 80-89 / 60-69 / below
+        if pct > 90:
+            return 100, ">90% of PLHIV screened for TB"
+        if pct >= 80:
+            return 80, "80-90% screened for TB"
+        if pct >= 60:
+            return 50, "60-79% screened for TB"
+        return 0, "<60% screened for TB - no payment"
     if band == "vl":  # id 16
         if pct >= 95:
             return 100, "≥95% VL suppression"
@@ -776,6 +1100,14 @@ def _unlock_bands(band, pct):
         if pct >= 60:
             return 50, "60–79% suppression"
         return 0, "<60% suppression — no payment"
+    if band == "commodity":  # id 21 — FAA: >=90 / 80-89 / 70-79 / below
+        if pct >= 90:
+            return 100, "\u226590% of facilities reporting"
+        if pct >= 80:
+            return 80, "80\u201389% of facilities reporting"
+        if pct >= 70:
+            return 50, "70\u201379% of facilities reporting"
+        return 0, "<70% of facilities reporting \u2014 no payment"
     # band == 'count' (ids 6 & 8) — achievement vs monthly count target
     if pct > 95:
         return 100, ">95% of monthly target"
@@ -803,13 +1135,17 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
     }
 
 
-def _compute_daraja_metrics(data, anchor, iit_by_period=None):
-    """Compute the seven DHIS2-measurable milestones for the anchor month.
+def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
+    """Compute the nine DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
     the "Interruption in Treatment" outcomes) supplied by
     `_fetch_iit_numerator`; it is a separate call because it needs the
     category-option breakdown.
+
+    `commodity` is the #21 KHIS commodity-reporting payload supplied by
+    `_khis_commodity_reporting` — the one metric here that is NOT sourced
+    from CHAK DHIS2.
     """
     if not data or not anchor:
         return [], None
@@ -822,26 +1158,51 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             return 0.0
         return float(data.get(de_id, {}).get(label, 0) or 0)
 
+    def vsum(de_ids, year, month):
+        """Sum a group of twin elements for one calendar month."""
+        return sum(val(d, year, month) for d in de_ids)
+
     year, month = _pe_key(anchor)
     q_year, q_month = _prev_quarter_close(year, month)
 
-    tested = val(_IND_HTS_TESTED, year, month)
-    positive = val(_IND_HTS_POSITIVE, year, month)
-    tx_new = val(_DE_TX_NEW, year, month)
-    tx_curr = val(_DE_TX_CURR, year, month)
-    prep_new = val(_DE_PREP_NEW, year, month)
-    vl_done = val(_DE_VL_DONE, year, month)
-    vl_supp = val(_DE_VL_SUPPRESSED, year, month)
+    # Every measure is Jamii Tekelezi + CHAP Stawisha (the two AOCs never
+    # overlap, so summing both namespaces gives the true Daraja total).
+    tested = val(_IND_HTS_TESTED, year, month) \
+        + vsum(_HTS_TESTED_62, year, month)
+    positive = val(_IND_HTS_POSITIVE, year, month) \
+        + vsum(_HTS_POSITIVE_62, year, month)
+    tx_new = val(_DE_TX_NEW, year, month) + vsum(_TX_NEW_62_ALL, year, month)
+    tx_curr = val(_DE_TX_CURR, year, month) + val(_DE_TX_CURR_62, year, month)
+    prep_new = val(_DE_PREP_NEW, year, month) + vsum(_DE_PREP_NEW_62, year, month)
+    vl_done = val(_DE_VL_DONE, year, month) + vsum(_DE_VL_62, year, month)
+    vl_supp = val(_DE_VL_SUPPRESSED, year, month) \
+        + vsum(_DE_VL_62_SUPPRESSED, year, month)
     tpt = val(_DE_TPT, year, month)
     tb_prev_num = val(_IND_TB_PREV_NUM, year, month)
     tb_prev_den = val(_IND_TB_PREV_DEN, year, month)
-    iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0)
+    # #14 numerator: the TX_TB *denominator* of both namespaces - every ART
+    # client screened for TB.  The arms are disjoint (see _DE_TX_TB_DEN_JTP).
+    tx_tb_den = vsum(_DE_TX_TB_DEN_JTP, year, month) \
+        + vsum(_DE_TX_TB_DEN_62, year, month)
+    # #9 numerator: Jamii "Tx_ML, Outcomes → Interruption" options + the
+    # CHAP Stawisha "TX_IIT STA" element.
+    iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0) \
+        + val(_DE_TX_IIT_62, year, month)
 
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus
     # every TX_NEW recorded so far in the CURRENT quarter.
+    #
+    # 🔥 The PBIX `%IIT` baseline is the SINGLE element `TX_CURR` — its DAX is
+    #   Baseline_TX_CURR = CALCULATE(SUM(Value),
+    #       'Data Elements'[Data Element] = "TX_CURR", Period = TX_CURR_Period)
+    # (and `TX_CURR_Previous_Quarter`, line 1466, is the same single element).
+    # Only the headline KPI / `TX_CURR_Monthly_Trend` uses all 9 TX_CURR-family
+    # elements.  Adding the CHAP Stawisha roll-up (_DE_TX_CURR_62) here inflated
+    # the denominator ~2.01x and halved `%IIT` versus the report.
     tx_curr_prevq = val(_DE_TX_CURR, q_year, q_month)
     tx_new_qtr = sum(
-        val(_DE_TX_NEW, y, m) for y, m in _quarter_months_to(year, month)
+        val(_DE_TX_NEW, y, m) + vsum(_TX_NEW_62_ALL, y, m)
+        for y, m in _quarter_months_to(year, month)
     )
     iit_denom = tx_curr_prevq + tx_new_qtr
 
@@ -862,7 +1223,8 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             f"{fmt(tested)} tested · {fmt(positive)} positive",
             pct6, unlock, band,
             "min(people tested ÷ 21,584, positives ÷ 306) × 100 — CHAK DHIS2 "
-            "official indicators HTS_TST / HTS_TST_POS : Numerator",
+            "HTS_TST / HTS_TST_POS : Numerator (Jamii Tekelezi) unioned with "
+            "the CHAP Stawisha HTS testing / new-positive elements",
         ))
 
     # ── #7 Linkage of HIV-positive clients to ART ──
@@ -877,7 +1239,8 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             "positive",
             pct7, unlock, band,
             "TX_NEW ÷ HTS_TST_POS × 100 — CHAK DHIS2 "
-            "(TX_NEW: Starting ART ÷ HTS_TST_POS : Numerator)",
+            "(TX_NEW: Starting ART [Jamii] + TX_New CD4<200/>200/unknown "
+            "[Stawisha] ÷ HTS_TST_POS : Numerator)",
         ))
 
     # ── #8 PrEP Initiation — monthly target 486 ──
@@ -890,8 +1253,9 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             "486 PrEP initiations / month (2,918 / 6)",
             f"{fmt(prep_new)} PrEP initiations",
             pct8, unlock, band,
-            "PrEP_New: PrEP, New Clients ÷ 486 (FAA monthly target) × 100 — "
-            "CHAK DHIS2",
+            "(PrEP_New: PrEP, New Clients [Jamii] + the CHAP Stawisha PrEP "
+            "new-client population elements) ÷ 486 (FAA monthly target) × "
+            "100 — CHAK DHIS2",
         ))
 
     # ── #9 HIV Care, Treatment Continuity & Retention (IIT) ──
@@ -910,8 +1274,9 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             f"{iit_pct:.2f}% · {fmt(iit_raw)} interrupted of {fmt(iit_denom)} "
             f"on ART (TX_CURR {fmt(tx_curr_prevq)} + TX_NEW {fmt(tx_new_qtr)})",
             iit_pct, unlock, band,
-            "Interruption in Treatment ÷ [TX_CURR(previous quarter close) + "
-            "TX_NEW(current quarter to date)] × 100 — CHAK DHIS2",
+            "(Tx_ML Outcomes → Interruption [Jamii] + TX_IIT STA [Stawisha]) "
+            "÷ [TX_CURR(previous quarter close) + TX_NEW(current quarter to "
+            "date)] × 100 — CHAK DHIS2",
         ))
 
     # ── #11 Advanced HIV Disease (AHD) identification & evaluation ──
@@ -922,8 +1287,10 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
     #   AHD who are screened for AHD using CD4 cell count or WHO staging
     #   criteria").
     if tx_new:
-        cd4_lt200 = val(_DE_TX_NEW_CD4_LT200, year, month)
-        cd4_ge200 = val(_DE_TX_NEW_CD4_GE200, year, month)
+        cd4_lt200 = val(_DE_TX_NEW_CD4_LT200, year, month) \
+            + val(_DE_TX_NEW_62_CD4_LT200, year, month)
+        cd4_ge200 = val(_DE_TX_NEW_CD4_GE200, year, month) \
+            + val(_DE_TX_NEW_62_CD4_GE200, year, month)
         cd4_known = cd4_lt200 + cd4_ge200
         ahd_pct = min(100.0, cd4_known / tx_new * 100.0)
         unlock, band = _unlock_bands("ahd", ahd_pct)
@@ -935,8 +1302,8 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             f"clients with CD4 established (<200 {fmt(cd4_lt200)} · "
             f"≥200 {fmt(cd4_ge200)})",
             ahd_pct, unlock, band,
-            "(TX_NEW: Starting ART, CD4 <200 + CD4 >=200) ÷ TX_NEW: "
-            "Starting ART × 100 — MOH 731 CD4 disaggregation, CHAK DHIS2",
+            "(TX_NEW CD4 <200 + CD4 >=200) ÷ TX_NEW × 100 — MOH 731 CD4 "
+            "disaggregation, Jamii Tekelezi + CHAP Stawisha, CHAK DHIS2",
         ))
 
     # ── #15 TB Preventive Therapy — 90% of eligible initiated ──
@@ -945,6 +1312,23 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
     #   (facilities report it in the TB_PREV section of the MOH 731).
     #   Fractions, not counts: the denominator is small, so the value is
     #   BLENDED across every OU in the chunk in _chak_analytics_fetch.
+    if tx_curr and tx_tb_den:
+        tb_case_pct = tx_tb_den / tx_curr * 100.0
+        unlock, band = _unlock_bands("tb", tb_case_pct)
+        metrics.append(_metric_doc(
+            14, "TB/HIV Case Identification", anchor,
+            "\u226590% of PLHIV screened for TB",
+            f"{tb_case_pct:.1f}% \u00b7 {fmt(tx_tb_den)} screened for TB of "
+            f"{fmt(tx_curr)} on ART",
+            tb_case_pct, unlock, band,
+            "TX_TB(Denominator) \u00f7 TX_CURR \u00d7 100 - CHAK DHIS2 "
+            "(TX_TB: Already on ART / NEW on ART - Screened Negative and "
+            "Positive [Jamii Tekelezi] + TX_TB Denominator Negative and "
+            "Positive Screen Already on / New on ART [CHAP Stawisha]) "
+            "\u00f7 (TX_CURR [Jamii] + TX_CURR Patients on Care "
+            "[CHAP Stawisha])",
+        ))
+
     if tb_prev_den:
         tpt_pct = tb_prev_num / tb_prev_den * 100.0
         unlock, band = _unlock_bands("tpt", tpt_pct)
@@ -955,7 +1339,7 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             "eligible initiated",
             tpt_pct, unlock, band,
             "TB_PREV Numerator Total ÷ TB_PREV Denominator Total × 100 "
-            "(CHAK DHIS2 official indicator)",
+            "(CHAK DHIS2 indicator — reported by the CHAP Stawisha dataset)",
         ))
 
     # ── #16 Viral Load Suppression — ≥95% with documented VL ──
@@ -967,8 +1351,40 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None):
             "≥95% suppression among PLHIV with documented VL",
             f"{vl_pct:.1f}% · {fmt(vl_supp)} of {fmt(vl_done)} suppressed",
             vl_pct, unlock, band,
-            "VL suppressed ÷ VL done (routine) × 100 — MOH 731",
+            "(TX_PVLS (N) ÷ TX_PVLS (D) Routine [Jamii] + VL results "
+            "<1000 cps/ml ÷ all VL results [Stawisha]) × 100 — MOH 731",
         ))
+
+    # ── #21 Commodity Security — monthly commodity-report submission ──
+    #   Threshold: "≥90% of health facilities submitting monthly commodity
+    #   reports".  Bands ≥90 / 80–89 / 70–79 / <70.
+    #   🔥 KHIS (national), NOT CHAK DHIS2 — see _KHIS_MOH_FORMS.
+    #   The milestone value is the MEAN of the three per-form reporting
+    #   rates, each scored on the facilities KHIS assigns that form.
+    if commodity and commodity.get("forms"):
+        _cf = [f for f in commodity["forms"] if f.get("rate") is not None]
+        if _cf:
+            commodity_pct = sum(f["rate"] for f in _cf) / len(_cf)
+            unlock, band = _unlock_bands("commodity", commodity_pct)
+            _detail = " · ".join(
+                f"{f['short']} {f['rate']:.1f}% ({fmt(f['reporters'])}/"
+                f"{fmt(f['expected'])})" for f in _cf
+            )
+            metrics.append(_metric_doc(
+                21, "Commodity Security", anchor,
+                "≥90% of health facilities submitting monthly commodity "
+                "reports",
+                f"{commodity_pct:.1f}% · {_detail}",
+                commodity_pct, unlock, band,
+                "mean of the three MOH Revision-2023 commodity-report "
+                "reporting rates × 100 — each rate = facilities submitting "
+                "≥1 proving regimen ÷ facilities KHIS assigns that dataset, "
+                "over the " + str(commodity.get("period") or "") + " month. "
+                "Source: KHIS national (hiskenya.dha.go.ke), NOT CHAK "
+                "DHIS2. MOH 643B detected on Rapid HIV 1+2 Test 1/2/3; "
+                "MOH 730B on ABC/3TC 600/300 30s, ABC/3TC/DTG 60/30/5 90s, "
+                "TAFLD 25/300/50 90s; MOH 729 on PC8, CF2G, PM12",
+            ))
 
     return metrics, anchor
 
@@ -1002,13 +1418,27 @@ def _compute_khis_metrics():
         # CHAK can briefly return an empty analytics response while the
         # instance is under load. Do not turn that transient response into a
         # blank five-minute dashboard cache.
+        #
+        # The MOH 731 roll-up and the Tx_ML (IIT) reads are INDEPENDENT
+        # queries against the same server and each takes 10-25 s, so they are
+        # issued concurrently.  The retry loop for the roll-up is unchanged
+        # and still runs to completion; the IIT future simply overlaps it.
+        from concurrent.futures import ThreadPoolExecutor
+
         data = {}
-        for attempt in range(3):
-            data = _fetch_daraja_metrics_data(ou_ids)
-            if data:
-                break
-            if attempt < 2:
-                time.sleep(2)
+        iit_by_period = {}
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            fut_iit = ex.submit(_fetch_iit_numerator, ou_ids)
+            for attempt in range(3):
+                data = _fetch_daraja_metrics_data(ou_ids)
+                if data:
+                    break
+                if attempt < 2:
+                    time.sleep(2)
+            try:
+                iit_by_period = fut_iit.result() or {}
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK IIT fetch failed: {exc}")
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
@@ -1016,9 +1446,11 @@ def _compute_khis_metrics():
                 "matched Daraja facilities."
             )
             return khis
-        iit_by_period = _fetch_iit_numerator(ou_ids)
+        _anchor = _pick_anchor_period(data)
+        _y, _m = _pe_key(_anchor)
+        commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
-            data, _pick_anchor_period(data), iit_by_period
+            data, _anchor, iit_by_period, commodity
         )
         if not metrics:
             khis["status"] = "empty"
@@ -1115,16 +1547,23 @@ def _build_payload():
     tiers = sorted(tier_set)
     award_total = months[-1]["cumulative"] if months else 0
 
-    # Live performance (CHAK DHIS2 / Daraja baseline) for the seven
-    # DHIS2-measurable milestones.  The baseline is attached to the FIRST
-    # month only (M1) — it is a test of the indicator wiring, not yet the
-    # confirmed performance of any project month.  M2–M6 keep "—" until
-    # GOR verifies each project month's confirmed values.
+    # Live performance (CHAK DHIS2 / Daraja baseline) for the eight
+    # DHIS2-measurable milestones (ids 6, 7, 8, 9, 11, 14, 15, 16) — plus
+    # #21, whose baseline comes from KHIS national (see _KHIS_MOH_FORMS).
+    #
+    # The baseline is ONE measurement — "as of" the latest reported month,
+    # across the Daraja facility roster — so it belongs on EVERY project
+    # month, not on M1 alone.  The front-end is written for exactly that:
+    # it renders "Monthly Payments - Earned" as the schedule max × the
+    # unlock % the baseline earns (with a dedicated "Final-pay max" variant
+    # for the M6 close-out tab) and documents the figure as an estimate that
+    # GOR verification of each project month replaces with confirmed values.
+    # Attaching it to M1 only left the PERFORMANCE and MONTHLY PAYMENTS -
+    # EARNED columns blank on five of the six tabs while the "KHIS baseline"
+    # chip stayed visible on all of them.
     khis = _compute_khis_metrics()
     perf_by_id = {m["id"]: m for m in (khis.get("metrics") or [])}
     for month in months:
-        if month.get("key") != "M1":
-            continue
         for row in month["rows"]:
             perf = perf_by_id.get(row["id"])
             if perf:

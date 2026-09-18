@@ -12,6 +12,9 @@ const state = {
   facilityFilter: "all",
   locationHierarchy: null,
   countyFilter: "all",
+  // Set the moment the user picks a county themselves. Until then the Daraja
+  // views are free to apply their own default (Meru) on first render.
+  countyFilterTouched: false,
   subCountyFilter: "all",
   projectFilter: "all",
   periodFilter: "all",
@@ -34,6 +37,16 @@ const state = {
   darajaFacilityIdNameMap: {},
   darajaFacilitiesBySubcounty: {},
 };
+
+// The county scope the top-bar filter is currently on, ready to drop straight
+// into a query string. "All Counties" is a real scope — every facility on the
+// Daraja roster — and must reach the server as "all". It used to be rewritten
+// to a single county here, which is why selecting All Counties still showed
+// that one county's numbers on every page.
+function selectedCountyParam() {
+  const county = state.countyFilter;
+  return county && county !== "all" ? county : "all";
+}
 
 // ── CHAK DHIS2 Project Configuration ──
 const CHAK_PROJECTS = Object.assign({}, window.PROJECT_CONFIGS || {});
@@ -240,6 +253,19 @@ function buildMonthRangeParam(endPeriod, count) {
     }
   }
   return months.join(";");
+}
+
+// Current calendar month as a DHIS2 "YYYYMM" period value. Reporting windows
+// are anchored here so they track the latest reported month instead of a
+// hard-coded date (which silently went stale once CHAK started reporting the
+// following month). `lagMonths` shifts the anchor back, for instances that
+// close their reporting behind the calendar.
+function currentYmParam(lagMonths) {
+  const lag = Math.max(0, Math.round(Number(lagMonths) || 0));
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - lag);
+  return String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0");
 }
 
 function rangeMonthsOf(value) {
@@ -857,6 +883,7 @@ function bindFilterControls() {
 
   elements.countyFilter?.addEventListener("change", () => {
     state.countyFilter = elements.countyFilter.value;
+    state.countyFilterTouched = true;
     state.subCountyFilter = "all";
     state.facilityFilter = "all";
     if (elements.subCountyFilter) elements.subCountyFilter.value = "all";

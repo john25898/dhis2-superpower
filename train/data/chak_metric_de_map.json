@@ -1,0 +1,516 @@
+{
+  "source": "train/CHAK Visuals (3).pbix",
+  "generated_by": "train/_pbix_final_map.py",
+  "projects": {
+    "previous": {
+      "dhis2_aoc": "T1rTe8Xa4CX",
+      "dhis2_aoc_name": "84477 - USAID Jamii Tekelezi",
+      "facility_count": 187,
+      "metrics": {
+        "TX_CURR": {
+          "de_uids": [
+            "kgzd9LfXZXq"
+          ],
+          "de_names": [
+            "TX_CURR"
+          ]
+        },
+        "TX_NEW": {
+          "de_uids": [
+            "vTTEybkXZ53",
+            "jbLj76PejpY",
+            "DiriHmlA9te",
+            "y7PJMU5K8k9"
+          ],
+          "de_names": [
+            "TX_NEW: Starting ART",
+            "TX_NEW: Starting ART, CD4 <200",
+            "TX_NEW: Starting ART, CD4 >=200",
+            "TX_NEW: Starting ART, CD4 Unknown"
+          ]
+        },
+        "TX_PVLS_den": {
+          "de_uids": [
+            "JGd3MwmKBuM"
+          ],
+          "de_names": [
+            "VL Monitoring (All): TX_PVLS (D) Routine"
+          ],
+          "unresolved_names": [
+            "TX_PVLS (D)"
+          ]
+        },
+        "TX_PVLS_num": {
+          "de_uids": [
+            "FloZph8hN9z"
+          ],
+          "de_names": [
+            "VL Monitoring (All): TX_PVLS (N) Routine"
+          ],
+          "unresolved_names": [
+            "TX_PVLS (N)"
+          ]
+        },
+        "HTS_tested": {
+          "de_uids": [
+            "J4zibSjbBCt",
+            "THJbtDzxplR",
+            "XKAlilawdhN",
+            "QBsyLQZRdiH",
+            "vFlUDposW0Y",
+            "XYhYAMivUX5",
+            "ymKviaHZtQN",
+            "Lwtqyjus0Mb",
+            "bMmnawX0lJZ",
+            "GT0exFOJBb6",
+            "VUddRU5XXhi",
+            "QJEM1kwtmEc",
+            "QHNavEKSTse",
+            "NO3wqVVZ0Ax",
+            "jWdJvSe5eh4",
+            "MGZ0ACvFX2q",
+            "FITo7mucBoA"
+          ],
+          "de_names": [
+            "HTS_TST (facility) - VCT - HIV Testing",
+            "HTS_TST (facility) - PITC Inpatient Services - HIV Testing",
+            "HTS_TST (facility) - PITC Emergency - HIV Testing",
+            "HTS_TST (facility) - STI clinic - HIV Testing",
+            "HTS_TST (facility) - Other PITC - HIV Testing",
+            "HTS_TST (facility) - TB Clinic - HIV Testing",
+            "HTS_TST (facility) - Malnutrition clinic - HIV Testing",
+            "HTS_TST (facility) - PITC Pediatric Services - HIV Testing",
+            "HTS_TST (facility) - PMTCT ANC1 Only",
+            "HTS_TST (facility) - PMTCT ANC Initial Tests @2,3,4,.. Visits",
+            "HTS_TST (facility) - PMTCT ANC Retests",
+            "HTS_TST (facility) - PMTCT L&D",
+            "HTS_TST (facility) - PMTCT L&D Retests",
+            "HTS_TST (facility) - PMTCT PNC",
+            "HTS_TST (facility) - PMTCT PNC Retests",
+            "SNS (HRN) - Tested peers",
+            "SNS (Pos) - Tested peers"
+          ]
+        },
+        "HTS_positive": {
+          "de_uids": [
+            "J4zibSjbBCt",
+            "THJbtDzxplR",
+            "XKAlilawdhN",
+            "QBsyLQZRdiH",
+            "vFlUDposW0Y",
+            "XYhYAMivUX5",
+            "ymKviaHZtQN",
+            "Lwtqyjus0Mb",
+            "bMmnawX0lJZ",
+            "GT0exFOJBb6",
+            "VUddRU5XXhi",
+            "QJEM1kwtmEc",
+            "QHNavEKSTse",
+            "NO3wqVVZ0Ax",
+            "jWdJvSe5eh4"
+          ],
+          "de_names": [
+            "HTS_TST (facility) - VCT - HIV Testing",
+            "HTS_TST (facility) - PITC Inpatient Services - HIV Testing",
+            "HTS_TST (facility) - PITC Emergency - HIV Testing",
+            "HTS_TST (facility) - STI clinic - HIV Testing",
+            "HTS_TST (facility) - Other PITC - HIV Testing",
+            "HTS_TST (facility) - TB Clinic - HIV Testing",
+            "HTS_TST (facility) - Malnutrition clinic - HIV Testing",
+            "HTS_TST (facility) - PITC Pediatric Services - HIV Testing",
+            "HTS_TST (facility) - PMTCT ANC1 Only",
+            "HTS_TST (facility) - PMTCT ANC Initial Tests @2,3,4,.. Visits",
+            "HTS_TST (facility) - PMTCT ANC Retests",
+            "HTS_TST (facility) - PMTCT L&D",
+            "HTS_TST (facility) - PMTCT L&D Retests",
+            "HTS_TST (facility) - PMTCT PNC",
+            "HTS_TST (facility) - PMTCT PNC Retests"
+          ]
+        },
+        "ANC1_attendance": {
+          "de_uids": [
+            "hqrw6uPL9t9"
+          ],
+          "de_names": [
+            "HTS_TST (facility) - PMTCT ANC: 1st ANC Visit"
+          ]
+        },
+        "PMTCT_known_status": {
+          "de_uids": [
+            "O4tXnOKed2j",
+            "bMmnawX0lJZ"
+          ],
+          "de_names": [
+            "HTS_TST (facility) - PMTCT ANC: Known Positive",
+            "HTS_TST (facility) - PMTCT ANC1 Only"
+          ]
+        },
+        "PMTCT_pos": {
+          "de_uids": [
+            "O4tXnOKed2j",
+            "bMmnawX0lJZ"
+          ],
+          "de_names": [
+            "HTS_TST (facility) - PMTCT ANC: Known Positive",
+            "HTS_TST (facility) - PMTCT ANC1 Only"
+          ]
+        },
+        "PrEP_new_pbfw": {
+          "de_uids": [
+            "VIg3ciXYUQn"
+          ],
+          "de_names": [
+            "PrEP_New: PrEP, New Clients"
+          ]
+        },
+        "TB_STAT_num": {
+          "de_uids": [
+            "TNjfvn2OLAs",
+            "ILx5Fy2Pkxj",
+            "XYhYAMivUX5"
+          ],
+          "de_names": [
+            "TB_STAT (Number of new and relapsed TB cases with known HIV status) - Known Positives",
+            "TB_STAT (Number of new and relapsed TB cases with known HIV status) - Recent Negative",
+            "HTS_TST (facility) - TB Clinic - HIV Testing"
+          ]
+        },
+        "TB_ART_den": {
+          "de_uids": [
+            "TNjfvn2OLAs",
+            "XYhYAMivUX5"
+          ],
+          "de_names": [
+            "TB_STAT (Number of new and relapsed TB cases with known HIV status) - Known Positives",
+            "HTS_TST (facility) - TB Clinic - HIV Testing"
+          ]
+        }
+      }
+    },
+    "new_62": {
+      "dhis2_aoc": "vZjyS5WF2aV",
+      "dhis2_aoc_name": "85745 - CHAP Stawisha",
+      "facility_count": 62,
+      "facility_ids": [
+        "IYM3agZtEok",
+        "amP1kWytNm2",
+        "Y9ozzrFMnYy",
+        "CmIEKqOW8Lg",
+        "q9xXncCEGRK",
+        "dLWshrUrHts",
+        "HO8XXXER1ZS",
+        "HVOJPKtJhsG",
+        "IIw7XjguWks",
+        "hCCacTXjCYp",
+        "RG4eEDBQ8tm",
+        "g9QbZTBk5sC",
+        "GmnUAmcCmsV",
+        "zZ24uGJ3OVi",
+        "lna5hD9un4O",
+        "XzQQ1Kwv9lP",
+        "IXiFtNKHo5f",
+        "UUbhK0ZeTTz",
+        "xWpiITvlGmC",
+        "dLQjsqOgttT",
+        "VoW67kdzIju",
+        "qsSIimN71Bx",
+        "ojdsW3HFt5P",
+        "YFYpHHWmaAE",
+        "BAtfedDlU9v",
+        "gMmgEY1hq3W",
+        "tgcsqKSppEP",
+        "T0UkaIvU3F9",
+        "pKwQQQX1kLw",
+        "S4GqmehPtUY",
+        "tEu5VkVwaK7",
+        "hiLD4yCxIAC",
+        "Kj2rML8tFk2",
+        "xyqzLEu0jDE",
+        "hSKpgCPZYm2",
+        "BOcLXF8VIvK",
+        "evV553fu7J8",
+        "pjoG55x2KMq",
+        "QUEf4kJAS00",
+        "ghygCp0yjh3",
+        "Q0WwPORvQYR",
+        "SkQZUBdlpnz",
+        "kwyBjVtokh1",
+        "f1mpqnM6p8W",
+        "pnELrefcHxQ",
+        "PJESmU1NFjO",
+        "fMexRJbQRAw",
+        "oau2wlYZlO3",
+        "m6ITwjXu5J5",
+        "u5q6JCLA4SL",
+        "nXaMv9GOjWk",
+        "ZLKeFpFXbAQ",
+        "sbtG4aQyRyp",
+        "ukxQvonmMyN",
+        "gCRidS1x9ty",
+        "DbOdUfzRcBN",
+        "eQ411WldmOy",
+        "Aqw6Dbpsjk6",
+        "TpILSUucrQK",
+        "XgnBT8Pug4r",
+        "qxRsPXiP9p4",
+        "eDZupn6owH8"
+      ],
+      "metrics": {
+        "TX_CURR_aggregate": {
+          "de_uids": [
+            "aMp82zBYPnx"
+          ],
+          "de_names": [
+            "TX_CURR Patients on Care"
+          ]
+        },
+        "TX_CURR_regimen_split": {
+          "de_uids": [
+            "wJ0vH5TRFHw",
+            "EgNQnR23En1",
+            "KsDSjjJo6GD",
+            "VIz7xRli13H",
+            "KEAYcGVL6Bk",
+            "qDjo1L1VfmP",
+            "JOldQxWZWso",
+            "HzXPYZqLgqj"
+          ],
+          "de_names": [
+            "TX_CURR on EFV",
+            "TX_CURR on PI 1st line",
+            "TX_CURR on PI 2nd line",
+            "TX_CURR on RAL 1st line",
+            "TX_CURR on RAL 2nd line",
+            "TX_CURR on Third Line",
+            "TX_CURR on DTG 1st line",
+            "TX_CURR on DTG 2nd line"
+          ]
+        },
+        "TX_NEW": {
+          "de_uids": [
+            "Syg8KH15VW6",
+            "gxEX3f1Wi4i",
+            "r2X4WnVpKQG"
+          ],
+          "de_names": [
+            "TX_New CD4<200",
+            "TX_New CD4>200",
+            "TX_New CD4 unknown"
+          ]
+        },
+        "TX_PVLS_den": {
+          "de_uids": [
+            "XfG4IcrxsAL",
+            "ya8yqHMBz1z",
+            "JkR9WcfccpF",
+            "Ub1rdwX3AQK"
+          ],
+          "de_names": [
+            "VL results <50 cps/ml",
+            "VL results 50-199 cps/ml",
+            "VL results 200-399 cps/ml",
+            "VL results >1000 cps/ml"
+          ]
+        },
+        "TX_PVLS_num": {
+          "de_uids": [
+            "XfG4IcrxsAL",
+            "ya8yqHMBz1z",
+            "JkR9WcfccpF"
+          ],
+          "de_names": [
+            "VL results <50 cps/ml",
+            "VL results 50-199 cps/ml",
+            "VL results 200-399 cps/ml"
+          ]
+        },
+        "HTS_tested": {
+          "de_uids": [
+            "FeL9n4JPBwR",
+            "U5p3md08al7",
+            "z4SijuAuj8u",
+            "EBUHaKNgr76",
+            "m0TGh0x0BKG",
+            "eIgi7HI0dHC",
+            "EbemQ1YUsS4",
+            "geC2CBzyQme",
+            "JEOphdexA5h",
+            "oRcQ7WvMSbg",
+            "GpUsEYocjeF",
+            "n1gIS3iRf5b",
+            "iWTSCEnAzth",
+            "ZMvTVuvnujj",
+            "sE6Fiu7oCWG",
+            "dkX4EY6cwl9",
+            "U60JE807fKl",
+            "Zc6u4IbiDtI",
+            "DR7CJrCb99O",
+            "qfGXWJ4dyfq",
+            "lU61bvd4vFS",
+            "qrOHMHfq6vW",
+            "fan1vuTrnfZ",
+            "lm2vXVEzxgd",
+            "WFBz2SqHikz",
+            "F2vqHaV3SIV",
+            "DDYp26Y2pLU",
+            "j1Ovy0UzWKC"
+          ],
+          "de_names": [
+            "PITC IPD HP Tested",
+            "PITC IPD NHP Tested",
+            "PITC OPD HP Tested",
+            "PITC OPD NHP Tested",
+            "1st ANC Post ANC1 Initial testing",
+            "MAT Post ANC1 Initial Test",
+            "PNC Post ANC1 Initial Test",
+            "1st ANC tested",
+            "2nd ANC Number Tested",
+            "MAT Post ANC1 Retesting",
+            "PNC Post ANC1 Retesting",
+            "SNS NAss Tested AGYW",
+            "SNS NAss Tested AYP",
+            "SNS NAss Tested GP",
+            "SNS NAss Tested FSW",
+            "SNS NAss Tested MSM",
+            "SNS NAss Tested PWID",
+            "SNS NAss Tested PiP",
+            "SNS NAss Tested TG",
+            "PAEDS Tested",
+            "MALN Tested",
+            "PITC TB Tested",
+            "PITC VCT Tested",
+            "PITC STI Tested",
+            "PITC EM Tested",
+            "PITC PNS Contacts Tested",
+            "PITC FT Contacts Tested",
+            "FP Tested"
+          ]
+        },
+        "HTS_positive": {
+          "de_uids": [
+            "AqIZwh2gOUs",
+            "FNCubo2RFGW",
+            "Cwn1ZLCXt6B",
+            "fryB6XsrdEX",
+            "WgrVvWg6CEI",
+            "xZvJ5UT2EK2",
+            "BIQZfMkMzr6",
+            "ObNBXpybAaC",
+            "FX0DHPMp83V",
+            "BhnzHXFnEM3",
+            "iOfdKICx6r9",
+            "b6RjSYPtLvy",
+            "ztdFfMQWrSF",
+            "S6KQd8Rmjad",
+            "doYJQ4Ieqc7",
+            "g3NOJTsqayy",
+            "LdO5qX5j238",
+            "SBGWvCJYoHl",
+            "wrU23YQYX0l",
+            "wuNiGmPCvjF",
+            "MADCCrhi2wC",
+            "jO8zNMIrakZ",
+            "hzRWjr4PtME",
+            "BpItig3EWij",
+            "R9mc3S56hWD",
+            "jbyp2irkHnt",
+            "KhG8T1IxFNF",
+            "HvXNwm2FiDE"
+          ],
+          "de_names": [
+            "PITC IPD HP New Positive",
+            "PITC IPD NHP New Positive",
+            "PITC OPD HP New Positive",
+            "PITC OPD NHP New Positive",
+            "1st ANC newly identified positive",
+            "1st ANC Post ANC1 Initial testing positive",
+            "2nd ANC Newly Identified Positive",
+            "MAT Post ANC1 Initial HIV Positive",
+            "MAT Post ANC1 Retesting Positive",
+            "PNC Post ANC1 Initial HIV Positive",
+            "PNC Post ANC1 Retesting Positive",
+            "SNS NAss NP AGYW",
+            "SNS NAss NP AYP",
+            "SNS NAss NP GP",
+            "SNS NAss NP FSW",
+            "SNS NAss NP MSM",
+            "SNS NAss NP PWID",
+            "SNS NAss NP PiP",
+            "SNS NAss NP TG",
+            "PAEDS Newly Identified Positive",
+            "MALN Newly Identified Positive",
+            "PITC TB New Positive",
+            "PITC VCT New Positive",
+            "PITC STI New Positive",
+            "PITC EM New Positive",
+            "FP Newly positive",
+            "PITC PNS Contacts New Positive",
+            "PITC FT Contacts New Positive"
+          ]
+        },
+        "ANC1_attendance": {
+          "de_uids": [
+            "ylYJBde9kjh",
+            "coybVr4mYpf"
+          ],
+          "de_names": [
+            "1st ANC known positive",
+            "1st ANC eligible"
+          ]
+        },
+        "PMTCT_known_status": {
+          "de_uids": [
+            "ylYJBde9kjh",
+            "geC2CBzyQme"
+          ],
+          "de_names": [
+            "1st ANC known positive",
+            "1st ANC tested"
+          ]
+        },
+        "PMTCT_pos": {
+          "de_uids": [
+            "ylYJBde9kjh",
+            "WgrVvWg6CEI"
+          ],
+          "de_names": [
+            "1st ANC known positive",
+            "1st ANC newly identified positive"
+          ]
+        },
+        "PrEP_new_pbfw": {
+          "de_uids": [
+            "KFp4UYTJ4Q6",
+            "S8VvgOzJRkX"
+          ],
+          "de_names": [
+            "PREP New PG",
+            "PREP New BF"
+          ]
+        },
+        "TB_STAT_num": {
+          "de_uids": [
+            "dBzqPLo74oR",
+            "uyUkKIQC2lA",
+            "qrOHMHfq6vW"
+          ],
+          "de_names": [
+            "PITC TB Known Positive",
+            "PITC TB Known Negative",
+            "PITC TB Tested"
+          ]
+        },
+        "TB_ART_den": {
+          "de_uids": [
+            "dBzqPLo74oR",
+            "jO8zNMIrakZ"
+          ],
+          "de_names": [
+            "PITC TB Known Positive",
+            "PITC TB New Positive"
+          ]
+        }
+      }
+    }
+  }
+}

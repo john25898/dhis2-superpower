@@ -11,7 +11,11 @@ import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from services.common import _period_sort_key, json_safe
-from services.dhis2 import HTS_SPECS, INDICATOR_SPECS, DARAJA_SPECS, _dhis2_fetch
+from services.dhis2 import (HTS_SPECS, INDICATOR_SPECS, DARAJA_SPECS,
+                            _STA_TX_CURR_REGIMEN, _chak_analytics_coc_cells,
+                            _chak_coc_name_totals,
+                            COC_AGE_BANDS, COC_CELL_MAP, _dhis2_fetch,
+                            CHAK_BASE, chak_get)
 from services.ou_resolver import _resolve_ou_ids
 from services.paths import BASE_DIR
 from services.superpower import (
@@ -24,6 +28,59 @@ from services.superpower import (
 hiv_bp = Blueprint("hiv", __name__)
 
 _app = None  # set by register_hiv_blueprint
+
+
+def _fetch_spec_metric(mmeta: dict, ou_id, pe: str) -> dict:
+    """Fetch one HTS/PrEP metric's period series.
+
+    A metric may carry a ``typology_of`` data element (used by
+    `prep_new_pbfw` / `prep_new_preg`).  That means: sum the metric's own
+    (Stawisha) elements **plus** the named Jamii element restricted to the
+    'PrEP Typologies' category option combos listed in
+    ``typology_include`` — i.e. exactly the PBIX filter
+    ``'PrEP Typologies'[PrEP Typologies] IN {"Pregnant","Breastfeeding"}``.
+
+    A metric may instead carry ``cocs`` (used by `hts_positive_our`): the
+    PBIX reaches `HTS Positive` with
+    ``KEEPFILTERS('HIV Results'[HIV Results] == "HIV+")`` over the *same*
+    testing elements, which DHIS2 expresses as a ``co:`` dimension filter.
+    ``co:`` filtering only applies to the elements' OWN category combo, and
+    these fetches come back keyed by ``(period, coc_id)`` — so they are
+    collapsed back onto a plain ``{period: value}`` series here.
+
+    ``extra_ids`` adds a second, UNFILTERED element list (the SNS
+    "(Pos) - Tested peers" element, whose name already means positive).
+    """
+    cocs = mmeta.get("cocs")
+    ids = list(mmeta.get("ids") or [])
+    if cocs and ids:
+        raw = _dhis2_fetch(";".join(ids), ou_id, pe, list(cocs)) or {}
+        out: dict = {}
+        for k, v in raw.items():
+            per = k[0] if isinstance(k, tuple) else k
+            out[per] = out.get(per, 0.0) + float(v or 0)
+    elif ids:
+        out = dict(_dhis2_fetch(";".join(ids), ou_id, pe, None) or {})
+    else:
+        # A metric may be defined purely by the ``typology_of`` Jamii element
+        # (see `prep_new_preg`), in which case it has no standalone elements.
+        out = {}
+
+    extra_ids = mmeta.get("extra_ids")
+    if extra_ids:
+        for period, val in (_dhis2_fetch(";".join(extra_ids), ou_id, pe, None)
+                            or {}).items():
+            out[period] = out.get(period, 0.0) + float(val or 0)
+
+    typo_de = mmeta.get("typology_of")
+    if typo_de:
+        jamii = _chak_coc_name_totals(
+            typo_de, ou_id, pe,
+            include=mmeta.get("typology_include") or ("preg", "breast"),
+        )
+        for period, val in jamii.items():
+            out[period] = out.get(period, 0) + val
+    return out
 
 
 def register_hiv_blueprint(app):
@@ -319,8 +376,7 @@ def hiv_testing_dhis_live() -> object:
     with ThreadPoolExecutor(max_workers=6) as ex:
         future_map = {}
         for mkey, mmeta in spec["metrics"].items():
-            dx_str = ";".join(mmeta["ids"])
-            fut = ex.submit(_dhis2_fetch, dx_str, ou_id, pe, None)
+            fut = ex.submit(_fetch_spec_metric, mmeta, ou_id, pe)
             future_map[fut] = mkey
         for fut in future_map:
             mkey = future_map[fut]
@@ -346,25 +402,38 @@ def hiv_testing_dhis_live() -> object:
             entry[mkey] = round(
                 float(metrics_data.get(mkey, {}).get(p, 0)), 1
             )
-        # Compute positivity rate for hts_uptake
+        # hts_uptake: fold the two project sections back together into the
+        # PBIX figures `HTS Tested` = our + other and `HTS Positive` =
+        # our + other.  The individual halves stay on the row so the split is
+        # still visible to the UI.
         if qtype == "hts_uptake":
-            tested = float(metrics_data.get("hts_tested", {}).get(p, 0))
-            positive = float(metrics_data.get("hts_positive", {}).get(p, 0))
+            tested = (float(metrics_data.get("hts_tested_our", {}).get(p, 0))
+                      + float(metrics_data.get("hts_tested_other", {}).get(p, 0)))
+            positive = (float(metrics_data.get("hts_positive_our", {}).get(p, 0))
+                        + float(metrics_data.get("hts_positive_other", {}).get(p, 0)))
+            entry["hts_tested"] = round(tested, 1)
+            entry["hts_positive"] = round(positive, 1)
             entry["positivity_rate"] = round(
                 (positive / tested * 100) if tested > 0 else 0, 1
             )
         trend.append(entry)
 
-    metric_list = [
-        {"key": mk, "label": mm["label"]}
-        for mk, mm in spec["metrics"].items()
-    ]
     if qtype == "hts_uptake":
-        metric_list.append({
-            "key": "positivity_rate",
-            "label": "HTS TST % Positive",
-            "is_pct": True,
-        })
+        metric_list = [
+            {"key": "hts_tested", "label": "HTS Tested (JTP + Stawisha)"},
+            {"key": "hts_positive", "label": "HTS Positive (JTP + Stawisha)"},
+            {"key": "positivity_rate", "label": "HTS TST % Positive", "is_pct": True},
+            {"key": "hts_tested_our", "label": "Tested - JTP (Jamii/Daraja)"},
+            {"key": "hts_tested_other", "label": "Tested - CHAP Stawisha"},
+            {"key": "hts_positive_our", "label": "Positive - JTP (Jamii/Daraja)"},
+            {"key": "hts_positive_other", "label": "Positive - CHAP Stawisha"},
+        ]
+    else:
+        metric_list = [
+            {"key": mk, "label": mm["label"]}
+            for mk, mm in spec["metrics"].items()
+            if not mm.get("split")
+        ]
 
     return jsonify(json_safe({
         "type": qtype,
@@ -412,8 +481,8 @@ def nart_dhis_live() -> object:
         "Bs5etPcLz7w","Ps8a7Mv1xIn","sQcd8UD8Mrs",
     }
 
-    dhis_base = os.getenv("DHIS_BASE_URL") or "http://ereporting.chak.or.ke:8500/api/"
-    url_base = dhis_base.rstrip("/") + "/analytics.json"
+    # CHAK_BASE is the single canonical CHAK endpoint (TLS, port 443).
+    url_base = CHAK_BASE.rstrip("/") + "/analytics.json"
     pe = "LAST_12_MONTHS"
 
     # ── Step 1: Superpower generates URL for the TOTAL metric ──
@@ -452,12 +521,20 @@ def nart_dhis_live() -> object:
             if result.get("ok") and result.get("rows"):
                 return result["rows"]
             # fallback: superpower failed, use direct
-        import requests as _req
         from requests.auth import HTTPBasicAuth
         username = os.getenv("DHIS_USERNAME", "Johnbrian")
         password = os.getenv("DHIS_PASSWORD", "JOHNb123\\")
         auth = HTTPBasicAuth(username, password)
-        resp = _req.get(api_url, auth=auth, timeout=120)
+        # Route through the shared CHAK client so the canonical base, the
+        # connect/read timeouts and the circuit breaker all apply here too.
+        try:
+            resp = chak_get("/analytics.json", {
+                "dimension": [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"],
+                "displayProperty": "NAME",
+            }, read_timeout=120, auth=auth)
+        except Exception as exc:
+            print(f"[HIV] CHAK analytics fetch failed: {exc}")
+            return []
         if not resp.ok:
             return []
         data = resp.json()
@@ -543,7 +620,6 @@ def dhis_query_art() -> object:
     subcounty = (request.args.get("subCounty") or "").strip()
 
     DX_TX_NEW = "gv7bbGesTTJ"
-    dhis_base = os.getenv("DHIS_BASE_URL") or "http://ereporting.chak.or.ke:8500/api/"
     username = os.getenv("DHIS_USERNAME") or "Johnbrian"
     password = os.getenv("DHIS_PASSWORD") or "JOHNb123\\"
 
@@ -589,10 +665,8 @@ def dhis_query_art() -> object:
 
     # ── Source 1: Live DHIS2 ─────────────────────────────────────────
     from requests.auth import HTTPBasicAuth
-    import requests as _req
 
     auth = HTTPBasicAuth(username, password)
-    url_base = dhis_base.rstrip("/") + "/analytics.json"
 
     ou_id = None
     ou_label = "All Facilities"
@@ -614,7 +688,8 @@ def dhis_query_art() -> object:
         params["dimension"].append(f"ou:{ou_id}")
 
     try:
-        resp = _req.get(url_base, params=params, auth=auth, timeout=120)
+        resp = chak_get("/analytics.json", params, read_timeout=120,
+                        auth=auth)
         if resp.ok:
             dhis_data = resp.json()
             # Map column names from response headers
@@ -778,8 +853,10 @@ def tx_curr_mmd() -> object:
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
     MMD_DX = (
-        "TNAf1ystLF3;JOldQxWZWso;HzXPYZqLgqj;g8mOybcTwmL;"
-        "EgNQnR23En1;KsDSjjJo6GD;VIz7xRli13H;KEAYcGVL6Bk;qDjo1L1VfmP"
+        # Real MMD measures: "TX_CURR_MMD" + "TX_CURR on MMD".
+        # The old list mashed the ART-regimen elements (JOldQxWZWso …) into
+        # this chart, which made the bar heights meaningless.
+        "TNAf1ystLF3;g8mOybcTwmL"
     )
 
     try:
@@ -849,17 +926,11 @@ def daraja_regimens() -> object:
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    REGIMEN_DX = {
-        "1st Line ART": "zZGNba5d34c",
-        "2nd Line ART": "F0xtjHxDZ2e",
-        "3rd Line ART": "Pk1PMmG4ml7",
-        "On DTG": "s62uidROGjG",
-        "Eligible DTG": "bsQdHW8sJ4b",
-        "Active on EFV-600": "lr1YorhNrJT",
-        "Active on EFV-400": "ggO3YzjB9j4",
-        "Active on PI": "Z4g3jskQn9c",
-        "Viremia Clinic": "JGIZOGP6bGU",
-    }
+    # Live ART regimen split.  The old "C&T (facility) - ART Regimen
+    # Monitoring" ids (zZGNba5d34c …) return zero for BOTH Daraja projects;
+    # these are the CHAP Stawisha (62-facility) regimen elements that carry
+    # the actual data, plus the Jamii equivalents where they exist.
+    REGIMEN_DX = dict(_STA_TX_CURR_REGIMEN)
     dx_all = ";".join(REGIMEN_DX.values())
 
     try:
@@ -924,75 +995,33 @@ def tx_curr_gender_split() -> object:
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    # Female TX_Curr STA DX IDs (all ages)
-    FEMALE_DX = [
-        "iaa4KseNcet",  # TX_Curr STA <1,F
-        "hJmFsJUytKD",  # TX_Curr STA 1-4,F
-        "FwRKImEnyEs",  # TX_Curr STA 5-9,F
-        "Aiq7hJDqUEe",  # TX_Curr STA 10-14,F
-        "n5ySsHEkFrs",  # TX_Curr STA 15-19,F
-        "qo1sG5nv3sM",  # TX_Curr STA 20-24,F
-        "J1djCE9rcZZ",  # TX_Curr STA 25-29,F
-        "SHzQklQSFti",  # TX_Curr STA 30-34,F
-        "brMgg890UfA",  # TX_Curr STA 35-39,F
-        "vEOthZE5MwG",  # TX_Curr STA 40-44,F
-        "rL9iyqtuW5w",  # TX_Curr STA 45-49,F
-        "FkNNEFbIWiM",  # TX_Curr STA 50-54,F
-        "NEb6Ty89bbF",  # TX_Curr STA 55-59,F
-        "MMFZc5KvI8m",  # TX_Curr STA 60-64,F
-        "bLbb816Lep0",  # TX_Curr STA 65+,F
-    ]
-    MALE_DX = [
-        "Q8ErsVgUUy7",  # TX_Curr STA <1,M
-        "P8UoaFZ9whV",  # TX_Curr STA 1-4,M
-        "CBoJcoKZ7Iy",  # TX_Curr STA 5-9,M
-        "UoCnviagVgb",  # TX_Curr STA 10-14,M
-        "LofgXYRFD02",  # TX_Curr STA 15-19,M
-        "TKSQgnyBukU",  # TX_Curr STA 20-24,M
-        "WwOocFBoNQj",  # TX_Curr STA 25-29,M
-        "g9yMnhmPQ58",  # TX_Curr STA 30-34,M
-        "isy3s3kUVQC",  # TX_Curr STA 35-39,M
-        "xpZhQHWpqL8",  # TX_Curr STA 40-44,M
-        "F4ZrXG2G3Kv",  # TX_Curr STA 45-49,M
-        "dWDqkhd9IAv",  # TX_Curr STA 50-54,M
-        "N01LC1ThJUT",  # TX_Curr STA 55-59,M
-        "o9YAn2dQuXx",  # TX_Curr STA 60-64,M
-        "Ex31nkiTRuJ",  # TX_Curr STA 65+,M
-    ]
-    female_dx_all = ";".join(FEMALE_DX)
-    male_dx_all = ";".join(MALE_DX)
+    # Both Daraja funding namespaces (84477 Jamii Tekelezi, 85745 CHAP
+    # Stawisha) share the SAME 30 age x sex COCs, so one COC-split request
+    # over the union of the two TX_CURR elements covers all 259 facilities.
+    # (The old code used the CHAP-only "TX_Curr STA <band>,F/M" indicators,
+    # which returned 0 for the 187 Jamii facilities.)
+    TX_CURR_DX = INDICATOR_SPECS["tx_curr"]["aggregate"]
 
     try:
-        results = {}
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            f_fut = executor.submit(_dhis2_fetch, female_dx_all, ou_id, pe, None)
-            m_fut = executor.submit(_dhis2_fetch, male_dx_all, ou_id, pe, None)
-            for fut in as_completed([f_fut, m_fut]):
-                try:
-                    data = fut.result()
-                except Exception:
-                    data = {}
-                if fut == f_fut:
-                    results["female"] = data
-                else:
-                    results["male"] = data
+        cells = _chak_analytics_coc_cells(TX_CURR_DX, ou_id, pe)
     except Exception as exc:
         return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
 
-    female_data = results.get("female", {})
-    male_data = results.get("male", {})
-
-    # Build trend
-    all_periods = sorted(set(list(female_data.keys()) + list(male_data.keys())), key=_period_sort_key)
+    all_periods = sorted(cells.keys(), key=_period_sort_key)
     trend = []
     for p in all_periods:
-        f_val = round(float(female_data.get(p, 0)), 1)
-        m_val = round(float(male_data.get(p, 0)), 1)
-        trend.append({"period": p, "label": p, "female": f_val, "male": m_val})
+        f_val = m_val = 0.0
+        for uid, val in cells.get(p, {}).items():
+            sex = COC_CELL_MAP.get(uid, ("", ""))[1]
+            if sex == "F":
+                f_val += val
+            elif sex == "M":
+                m_val += val
+        trend.append({"period": p, "label": p,
+                      "female": round(f_val, 1), "male": round(m_val, 1)})
 
-    # Latest values
-    latest_f = round(float(female_data.get(all_periods[-1], 0)), 1) if all_periods else 0
-    latest_m = round(float(male_data.get(all_periods[-1], 0)), 1) if all_periods else 0
+    latest_f = trend[-1]["female"] if trend else 0
+    latest_m = trend[-1]["male"] if trend else 0
 
     return jsonify(json_safe({
         "ok": True,
@@ -1017,61 +1046,38 @@ def tx_curr_age_split() -> object:
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    AGE_DX_MAP = {
-        "<1": "iaa4KseNcet;Q8ErsVgUUy7",
-        "1-4": "hJmFsJUytKD;P8UoaFZ9whV",
-        "5-9": "FwRKImEnyEs;CBoJcoKZ7Iy",
-        "10-14": "Aiq7hJDqUEe;UoCnviagVgb",
-        "15-19": "n5ySsHEkFrs;LofgXYRFD02",
-        "20-24": "qo1sG5nv3sM;TKSQgnyBukU",
-        "25-29": "J1djCE9rcZZ;WwOocFBoNQj",
-        "30-34": "SHzQklQSFti;g9yMnhmPQ58",
-        "35-39": "brMgg890UfA;isy3s3kUVQC",
-        "40-44": "vEOthZE5MwG;xpZhQHWpqL8",
-        "45-49": "rL9iyqtuW5w;F4ZrXG2G3Kv",
-        "50-54": "FkNNEFbIWiM;dWDqkhd9IAv",
-        "55-59": "NEb6Ty89bbF;N01LC1ThJUT",
-        "60-64": "MMFZc5KvI8m;o9YAn2dQuXx",
-        "65+": "bLbb816Lep0;Ex31nkiTRuJ",
-    }
+    # Age bands come from the SHARED 30 age x sex COCs of the two TX_CURR
+    # elements (Jamii + CHAP Stawisha), not from the CHAP-only indicators.
+    AGE_ORDER = COC_AGE_BANDS
+    TX_CURR_DX = INDICATOR_SPECS["tx_curr"]["aggregate"]
 
     try:
-        age_results = {}
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            fut_map = {}
-            for age_label, dx_ids in AGE_DX_MAP.items():
-                fut = executor.submit(_dhis2_fetch, dx_ids, ou_id, pe, None)
-                fut_map[fut] = age_label
-            for fut in as_completed(fut_map):
-                age_label = fut_map[fut]
-                try:
-                    data = fut.result()
-                except Exception:
-                    data = {}
-                age_results[age_label] = data
+        cells = _chak_analytics_coc_cells(TX_CURR_DX, ou_id, pe)
     except Exception as exc:
         return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
 
-    # Build age_data (latest period values)
-    all_periods = set()
-    for age_data in age_results.values():
-        all_periods.update(age_data.keys())
-    sorted_periods = sorted(all_periods, key=_period_sort_key)
+    sorted_periods = sorted(cells.keys(), key=_period_sort_key)
     latest_period = sorted_periods[-1] if sorted_periods else ""
 
+    # {age: value} for the latest period
+    by_age: dict[str, float] = {a: 0.0 for a in AGE_ORDER}
+    for uid, val in cells.get(latest_period, {}).items():
+        band = COC_CELL_MAP.get(uid, (None, ""))[0]
+        if band:
+            by_age[band] = by_age.get(band, 0.0) + val
+
     age_data = []
-    AGE_ORDER = ["<1","1-4","5-9","10-14","15-19","20-24","25-29","30-34","35-39","40-44","45-49","50-54","55-59","60-64","65+"]
     for age in AGE_ORDER:
-        d = age_results.get(age, {})
-        val = round(float(d.get(latest_period, 0)), 1) if latest_period else 0
+        val = round(by_age.get(age, 0.0), 1)
         if val > 0:
             age_data.append({"age": age, "value": val})
 
     # Build trend (total TX_CURR across all ages)
     trend = []
     for p in sorted_periods:
-        total = sum(round(float(age_results.get(a, {}).get(p, 0)), 1) for a in AGE_ORDER)
-        trend.append({"period": p, "label": p, "value": total})
+        total = sum(v for uid, v in cells.get(p, {}).items()
+                    if uid in COC_CELL_MAP)
+        trend.append({"period": p, "label": p, "value": round(total, 1)})
 
     return jsonify(json_safe({
         "ok": True,
@@ -1090,43 +1096,31 @@ def tx_new_gender_split() -> object:
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    FEMALE_DX = [
-        "X7QikQUsYB1", "MOqDhGiw7W6", "BFbmB3WxGPd", "xz2f0oONxQx",
-        "f59E1kimKqe", "UjIzCVxESAz", "Y4jKOMblgII", "hUHq4KO9YMz",
-        "tWTgIibsKJ5", "AFdikiNpC3e", "GMoRCzegC6C", "Bs5etPcLz7w",
-        "Ps8a7Mv1xIn", "sQcd8UD8Mrs",
-    ]
-    MALE_DX = [
-        "s9iBEnfSHhh", "JprDjnAyB0f", "PG5Ynz9xGCu", "SNOcc1Tq2iH",
-        "VqYNMLji5U5", "wJWCrZVh1iu", "jjXJNig8fxs", "Lbs5RUpnwPD",
-        "cQrYHDWkY2y", "QRV2YRNGYJ6", "Mt9G8jCODUw", "FDRjPKGGVC9",
-        "ShO7o3bHsNr", "ivLPgJtKgcN",
-    ]
+    # TX_NEW uses the same 30 shared age x sex COCs, so one COC-split request
+    # over the Jamii "TX_NEW: Starting ART" element plus the CHAP Stawisha
+    # CD4 trio (TX_New CD4<200 / >200 / unknown) covers all 259 facilities.
+    TX_NEW_DX = INDICATOR_SPECS["tx_new"]["aggregate"]
 
     try:
-        results = {}
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            f_fut = executor.submit(_dhis2_fetch, ";".join(FEMALE_DX), ou_id, pe, None)
-            m_fut = executor.submit(_dhis2_fetch, ";".join(MALE_DX), ou_id, pe, None)
-            for fut in as_completed([f_fut, m_fut]):
-                try:
-                    data = fut.result()
-                except Exception:
-                    data = {}
-                results["female" if fut == f_fut else "male"] = data
+        cells = _chak_analytics_coc_cells(TX_NEW_DX, ou_id, pe)
     except Exception as exc:
         return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
 
-    female_data = results.get("female", {})
-    male_data = results.get("male", {})
-    all_periods = sorted(set(list(female_data.keys()) + list(male_data.keys())), key=_period_sort_key)
+    all_periods = sorted(cells.keys(), key=_period_sort_key)
     trend = []
     for p in all_periods:
-        f_val = round(float(female_data.get(p, 0)), 1)
-        m_val = round(float(male_data.get(p, 0)), 1)
-        trend.append({"period": p, "label": p, "female": f_val, "male": m_val})
-    latest_f = round(float(female_data.get(all_periods[-1], 0)), 1) if all_periods else 0
-    latest_m = round(float(male_data.get(all_periods[-1], 0)), 1) if all_periods else 0
+        f_val = m_val = 0.0
+        for uid, val in cells.get(p, {}).items():
+            sex = COC_CELL_MAP.get(uid, ("", ""))[1]
+            if sex == "F":
+                f_val += val
+            elif sex == "M":
+                m_val += val
+        trend.append({"period": p, "label": p,
+                      "female": round(f_val, 1), "male": round(m_val, 1)})
+
+    latest_f = trend[-1]["female"] if trend else 0
+    latest_m = trend[-1]["male"] if trend else 0
     return jsonify(json_safe({
         "ok": True, "male": latest_m, "female": latest_f,
         "total": latest_f + latest_m,
@@ -1144,50 +1138,28 @@ def tx_new_age_split() -> object:
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
-    AGE_DX_MAP = {
-        "1-4": "X7QikQUsYB1;s9iBEnfSHhh",
-        "5-9": "MOqDhGiw7W6;JprDjnAyB0f",
-        "10-14": "BFbmB3WxGPd;PG5Ynz9xGCu",
-        "15-19": "xz2f0oONxQx;SNOcc1Tq2iH",
-        "20-24": "f59E1kimKqe;VqYNMLji5U5",
-        "25-29": "UjIzCVxESAz;wJWCrZVh1iu",
-        "30-34": "Y4jKOMblgII;jjXJNig8fxs",
-        "35-39": "hUHq4KO9YMz;Lbs5RUpnwPD",
-        "40-44": "tWTgIibsKJ5;cQrYHDWkY2y",
-        "45-49": "AFdikiNpC3e;QRV2YRNGYJ6",
-        "50-54": "GMoRCzegC6C;Mt9G8jCODUw",
-        "55-59": "Bs5etPcLz7w;FDRjPKGGVC9",
-        "60-64": "Ps8a7Mv1xIn;ShO7o3bHsNr",
-        "65+": "sQcd8UD8Mrs;ivLPgJtKgcN",
-    }
-    AGE_ORDER = ["1-4","5-9","10-14","15-19","20-24","25-29","30-34","35-39","40-44","45-49","50-54","55-59","60-64","65+"]
+    # Same shared 30 age x sex COCs as TX_CURR. Zero-value bands are dropped
+    # from the payload below, so keeping the full band list keeps age_data
+    # summing to the same total as tx-new-gender-split.
+    AGE_ORDER = list(COC_AGE_BANDS)
+    TX_NEW_DX = INDICATOR_SPECS["tx_new"]["aggregate"]
 
     try:
-        age_results = {}
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            fut_map = {}
-            for age_label, dx_ids in AGE_DX_MAP.items():
-                fut = executor.submit(_dhis2_fetch, dx_ids, ou_id, pe, None)
-                fut_map[fut] = age_label
-            for fut in as_completed(fut_map):
-                age_label = fut_map[fut]
-                try:
-                    data = fut.result()
-                except Exception:
-                    data = {}
-                age_results[age_label] = data
+        cells = _chak_analytics_coc_cells(TX_NEW_DX, ou_id, pe)
     except Exception as exc:
         return jsonify(json_safe({"ok": False, "error": str(exc)})), 500
 
-    all_periods = set()
-    for age_data in age_results.values():
-        all_periods.update(age_data.keys())
-    sorted_periods = sorted(all_periods, key=_period_sort_key)
+    sorted_periods = sorted(cells.keys(), key=_period_sort_key)
     latest_period = sorted_periods[-1] if sorted_periods else ""
+    by_age: dict[str, float] = {a: 0.0 for a in AGE_ORDER}
+    for uid, val in cells.get(latest_period, {}).items():
+        band = COC_CELL_MAP.get(uid, (None, ""))[0]
+        if band:
+            by_age[band] = by_age.get(band, 0.0) + val
+
     age_data = []
     for age in AGE_ORDER:
-        d = age_results.get(age, {})
-        val = round(float(d.get(latest_period, 0)), 1) if latest_period else 0
+        val = round(by_age.get(age, 0.0), 1)
         if val > 0:
             age_data.append({"age": age, "value": val})
     return jsonify(json_safe({
@@ -1206,33 +1178,38 @@ def homepage_summary() -> object:
     county = (request.args.get("county") or "Meru County").strip()
     pe = (request.args.get("period") or "LAST_12_MONTHS").strip()
     sc_filter = request.args.get("subcounty", "").strip()
+    fac_filter = request.args.get("facility", "").strip()
 
-    ou_id, _ = _resolve_ou_ids(county, sc_filter or None, None)
+    ou_id, _ = _resolve_ou_ids(county, sc_filter or None, fac_filter or None)
 
     errors = []
     result = {}
 
-    # ── DX IDs ──
-    TX_NEW_DX = INDICATOR_SPECS["tx_new"]["aggregate"]    # vTTEybkXZ53
-    TX_CURR_DX = INDICATOR_SPECS["tx_curr"]["aggregate"]  # kgzd9LfXZXq
+    # ── DX IDs (each is the UNION of the Jamii + Stawisha namespaces) ──
+    TX_NEW_DX = INDICATOR_SPECS["tx_new"]["aggregate"]    # vTTEybkXZ53 + Stawisha CD4 trio
+    TX_CURR_DX = INDICATOR_SPECS["tx_curr"]["aggregate"]  # kgzd9LfXZXq + 8 regimen lines
 
-    # HTS entry-point DXs for tested count
-    HTS_TESTED_DX = [
-        "ymKviaHZtQN","vFlUDposW0Y","XKAlilawdhN","THJbtDzxplR",
-        "Lwtqyjus0Mb","QBsyLQZRdiH","XYhYAMivUX5","J4zibSjbBCt",
-    ]
-    HTS_POSITIVE_DX = "CcOr3MB7Mh4"
+    # HTS DXs — the two project sections, summed.  The PBIX measures
+    # `HTS Tested` and `HTS Positive` are UNION(our JTP, CHAP Stawisha), so
+    # pulling the halves separately keeps both attributable while the totals
+    # below match the report.
+    HTS_TESTED_OUR_DX = HTS_SPECS["hts_uptake"]["metrics"]["hts_tested_our"]["ids"]
+    HTS_TESTED_OTHER_DX = HTS_SPECS["hts_uptake"]["metrics"]["hts_tested_other"]["ids"]
+    HTS_POSITIVE_OUR_DX = HTS_SPECS["hts_uptake"]["metrics"]["hts_positive_our"]["ids"]
+    HTS_POSITIVE_OTHER_DX = HTS_SPECS["hts_uptake"]["metrics"]["hts_positive_other"]["ids"]
 
-    # ── Parallel fetch all 4 DX groups ──
+    # ── Parallel fetch all DX groups ──
     fetch_tasks = {
         "tx_new": TX_NEW_DX,
         "tx_curr": TX_CURR_DX,
-        "hts_tested": HTS_TESTED_DX,
-        "hts_positive": HTS_POSITIVE_DX,
+        "hts_tested_our": HTS_TESTED_OUR_DX,
+        "hts_tested_other": HTS_TESTED_OTHER_DX,
+        "hts_positive_our": HTS_POSITIVE_OUR_DX,
+        "hts_positive_other": HTS_POSITIVE_OTHER_DX,
     }
 
     fetched = {}
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         futures = {}
         for key, dx in fetch_tasks.items():
             futures[executor.submit(_dhis2_fetch, dx, ou_id, pe, None)] = key
@@ -1266,12 +1243,18 @@ def homepage_summary() -> object:
             "period": p, "label": _label(p),
             "value": round(float(fetched["tx_curr"].get(p, 0)), 1),
         })
-        tested = float(fetched["hts_tested"].get(p, 0))
-        positive = float(fetched["hts_positive"].get(p, 0))
+        tested = (float(fetched["hts_tested_our"].get(p, 0))
+                  + float(fetched["hts_tested_other"].get(p, 0)))
+        positive = (float(fetched["hts_positive_our"].get(p, 0))
+                    + float(fetched["hts_positive_other"].get(p, 0)))
         hts_trend.append({
             "period": p, "label": _label(p),
             "tested": round(tested, 1),
+            "tested_our": round(float(fetched["hts_tested_our"].get(p, 0)), 1),
+            "tested_other": round(float(fetched["hts_tested_other"].get(p, 0)), 1),
             "positive": round(positive, 1),
+            "positive_our": round(float(fetched["hts_positive_our"].get(p, 0)), 1),
+            "positive_other": round(float(fetched["hts_positive_other"].get(p, 0)), 1),
             "positivity_rate": round((positive / tested * 100) if tested > 0 else 0, 1),
         })
 
@@ -1279,16 +1262,25 @@ def homepage_summary() -> object:
     latest = all_periods[-1] if all_periods else None
     kpis = {}
     if latest:
+        l_tested_our = float(fetched["hts_tested_our"].get(latest, 0))
+        l_tested_other = float(fetched["hts_tested_other"].get(latest, 0))
+        l_pos_our = float(fetched["hts_positive_our"].get(latest, 0))
+        l_pos_other = float(fetched["hts_positive_other"].get(latest, 0))
+        l_tested = l_tested_our + l_tested_other
+        l_positive = l_pos_our + l_pos_other
         kpis = {
             "label": _label(latest),
             "tx_curr": round(float(fetched["tx_curr"].get(latest, 0)), 1),
             "tx_new": round(float(fetched["tx_new"].get(latest, 0)), 1),
-            "hts_tested": round(float(fetched["hts_tested"].get(latest, 0)), 1),
-            "hts_positive": round(float(fetched["hts_positive"].get(latest, 0)), 1),
+            "hts_tested": round(l_tested, 1),
+            "hts_tested_our": round(l_tested_our, 1),
+            "hts_tested_other": round(l_tested_other, 1),
+            "hts_positive": round(l_positive, 1),
+            "hts_positive_our": round(l_pos_our, 1),
+            "hts_positive_other": round(l_pos_other, 1),
         }
         kpis["positivity_rate"] = round(
-            (kpis["hts_positive"] / kpis["hts_tested"] * 100)
-            if kpis["hts_tested"] > 0 else 0, 1
+            (l_positive / l_tested * 100) if l_tested > 0 else 0, 1
         )
 
     return jsonify(json_safe({

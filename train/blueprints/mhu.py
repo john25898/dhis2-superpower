@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import json
 from collections import OrderedDict, defaultdict
 
 import pandas as pd
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
-from services.dhis2 import CHAK_BASE, CHAK_PASS, CHAK_USER, _chak_analytics_fetch
+from services.dhis2 import (CHAK_PASS, CHAK_USER, _chak_analytics_fetch,
+                            chak_get)
 from services.khis import (
     KENYA_COUNTY_CENTERS,
     _get_facility_ward_map,
@@ -37,6 +39,12 @@ _MHU_MAPPING_INDEX = None
 # merged) census cache — the xlsx is parsed once per process and reused by
 # both facility-mapping and mhu-list.
 _DARJA_CACHE = None
+# Kenya county boundaries (data/kenya_counties.geojson, 11 MB).  Parsing it
+# per request cost ~15 s, so the serialized bytes are memoized.  The key is
+# the file's (mtime_ns, size), so dropping a new GeoJSON on disk is picked
+# up on the very next request — no restart, no manual cache bust.  The gzip
+# variant is memoized alongside it; see _county_geojson() for why.
+_COUNTY_GEOJSON_CACHE = None  # (key, payload_bytes, payload_gz_bytes, etag)
 
 
 # ── Daraja merged-project census (Site_Census - Daraja.xlsx) ──────────
@@ -423,17 +431,69 @@ def project_mhu_list():
     )
 
 
+def _county_geojson():
+    """Return (payload_bytes, payload_gz_bytes, etag) for the county GeoJSON.
+
+    The file is 11 MB, so the old `json.load` + `jsonify` per request cost
+    ~15 s and re-serialized an unchanged document on every page load.  Parse
+    once and reuse; the cache key is the file's (mtime_ns, size) so replacing
+    the GeoJSON on disk invalidates it immediately.
+
+    The gzip body is produced and cached here rather than left to the
+    app-wide `compress_response` hook in app.py.  That hook runs on every
+    response whose body is >= 1 KB, and because werkzeug's
+    `make_conditional` deliberately keeps the body on a 304 (the WSGI layer
+    strips it afterwards), the hook was re-compressing all 11 MB on every
+    single request — including revalidations — at ~3 s a time.  Compressing
+    once collapses that to ~0 s.
+    """
+    global _COUNTY_GEOJSON_CACHE
+    geojson_path = BASE_DIR / "data" / "kenya_counties.geojson"
+    stat = geojson_path.stat()          # FileNotFoundError if absent
+    key = (stat.st_mtime_ns, stat.st_size)
+    cached = _COUNTY_GEOJSON_CACHE
+    if cached and cached[0] == key:
+        return cached[1], cached[2], cached[3]
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        payload = json.dumps(json.load(f), separators=(",", ":")).encode("utf-8")
+    # Level 6 is several times faster than the default 9 for a negligible
+    # size penalty on GeoJSON, and it only runs when the file changes.
+    payload_gz = gzip.compress(payload, compresslevel=6)
+    # NOTE: werkzeug's quote_etag() adds the surrounding quotes, so the raw
+    # value must be passed unquoted or set_etag() raises "invalid etag".
+    etag = "%d-%d" % (int(stat.st_mtime), stat.st_size)
+    _COUNTY_GEOJSON_CACHE = (key, payload, payload_gz, etag)
+    return payload, payload_gz, etag
+
+
 @mhu_bp.get("/api/kenya-counties")
 def kenya_counties_geojson():
-    """Serve Kenya county boundaries as GeoJSON for choropleth maps."""
-    geojson_path = BASE_DIR / "data" / "kenya_counties.geojson"
-    if not geojson_path.exists():
-        return jsonify({"error": "County boundary file not found"}), 404
+    """Serve Kenya county boundaries as GeoJSON for choropleth maps.
+
+    Served as pre-serialized (and pre-compressed) bytes with an ETag, so a
+    repeat page load gets a cheap 304 instead of re-parsing, re-gzipping and
+    re-sending 11 MB.  The GZIP variant carries its own ETag and both are
+    marked `Vary: Accept-Encoding` so caches keep the two apart.
+    """
     try:
-        with open(geojson_path, "r", encoding="utf-8") as f:
-            return jsonify(json.load(f))
-    except Exception as e:
+        payload, payload_gz, etag = _county_geojson()
+    except FileNotFoundError:
+        return jsonify({"error": "County boundary file not found"}), 404
+    except Exception as e:  # noqa: BLE001
         return jsonify({"error": str(e)}), 500
+
+    if "gzip" in (request.headers.get("Accept-Encoding") or "").lower():
+        resp = Response(payload_gz, mimetype="application/json")
+        # Setting Content-Encoding also makes the app-wide compress_response
+        # hook in app.py skip this response instead of re-compressing it.
+        resp.headers["Content-Encoding"] = "gzip"
+        resp.set_etag(etag + "-gz")
+    else:
+        resp = Response(payload, mimetype="application/json")
+        resp.set_etag(etag)
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["Vary"] = "Accept-Encoding"
+    return resp.make_conditional(request)
 
 
 # ── MHU endpoint (KHIS-sourced) ──────────────────────────────────
@@ -977,14 +1037,12 @@ def mhu_chak_program_indicators():
     """Query CHAK DHIS2 for HIV-related program indicators.
     Params: ?search=HIV (default) to search by name
     """
-    import requests as _req
     from requests.auth import HTTPBasicAuth
 
     search = request.args.get("search", "HIV")
     auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
 
     # First: search program indicators
-    pi_url = CHAK_BASE.rstrip("/") + "/programIndicators.json"
     pi_params = {
         "filter": f"name:ilike:{search}",
         "fields": "id,name,program[id,name],shortName",
@@ -992,7 +1050,8 @@ def mhu_chak_program_indicators():
     }
     pi_result = {"count": 0, "indicators": []}
     try:
-        resp = _req.get(pi_url, params=pi_params, auth=auth, verify=False, timeout=60)
+        resp = chak_get("/programIndicators.json", pi_params,
+                        read_timeout=60, auth=auth)
         if resp.ok:
             data = resp.json()
             pis = data.get("programIndicators", [])
@@ -1007,7 +1066,6 @@ def mhu_chak_program_indicators():
         pi_result["error"] = str(e)
 
     # Also: search data elements (in case program indicators not used)
-    de_url = CHAK_BASE.rstrip("/") + "/dataElements.json"
     de_params = {
         "filter": f"name:ilike:{search}",
         "fields": "id,name,shortName",
@@ -1015,7 +1073,8 @@ def mhu_chak_program_indicators():
     }
     de_result = {"count": 0, "elements": []}
     try:
-        resp = _req.get(de_url, params=de_params, auth=auth, verify=False, timeout=60)
+        resp = chak_get("/dataElements.json", de_params,
+                        read_timeout=60, auth=auth)
         if resp.ok:
             data = resp.json()
             des = data.get("dataElements", [])
@@ -1029,7 +1088,6 @@ def mhu_chak_program_indicators():
         de_result["error"] = str(e)
 
     # Also: list HIV programs
-    prog_url = CHAK_BASE.rstrip("/") + "/programs.json"
     prog_params = {
         "filter": f"name:ilike:{search}",
         "fields": "id,name,shortName",
@@ -1037,7 +1095,8 @@ def mhu_chak_program_indicators():
     }
     prog_result = {"count": 0, "programs": []}
     try:
-        resp = _req.get(prog_url, params=prog_params, auth=auth, verify=False, timeout=60)
+        resp = chak_get("/programs.json", prog_params,
+                        read_timeout=60, auth=auth)
         if resp.ok:
             data = resp.json()
             progs = data.get("programs", [])

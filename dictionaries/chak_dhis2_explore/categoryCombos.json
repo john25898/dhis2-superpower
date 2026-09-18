@@ -1,0 +1,2347 @@
+{
+  "categoryCombos": [
+    {
+      "name": "Age Bands in Months",
+      "categories": [
+        {
+          "name": "Age Bands in Months",
+          "categoryOptions": [
+            {
+              "name": "0 - 2 Months",
+              "id": "iXxSCqxcszF"
+            },
+            {
+              "name": "2 - 12 Months",
+              "id": "Ku0YMR4lXcq"
+            },
+            {
+              "name": "12+ Months",
+              "id": "CxRHqAPpaWQ"
+            }
+          ],
+          "id": "uFIOQk7pl2D"
+        }
+      ],
+      "id": "j5cCvw9FeF6"
+    },
+    {
+      "name": "ARV Dispensing",
+      "categories": [
+        {
+          "name": "ARV Dispensing Quantity",
+          "categoryOptions": [
+            {
+              "name": "<3 months of ARVs (not MMD)",
+              "id": "Kk8xe1lGSAQ"
+            },
+            {
+              "name": "3-5 months of ARVs",
+              "id": "v0zmLchwBXc"
+            },
+            {
+              "name": "6 or more months of ARVs",
+              "id": "aHTJsPBZ9i4"
+            }
+          ],
+          "id": "UwAR5nZCHrD"
+        },
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "rZVsSFq41SE"
+    },
+    {
+      "name": "Coarse Age Bands",
+      "categories": [
+        {
+          "name": "Coarse Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<15 years",
+              "id": "a0GETR0tKuG"
+            },
+            {
+              "name": "15+ years",
+              "id": "n2KXsyCrlnx"
+            }
+          ],
+          "id": "pzqSQhjPtPN"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "Q4HM8nSsgbz"
+    },
+    {
+      "name": "Coarse Age Bands, Gender and MMD",
+      "categories": [
+        {
+          "name": "Coarse Age",
+          "categoryOptions": [
+            {
+              "name": "Unknown Age",
+              "id": "YZgL4d4gcNt"
+            },
+            {
+              "name": "<15 years",
+              "id": "a0GETR0tKuG"
+            },
+            {
+              "name": "15+ years",
+              "id": "n2KXsyCrlnx"
+            }
+          ],
+          "id": "U43NteRI9WD"
+        },
+        {
+          "name": "ARV Dispensing Quantity",
+          "categoryOptions": [
+            {
+              "name": "<3 months of ARVs (not MMD)",
+              "id": "Kk8xe1lGSAQ"
+            },
+            {
+              "name": "3-5 months of ARVs",
+              "id": "v0zmLchwBXc"
+            },
+            {
+              "name": "6 or more months of ARVs",
+              "id": "aHTJsPBZ9i4"
+            }
+          ],
+          "id": "UwAR5nZCHrD"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "mUHUCqlWJEU"
+    },
+    {
+      "name": "COD, Sex and Age",
+      "categories": [
+        {
+          "name": "Cause of Death",
+          "categoryOptions": [
+            {
+              "name": "HIV Disease Resulting in Cancer",
+              "id": "xW3GdXcvVQj"
+            },
+            {
+              "name": "HIV Disease Resulting in Other Infectious and Parasitic Disease",
+              "id": "kK9Zzppylda"
+            },
+            {
+              "name": "HIV Disease Resulting in TB",
+              "id": "XtMeDB4tzzi"
+            },
+            {
+              "name": "Other Natural Causes",
+              "id": "dIzWJKxyqJE"
+            },
+            {
+              "name": "Non-Natural Causes",
+              "id": "E7MjlEis42P"
+            },
+            {
+              "name": "Unknown Cause",
+              "id": "AGHTi6jEWmT"
+            },
+            {
+              "name": "Other HIV Disease",
+              "id": "HhcvK3ZHvOP"
+            }
+          ],
+          "id": "TOu3ed0IA2O"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        }
+      ],
+      "id": "TDD71n9kaGO"
+    },
+    {
+      "name": "DATIM Finer Age Bands, Gender and HIV Results",
+      "categories": [
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "HIV Results",
+          "categoryOptions": [
+            {
+              "name": "HIV-",
+              "id": "Dxo1p5eRxMd"
+            },
+            {
+              "name": "HIV+",
+              "id": "S9ajlY8RHNR"
+            }
+          ],
+          "id": "xBrBiSOWisn"
+        }
+      ],
+      "id": "hxxnUQm3bpt"
+    },
+    {
+      "name": "default",
+      "categories": [
+        {
+          "name": "default",
+          "categoryOptions": [
+            {
+              "name": "default",
+              "id": "xYerKDKCefk"
+            }
+          ],
+          "id": "GLevLNI9wkl"
+        }
+      ],
+      "id": "bjDvmb4bfuf"
+    },
+    {
+      "name": "Finer Age Bands",
+      "categories": [
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        }
+      ],
+      "id": "cdtFUY2Qw5K"
+    },
+    {
+      "name": "Finer Age Bands and Gender",
+      "categories": [
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "Xl44oF9oRGM"
+    },
+    {
+      "name": "Funding Mechanism",
+      "categories": [
+        {
+          "name": "Funding Mechanism",
+          "categoryOptions": [
+            {
+              "name": "CHAK MHU",
+              "id": "yM9OkkiIfNN"
+            },
+            {
+              "name": "Jamii Tekelezi",
+              "id": "xvVJuvfQde5"
+            },
+            {
+              "name": "85745 - CHAP Stawisha",
+              "id": "FTELR4gVw36"
+            },
+            {
+              "name": "BfW Project",
+              "id": "cMIAjReW6Y6"
+            },
+            {
+              "name": "Gates Foundation - RMNCH",
+              "id": "IUisusZ1QOP"
+            },
+            {
+              "name": "ACS Project",
+              "id": "tGWqnHZ9LpT"
+            },
+            {
+              "name": "Gitlab project",
+              "id": "vHdO0zD5sCt"
+            }
+          ],
+          "id": "X9eni7U6Wlm"
+        }
+      ],
+      "id": "xBBcSSBmZjB"
+    },
+    {
+      "name": "HCA Outcomes Period",
+      "categories": [
+        {
+          "name": "HCA Outcomes",
+          "categoryOptions": [
+            {
+              "name": "HCA Outcomes at 12 Months",
+              "id": "LZ5YYBZ5DWC"
+            },
+            {
+              "name": "HCA Outcomes at 18 Months",
+              "id": "tbYnSm7lN5e"
+            }
+          ],
+          "id": "qgXTZXmK36Z"
+        }
+      ],
+      "id": "e1bSLB0Av7K"
+    },
+    {
+      "name": "KeyPop Categories",
+      "categories": [
+        {
+          "name": "KeyPop Categories",
+          "categoryOptions": [
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "People in prison",
+              "id": "D2JnoTtzibY"
+            }
+          ],
+          "id": "JgqptqpksG9"
+        }
+      ],
+      "id": "F1oaCOoNs0L"
+    },
+    {
+      "name": "KeyPop Categories and HIV Results",
+      "categories": [
+        {
+          "name": "KeyPop Categories",
+          "categoryOptions": [
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "People in prison",
+              "id": "D2JnoTtzibY"
+            }
+          ],
+          "id": "JgqptqpksG9"
+        },
+        {
+          "name": "HIV Results",
+          "categoryOptions": [
+            {
+              "name": "HIV-",
+              "id": "Dxo1p5eRxMd"
+            },
+            {
+              "name": "HIV+",
+              "id": "S9ajlY8RHNR"
+            }
+          ],
+          "id": "xBrBiSOWisn"
+        }
+      ],
+      "id": "XIpX06n1r71"
+    },
+    {
+      "name": "KeyPop Categories and outcome",
+      "categories": [
+        {
+          "name": "KeyPop Categories",
+          "categoryOptions": [
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "People in prison",
+              "id": "D2JnoTtzibY"
+            }
+          ],
+          "id": "JgqptqpksG9"
+        },
+        {
+          "name": "Outcomes",
+          "categoryOptions": [
+            {
+              "name": "Died",
+              "id": "hZKke8BKSJS"
+            },
+            {
+              "name": "Transferred Out",
+              "id": "FI3AoZ37e2t"
+            },
+            {
+              "name": "Refused (Stopped) Treatment",
+              "id": "VSaEmwwdBM0"
+            },
+            {
+              "name": "Interruption in Treatment (<3 Months Treatment)",
+              "id": "aYhgkCY97Ga"
+            },
+            {
+              "name": "Interruption in Treatment (3-5 Months Treatment)",
+              "id": "EDiSGvvIfoN"
+            },
+            {
+              "name": "Interruption In Treatment (6+ Months Treatment)",
+              "id": "l2jNAuxJvg9"
+            }
+          ],
+          "id": "TeWIs02giN0"
+        }
+      ],
+      "id": "tR2deVTOQ7v"
+    },
+    {
+      "name": "KeyPop Categories and Status",
+      "categories": [
+        {
+          "name": "KeyPop HIV Status",
+          "categoryOptions": [
+            {
+              "name": "Known Positive",
+              "id": "sRw0x0rsCx4"
+            },
+            {
+              "name": "Newly tested and / or referred for testing",
+              "id": "CbqqW0tY9pS"
+            },
+            {
+              "name": "Declined testing and / or referral",
+              "id": "haxX177W6cQ"
+            }
+          ],
+          "id": "KJs1bnRqtFq"
+        },
+        {
+          "name": "KeyPop Categories",
+          "categoryOptions": [
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "People in prison",
+              "id": "D2JnoTtzibY"
+            }
+          ],
+          "id": "JgqptqpksG9"
+        }
+      ],
+      "id": "Aa1IdLYwlwn"
+    },
+    {
+      "name": "Known Positive/New Positive",
+      "categories": [
+        {
+          "name": "Known Positive/New Positive",
+          "categoryOptions": [
+            {
+              "name": "Known Positive",
+              "id": "sRw0x0rsCx4"
+            },
+            {
+              "name": "New HIV Positive",
+              "id": "Fjz4xsOqHeq"
+            }
+          ],
+          "id": "gBQZPIhfPKy"
+        }
+      ],
+      "id": "H6oO2tUIj37"
+    },
+    {
+      "name": "Outcome, Sex and Age",
+      "categories": [
+        {
+          "name": "Outcomes",
+          "categoryOptions": [
+            {
+              "name": "Died",
+              "id": "hZKke8BKSJS"
+            },
+            {
+              "name": "Transferred Out",
+              "id": "FI3AoZ37e2t"
+            },
+            {
+              "name": "Refused (Stopped) Treatment",
+              "id": "VSaEmwwdBM0"
+            },
+            {
+              "name": "Interruption in Treatment (<3 Months Treatment)",
+              "id": "aYhgkCY97Ga"
+            },
+            {
+              "name": "Interruption in Treatment (3-5 Months Treatment)",
+              "id": "EDiSGvvIfoN"
+            },
+            {
+              "name": "Interruption In Treatment (6+ Months Treatment)",
+              "id": "l2jNAuxJvg9"
+            }
+          ],
+          "id": "TeWIs02giN0"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        }
+      ],
+      "id": "IhoCRe7t5jA"
+    },
+    {
+      "name": "OVC_HIVSTAT, Age Bands and Gender",
+      "categories": [
+        {
+          "name": "OVC_HIV Status",
+          "categoryOptions": [
+            {
+              "name": "OVC_Currently receiving ART",
+              "id": "kZJ4NQ7Zb6I"
+            },
+            {
+              "name": "OVC_No HIV status reported to the IP (HIV Status Unknown)",
+              "id": "gQwt6afSXHS"
+            },
+            {
+              "name": "OVC_Not Currently receiving ART or ART Status Unknown",
+              "id": "NND2p7Xmvz4"
+            },
+            {
+              "name": "OVC_Reported HIV Negative to IP",
+              "id": "Nr9eURINsY1"
+            },
+            {
+              "name": "OVC_Test not required based on risk assessment",
+              "id": "KQjp8SPbzVz"
+            }
+          ],
+          "id": "BYhXQq35RzI"
+        },
+        {
+          "name": "OVC Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "18+ years",
+              "id": "jct6MeJh7ld"
+            }
+          ],
+          "id": "ee1dqHBYFLL"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "yribXfThN21"
+    },
+    {
+      "name": "OVC_Preventive, Age Bands and Gender",
+      "categories": [
+        {
+          "name": "OVC Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "18+ years",
+              "id": "jct6MeJh7ld"
+            }
+          ],
+          "id": "ee1dqHBYFLL"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "DbT8NlUcTIM"
+    },
+    {
+      "name": "OVC_SERV, Age Bands and Gender",
+      "categories": [
+        {
+          "name": "OVC_SERV",
+          "categoryOptions": [
+            {
+              "name": "OVC",
+              "id": "TBunqhDDal1"
+            },
+            {
+              "name": "Caregivers",
+              "id": "KnCPZGhTTVs"
+            }
+          ],
+          "id": "TJWOU4YS3B3"
+        },
+        {
+          "name": "OVC Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "18+ years",
+              "id": "jct6MeJh7ld"
+            }
+          ],
+          "id": "ee1dqHBYFLL"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        }
+      ],
+      "id": "cRJjurn81uT"
+    },
+    {
+      "name": "OVC_SERV_Transfers",
+      "categories": [
+        {
+          "name": "OVC_SERV_Transfers",
+          "categoryOptions": [
+            {
+              "name": "Transferred out to a PEPFAR-supported partner",
+              "id": "E7rid1ZcGqs"
+            },
+            {
+              "name": "Transferred out to a non-PEPFAR supported partner",
+              "id": "vfTQaDbZRvA"
+            },
+            {
+              "name": "Exited without Graduation",
+              "id": "x4RWab0UMu8"
+            }
+          ],
+          "id": "kMYBCvATCfx"
+        }
+      ],
+      "id": "XMzfLAcifW9"
+    },
+    {
+      "name": "Preg/BF Categories",
+      "categories": [
+        {
+          "name": "Preg/BF Categories",
+          "categoryOptions": [
+            {
+              "name": "Pregnant",
+              "id": "GPMJgiexX66"
+            },
+            {
+              "name": "Breastfeeding",
+              "id": "DfrVev4fp4b"
+            }
+          ],
+          "id": "UXg6hD9HF2f"
+        }
+      ],
+      "id": "YLDcIWi2R9h"
+    },
+    {
+      "name": "PrEP Categories and Status",
+      "categories": [
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "PrEP Typologies",
+          "categoryOptions": [
+            {
+              "name": "AGYW",
+              "id": "pVjOsO7pD6n"
+            },
+            {
+              "name": "Other Women( 25+)",
+              "id": "tlb83wWz1Rf"
+            },
+            {
+              "name": "Men at high risk",
+              "id": "nIqMQUMpdFW"
+            },
+            {
+              "name": "Serodiscordant Couple",
+              "id": "hYFrCg0UhWJ"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "Pregnant",
+              "id": "GPMJgiexX66"
+            },
+            {
+              "name": "Breastfeeding",
+              "id": "DfrVev4fp4b"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            }
+          ],
+          "id": "KTRGjLOxUEZ"
+        }
+      ],
+      "id": "kmMtoZPzeqX"
+    },
+    {
+      "name": "PrEP Categories, Status and Reason",
+      "categories": [
+        {
+          "name": "PrEP Initiation Reasons",
+          "categoryOptions": [
+            {
+              "name": "Client has sex with more than one partner",
+              "id": "iIUPAP2LRv6"
+            },
+            {
+              "name": "Engaging in Transactional Sex",
+              "id": "j0FW8BtreQX"
+            },
+            {
+              "name": "Inconsistent or no condom use",
+              "id": "Tj2esuhwHcH"
+            },
+            {
+              "name": "Injection drug use",
+              "id": "h9tUDwNFqtS"
+            },
+            {
+              "name": "On going IPV/GBV",
+              "id": "eOrrNd2Ft5t"
+            },
+            {
+              "name": "Other Reasons",
+              "id": "kTIfFzFZ6yd"
+            },
+            {
+              "name": "Recent STI",
+              "id": "BeFuVpNVSbj"
+            },
+            {
+              "name": "Sero- Serodiscordant Couples trying to conceive",
+              "id": "apYjwfa6yxV"
+            },
+            {
+              "name": "Sex Partner High Risk",
+              "id": "NfMOb3yWUIw"
+            },
+            {
+              "name": "Partner Positive",
+              "id": "kIHtKPPzKQz"
+            },
+            {
+              "name": "Recurrent use of PEP",
+              "id": "fPcU0vOCJvs"
+            }
+          ],
+          "id": "pJ5ada6upJW"
+        },
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "PrEP Typologies",
+          "categoryOptions": [
+            {
+              "name": "AGYW",
+              "id": "pVjOsO7pD6n"
+            },
+            {
+              "name": "Other Women( 25+)",
+              "id": "tlb83wWz1Rf"
+            },
+            {
+              "name": "Men at high risk",
+              "id": "nIqMQUMpdFW"
+            },
+            {
+              "name": "Serodiscordant Couple",
+              "id": "hYFrCg0UhWJ"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "Pregnant",
+              "id": "GPMJgiexX66"
+            },
+            {
+              "name": "Breastfeeding",
+              "id": "DfrVev4fp4b"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            }
+          ],
+          "id": "KTRGjLOxUEZ"
+        }
+      ],
+      "id": "DvrOaCCSmiH"
+    },
+    {
+      "name": "PrEP Categories, Status and Visit",
+      "categories": [
+        {
+          "name": "Finer Age Bands",
+          "categoryOptions": [
+            {
+              "name": "<1 year",
+              "id": "CVJ2fn08Uth"
+            },
+            {
+              "name": "1-4 years",
+              "id": "k2iti740Ncz"
+            },
+            {
+              "name": "1-9 years",
+              "id": "UMoMWTJRI3J"
+            },
+            {
+              "name": "5-9 years",
+              "id": "OeVK6h4JGN1"
+            },
+            {
+              "name": "10-14 years",
+              "id": "ILlpDaXEmQm"
+            },
+            {
+              "name": "15-17 years",
+              "id": "JsHZUGVojhl"
+            },
+            {
+              "name": "15-19 years",
+              "id": "QDUrG4hcGz8"
+            },
+            {
+              "name": "15-24 years",
+              "id": "EOQTZMOJZUt"
+            },
+            {
+              "name": "18-19 years",
+              "id": "l7JRFeWlSUu"
+            },
+            {
+              "name": "18-20 years",
+              "id": "N7qu8Tsri05"
+            },
+            {
+              "name": "20-24 years",
+              "id": "GwbYBltvqu7"
+            },
+            {
+              "name": "25+ years",
+              "id": "H7E3BDY1KIw"
+            },
+            {
+              "name": "25-29 years",
+              "id": "rulMjoSDYlM"
+            },
+            {
+              "name": "25-49 years",
+              "id": "g3iSUjMC3W5"
+            },
+            {
+              "name": "<30 years",
+              "id": "fwR9ABYNpSR"
+            },
+            {
+              "name": "30-34 years",
+              "id": "TSe5lAJqAgT"
+            },
+            {
+              "name": "30-39 years",
+              "id": "RsOV3ucga2j"
+            },
+            {
+              "name": "35-39 years",
+              "id": "J6GmKLFQZ5v"
+            },
+            {
+              "name": "40-44 years",
+              "id": "mvfAKOHoR4o"
+            },
+            {
+              "name": "40-49 years",
+              "id": "Vq4KgkJJRqD"
+            },
+            {
+              "name": "45-49 years",
+              "id": "Uj7qcxH3IFa"
+            },
+            {
+              "name": "50+ years",
+              "id": "ysjsmdtiw0R"
+            },
+            {
+              "name": "50-54 years",
+              "id": "VBVcqSPEWgj"
+            },
+            {
+              "name": "50-59 years",
+              "id": "VRj0rEF3Wgg"
+            },
+            {
+              "name": "55-59 years",
+              "id": "da5YeKckRdJ"
+            },
+            {
+              "name": "60-64 years",
+              "id": "usAWYrOBBUn"
+            },
+            {
+              "name": "60+ years",
+              "id": "rijM22aeSdS"
+            },
+            {
+              "name": "65+ years",
+              "id": "xztE2Jo0CMg"
+            }
+          ],
+          "id": "PiDJ9GbMZ0B"
+        },
+        {
+          "name": "Sex",
+          "categoryOptions": [
+            {
+              "name": "Female",
+              "id": "dT27AGatVqt"
+            },
+            {
+              "name": "Male",
+              "id": "V0STnqSEsmU"
+            }
+          ],
+          "id": "T0f1LB7a870"
+        },
+        {
+          "name": "PrEP Typologies",
+          "categoryOptions": [
+            {
+              "name": "AGYW",
+              "id": "pVjOsO7pD6n"
+            },
+            {
+              "name": "Other Women( 25+)",
+              "id": "tlb83wWz1Rf"
+            },
+            {
+              "name": "Men at high risk",
+              "id": "nIqMQUMpdFW"
+            },
+            {
+              "name": "Serodiscordant Couple",
+              "id": "hYFrCg0UhWJ"
+            },
+            {
+              "name": "MSM",
+              "id": "PJpqGW1olGz"
+            },
+            {
+              "name": "FSW",
+              "id": "wL2JK0IsRRY"
+            },
+            {
+              "name": "PWID",
+              "id": "L9p76uC3RR7"
+            },
+            {
+              "name": "Pregnant",
+              "id": "GPMJgiexX66"
+            },
+            {
+              "name": "Breastfeeding",
+              "id": "DfrVev4fp4b"
+            },
+            {
+              "name": "Transgender",
+              "id": "Co9LTr2RQJX"
+            }
+          ],
+          "id": "KTRGjLOxUEZ"
+        },
+        {
+          "name": "Prep Visit Type",
+          "categoryOptions": [],
+          "id": "Q57rhFHhD5x"
+        }
+      ],
+      "id": "ORpFjVYRa4R"
+    },
+    {
+      "name": "Prep Distribution",
+      "categories": [
+        {
+          "name": "Prep Distribution",
+          "categoryOptions": [
+            {
+              "name": "Facility",
+              "id": "yspjdf014cp"
+            },
+            {
+              "name": "Community",
+              "id": "c4gZ8cIhoI6"
+            }
+          ],
+          "id": "Iz2FsOhEVK5"
+        }
+      ],
+      "id": "XqKUuoCeelq"
+    },
+    {
+      "name": "Prep Test Result",
+      "categories": [
+        {
+          "name": "PrEP Test Result",
+          "categoryOptions": [
+            {
+              "name": "HIV-",
+              "id": "Dxo1p5eRxMd"
+            },
+            {
+              "name": "HIV+",
+              "id": "S9ajlY8RHNR"
+            },
+            {
+              "name": "<3 months PreP",
+              "id": "eSaozZdOqO5"
+            }
+          ],
+          "id": "mWaygEywlFk"
+        }
+      ],
+      "id": "paDbpnpx8Br"
+    },
+    {
+      "name": "Prep Type",
+      "categories": [
+        {
+          "name": "Prep Type",
+          "categoryOptions": [
+            {
+              "name": "Oral",
+              "id": "zEBgHW8BHyo"
+            },
+            {
+              "name": "Injectible",
+              "id": "LM6p2C3rsQK"
+            },
+            {
+              "name": "Other",
+              "id": "XxUOmQDryJA"
+            }
+          ],
+          "id": "mBttpiKDHhU"
+        }
+      ],
+      "id": "TWZLKLpSoDW"
+    },
+    {
+      "name": "Project",
+      "categories": [
+        {
+          "name": "Project",
+          "categoryOptions": [
+            {
+              "name": "85745 - CHAP Stawisha",
+              "id": "FTELR4gVw36"
+            },
+            {
+              "name": "Jamii Tekelezi",
+              "id": "xvVJuvfQde5"
+            },
+            {
+              "name": "ACS Project",
+              "id": "tGWqnHZ9LpT"
+            },
+            {
+              "name": "BfW Project",
+              "id": "cMIAjReW6Y6"
+            },
+            {
+              "name": "CHAK MHU",
+              "id": "yM9OkkiIfNN"
+            },
+            {
+              "name": "Gates Foundation - RMNCH",
+              "id": "IUisusZ1QOP"
+            },
+            {
+              "name": "Gitlab project",
+              "id": "vHdO0zD5sCt"
+            }
+          ],
+          "id": "FXXHYCFmqV6"
+        }
+      ],
+      "id": "KtHoTGIqhUW"
+    },
+    {
+      "name": "Screen_Type",
+      "categories": [
+        {
+          "name": "TB Screen Type",
+          "categoryOptions": [
+            {
+              "name": "Chest X-Ray",
+              "id": "cOLzLGcojjL"
+            },
+            {
+              "name": "Molecular WHO-Recommended Diagnostic Test (mWRD)",
+              "id": "pvB517BzDU6"
+            },
+            {
+              "name": "Symptom Screen Only",
+              "id": "uvBxARMzgRd"
+            }
+          ],
+          "id": "hENpLraeIwg"
+        }
+      ],
+      "id": "fpMThnEqck0"
+    },
+    {
+      "name": "TX_RTT IIT",
+      "categories": [
+        {
+          "name": "TX_RTT IIT",
+          "categoryOptions": [
+            {
+              "name": "Interruption in Treatment (<3 Months Treatment)",
+              "id": "aYhgkCY97Ga"
+            },
+            {
+              "name": "Interruption in Treatment (3-5 Months Treatment)",
+              "id": "EDiSGvvIfoN"
+            },
+            {
+              "name": "Interruption In Treatment (6+ Months Treatment)",
+              "id": "l2jNAuxJvg9"
+            }
+          ],
+          "id": "dunUvULUt4u"
+        }
+      ],
+      "id": "AMO61jTherI"
+    },
+    {
+      "name": "TX_TB_Diagnostic Test",
+      "categories": [
+        {
+          "name": "Tx_TB_Diagnostic Test",
+          "categoryOptions": [
+            {
+              "name": "Smear Microscopy Only",
+              "id": "TQQz86HHYpR"
+            },
+            {
+              "name": "mWRD: Molecular  (with or without other testing)",
+              "id": "ETXRjzKcOkk"
+            },
+            {
+              "name": "Additional test other than mWRD",
+              "id": "ZcI2fQFwTmr"
+            }
+          ],
+          "id": "u5bn6GpCeBN"
+        }
+      ],
+      "id": "qnevFCzREaH"
+    }
+  ]
+}

@@ -1236,8 +1236,7 @@ function renderChakPage(container, slug, apiPageId) {
     </div>
   `;
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = selectedCountyParam();
   const projParam =
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
@@ -1288,4 +1287,3 @@ function renderChakPage(container, slug, apiPageId) {
 // ────────────────────────────────────────────────────────────
 // PROJECT PERFORMANCE MONITORING DASHBOARD (from Excel)
 // ────────────────────────────────────────────────────────────
-

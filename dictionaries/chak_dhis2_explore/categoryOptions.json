@@ -1,0 +1,488 @@
+{
+  "categoryOptions": [
+    {
+      "name": "0 - 2 Months",
+      "id": "iXxSCqxcszF"
+    },
+    {
+      "name": "10-14 years",
+      "id": "ILlpDaXEmQm"
+    },
+    {
+      "name": "12+ Months",
+      "id": "CxRHqAPpaWQ"
+    },
+    {
+      "name": "1-4 years",
+      "id": "k2iti740Ncz"
+    },
+    {
+      "name": "15-17 years",
+      "id": "JsHZUGVojhl"
+    },
+    {
+      "name": "15-19 years",
+      "id": "QDUrG4hcGz8"
+    },
+    {
+      "name": "15-24 years",
+      "id": "EOQTZMOJZUt"
+    },
+    {
+      "name": "<15 years",
+      "id": "a0GETR0tKuG"
+    },
+    {
+      "name": "15+ years",
+      "id": "n2KXsyCrlnx"
+    },
+    {
+      "name": "18-19 years",
+      "id": "l7JRFeWlSUu"
+    },
+    {
+      "name": "18-20 years",
+      "id": "N7qu8Tsri05"
+    },
+    {
+      "name": "18+ years",
+      "id": "jct6MeJh7ld"
+    },
+    {
+      "name": "1-9 years",
+      "id": "UMoMWTJRI3J"
+    },
+    {
+      "name": "<1 year",
+      "id": "CVJ2fn08Uth"
+    },
+    {
+      "name": "20-24 years",
+      "id": "GwbYBltvqu7"
+    },
+    {
+      "name": "2 - 12 Months",
+      "id": "Ku0YMR4lXcq"
+    },
+    {
+      "name": "25-29 years",
+      "id": "rulMjoSDYlM"
+    },
+    {
+      "name": "25-49 years",
+      "id": "g3iSUjMC3W5"
+    },
+    {
+      "name": "25+ years",
+      "id": "H7E3BDY1KIw"
+    },
+    {
+      "name": "30-34 years",
+      "id": "TSe5lAJqAgT"
+    },
+    {
+      "name": "30-39 years",
+      "id": "RsOV3ucga2j"
+    },
+    {
+      "name": "<30 years",
+      "id": "fwR9ABYNpSR"
+    },
+    {
+      "name": "35-39 years",
+      "id": "J6GmKLFQZ5v"
+    },
+    {
+      "name": "3-5 months of ARVs",
+      "id": "v0zmLchwBXc"
+    },
+    {
+      "name": "<3 months of ARVs (not MMD)",
+      "id": "Kk8xe1lGSAQ"
+    },
+    {
+      "name": "<3 months PreP",
+      "id": "eSaozZdOqO5"
+    },
+    {
+      "name": "40-44 years",
+      "id": "mvfAKOHoR4o"
+    },
+    {
+      "name": "40-49 years",
+      "id": "Vq4KgkJJRqD"
+    },
+    {
+      "name": "45-49 years",
+      "id": "Uj7qcxH3IFa"
+    },
+    {
+      "name": "50-54 years",
+      "id": "VBVcqSPEWgj"
+    },
+    {
+      "name": "50-59 years",
+      "id": "VRj0rEF3Wgg"
+    },
+    {
+      "name": "50+ years",
+      "id": "ysjsmdtiw0R"
+    },
+    {
+      "name": "55-59 years",
+      "id": "da5YeKckRdJ"
+    },
+    {
+      "name": "5-9 years",
+      "id": "OeVK6h4JGN1"
+    },
+    {
+      "name": "60-64 years",
+      "id": "usAWYrOBBUn"
+    },
+    {
+      "name": "60+ years",
+      "id": "rijM22aeSdS"
+    },
+    {
+      "name": "65+ years",
+      "id": "xztE2Jo0CMg"
+    },
+    {
+      "name": "6 or more months of ARVs",
+      "id": "aHTJsPBZ9i4"
+    },
+    {
+      "name": "85745 - CHAP Stawisha",
+      "id": "FTELR4gVw36"
+    },
+    {
+      "name": "ACS Project",
+      "id": "tGWqnHZ9LpT"
+    },
+    {
+      "name": "Additional test other than mWRD",
+      "id": "ZcI2fQFwTmr"
+    },
+    {
+      "name": "AGYW",
+      "id": "pVjOsO7pD6n"
+    },
+    {
+      "name": "BfW Project",
+      "id": "cMIAjReW6Y6"
+    },
+    {
+      "name": "Breastfeeding",
+      "id": "DfrVev4fp4b"
+    },
+    {
+      "name": "Caregivers",
+      "id": "KnCPZGhTTVs"
+    },
+    {
+      "name": " CD4 >=200",
+      "id": "TQXmvbyCony"
+    },
+    {
+      "name": "CD4 < 200",
+      "id": "Jh1bs6Qnp76"
+    },
+    {
+      "name": "CD4 Not Eligible",
+      "id": "whFcEEBki9F"
+    },
+    {
+      "name": " CD4 Unknown",
+      "id": "skPBdQUrRTn"
+    },
+    {
+      "name": "CHAK MHU",
+      "id": "yM9OkkiIfNN"
+    },
+    {
+      "name": "CHAP STAWISHA",
+      "id": "ZR8TeNLEjeO"
+    },
+    {
+      "name": "Chest X-Ray",
+      "id": "cOLzLGcojjL"
+    },
+    {
+      "name": "Client has sex with more than one partner",
+      "id": "iIUPAP2LRv6"
+    },
+    {
+      "name": "Community",
+      "id": "c4gZ8cIhoI6"
+    },
+    {
+      "name": "Declined testing and / or referral",
+      "id": "haxX177W6cQ"
+    },
+    {
+      "name": "default",
+      "id": "xYerKDKCefk"
+    },
+    {
+      "name": "Died",
+      "id": "hZKke8BKSJS"
+    },
+    {
+      "name": "Engaging in Transactional Sex",
+      "id": "j0FW8BtreQX"
+    },
+    {
+      "name": "Exited without Graduation",
+      "id": "x4RWab0UMu8"
+    },
+    {
+      "name": "Facility",
+      "id": "yspjdf014cp"
+    },
+    {
+      "name": "Female",
+      "id": "dT27AGatVqt"
+    },
+    {
+      "name": "FSW",
+      "id": "wL2JK0IsRRY"
+    },
+    {
+      "name": "Gates Foundation - RMNCH",
+      "id": "IUisusZ1QOP"
+    },
+    {
+      "name": "Gitlab project",
+      "id": "vHdO0zD5sCt"
+    },
+    {
+      "name": "HCA Outcomes at 12 Months",
+      "id": "LZ5YYBZ5DWC"
+    },
+    {
+      "name": "HCA Outcomes at 18 Months",
+      "id": "tbYnSm7lN5e"
+    },
+    {
+      "name": "HIV+",
+      "id": "S9ajlY8RHNR"
+    },
+    {
+      "name": "HIV-",
+      "id": "Dxo1p5eRxMd"
+    },
+    {
+      "name": "HIV Disease Resulting in Cancer",
+      "id": "xW3GdXcvVQj"
+    },
+    {
+      "name": "HIV Disease Resulting in Other Infectious and Parasitic Disease",
+      "id": "kK9Zzppylda"
+    },
+    {
+      "name": "HIV Disease Resulting in TB",
+      "id": "XtMeDB4tzzi"
+    },
+    {
+      "name": "Inconsistent or no condom use",
+      "id": "Tj2esuhwHcH"
+    },
+    {
+      "name": "Injectible",
+      "id": "LM6p2C3rsQK"
+    },
+    {
+      "name": "Injection drug use",
+      "id": "h9tUDwNFqtS"
+    },
+    {
+      "name": "Interruption in Treatment (3-5 Months Treatment)",
+      "id": "EDiSGvvIfoN"
+    },
+    {
+      "name": "Interruption in Treatment (<3 Months Treatment)",
+      "id": "aYhgkCY97Ga"
+    },
+    {
+      "name": "Interruption In Treatment (6+ Months Treatment)",
+      "id": "l2jNAuxJvg9"
+    },
+    {
+      "name": "Jamii Tekelezi",
+      "id": "xvVJuvfQde5"
+    },
+    {
+      "name": "Known Positive",
+      "id": "sRw0x0rsCx4"
+    },
+    {
+      "name": "Male",
+      "id": "V0STnqSEsmU"
+    },
+    {
+      "name": "Men at high risk",
+      "id": "nIqMQUMpdFW"
+    },
+    {
+      "name": "Molecular WHO-Recommended Diagnostic Test (mWRD)",
+      "id": "pvB517BzDU6"
+    },
+    {
+      "name": "MSM",
+      "id": "PJpqGW1olGz"
+    },
+    {
+      "name": "mWRD: Molecular  (with or without other testing)",
+      "id": "ETXRjzKcOkk"
+    },
+    {
+      "name": "New HIV Positive",
+      "id": "Fjz4xsOqHeq"
+    },
+    {
+      "name": "Newly tested and / or referred for testing",
+      "id": "CbqqW0tY9pS"
+    },
+    {
+      "name": "Non-Natural Causes",
+      "id": "E7MjlEis42P"
+    },
+    {
+      "name": "On going IPV/GBV",
+      "id": "eOrrNd2Ft5t"
+    },
+    {
+      "name": "Oral",
+      "id": "zEBgHW8BHyo"
+    },
+    {
+      "name": "Other",
+      "id": "XxUOmQDryJA"
+    },
+    {
+      "name": "Other HIV Disease",
+      "id": "HhcvK3ZHvOP"
+    },
+    {
+      "name": "Other Natural Causes",
+      "id": "dIzWJKxyqJE"
+    },
+    {
+      "name": "Other Reasons",
+      "id": "kTIfFzFZ6yd"
+    },
+    {
+      "name": "Other Women( 25+)",
+      "id": "tlb83wWz1Rf"
+    },
+    {
+      "name": "OVC",
+      "id": "TBunqhDDal1"
+    },
+    {
+      "name": "OVC_Currently receiving ART",
+      "id": "kZJ4NQ7Zb6I"
+    },
+    {
+      "name": "OVC_No HIV status reported to the IP (HIV Status Unknown)",
+      "id": "gQwt6afSXHS"
+    },
+    {
+      "name": "OVC_Not Currently receiving ART or ART Status Unknown",
+      "id": "NND2p7Xmvz4"
+    },
+    {
+      "name": "OVC_Reported HIV Negative to IP",
+      "id": "Nr9eURINsY1"
+    },
+    {
+      "name": "OVC_Test not required based on risk assessment",
+      "id": "KQjp8SPbzVz"
+    },
+    {
+      "name": "Partner Positive",
+      "id": "kIHtKPPzKQz"
+    },
+    {
+      "name": "People in prison",
+      "id": "D2JnoTtzibY"
+    },
+    {
+      "name": "Pregnant",
+      "id": "GPMJgiexX66"
+    },
+    {
+      "name": "Project",
+      "id": "lkytjMbT6Vn"
+    },
+    {
+      "name": "PWID",
+      "id": "L9p76uC3RR7"
+    },
+    {
+      "name": "Recent STI",
+      "id": "BeFuVpNVSbj"
+    },
+    {
+      "name": "Recurrent use of PEP",
+      "id": "fPcU0vOCJvs"
+    },
+    {
+      "name": "Refused (Stopped) Treatment",
+      "id": "VSaEmwwdBM0"
+    },
+    {
+      "name": "Restarting PrEP",
+      "id": "URZ6VQrpHMd"
+    },
+    {
+      "name": "Serodiscordant Couple",
+      "id": "hYFrCg0UhWJ"
+    },
+    {
+      "name": "Sero- Serodiscordant Couples trying to conceive",
+      "id": "apYjwfa6yxV"
+    },
+    {
+      "name": "Sex Partner High Risk",
+      "id": "NfMOb3yWUIw"
+    },
+    {
+      "name": "Smear Microscopy Only",
+      "id": "TQQz86HHYpR"
+    },
+    {
+      "name": "Symptom Screen Only",
+      "id": "uvBxARMzgRd"
+    },
+    {
+      "name": "Transferred Out",
+      "id": "FI3AoZ37e2t"
+    },
+    {
+      "name": "Transferred out to a non-PEPFAR supported partner",
+      "id": "vfTQaDbZRvA"
+    },
+    {
+      "name": "Transferred out to a PEPFAR-supported partner",
+      "id": "E7rid1ZcGqs"
+    },
+    {
+      "name": "Transgender",
+      "id": "Co9LTr2RQJX"
+    },
+    {
+      "name": "Undefined Sex",
+      "id": "It4dKAH8k30"
+    },
+    {
+      "name": "Unknown Age",
+      "id": "YZgL4d4gcNt"
+    },
+    {
+      "name": "Unknown Cause",
+      "id": "AGHTi6jEWmT"
+    }
+  ]
+}

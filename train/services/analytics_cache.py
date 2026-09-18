@@ -99,7 +99,13 @@ def store(key: Hashable, value: Any, ttl: float = DEFAULT_TTL) -> None:
             # If still at cap, drop the whole cache (simple, rare).
             if len(_CACHE) >= _MAX_ENTRIES:
                 _CACHE.clear()
-        _CACHE[key] = (time.monotonic() + ttl, value)
+        # Deep copy on WRITE as well as on read.  Callers such as
+        # `pbix_dashboards._dhis2_fetch` cache-miss path return the stored
+        # object to the caller by reference; without this copy a caller that
+        # mutates the returned dict (e.g. merging a second arm into it) would
+        # silently overwrite the cached value, and every later request would
+        # read the already-merged figure and merge again.
+        _CACHE[key] = (time.monotonic() + ttl, copy.deepcopy(value))
 
 
 def clear() -> None:

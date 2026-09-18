@@ -129,7 +129,10 @@ function milestoneEmptyCell() {
 
 // =====================================================================
 // Live KHIS performance helpers (milestone rows carry row.perf when the
-// milestone is measured from CHAK DHIS2 MOH 731 data — ids 6,7,8,9,15,16).
+// milestone is measured from CHAK DHIS2 MOH 731 data - ids 6,7,8,9,11,14,15,16
+// - or, for #21 Commodity Security, from KHIS national commodity-return rates).
+// The same baseline is attached to every project month M1–M6; the
+// "Monthly Payments - Earned" cell derives the schedule max × unlock %.
 // =====================================================================
 function msPerformanceCell(perf) {
   if (!perf) return milestoneEmptyCell();
@@ -200,7 +203,7 @@ function msKhisChipHtml(khis) {
 function msKhisNoteHtml(khis) {
   if (!khis || khis.status !== "ok") return "";
   return (
-    " The seven DHIS2-measurable milestones (6–9, 11, 15, 16) show a live baseline from the CHAK DHIS2 (MOH 731) " +
+    " The nine DHIS2-measurable milestones (6–9, 11, 14, 15, 16, 21) show a live baseline from the CHAK DHIS2 (MOH 731) " +
     escapeHtml(String(khis.asOf || "latest reporting month")) +
     " month across " +
     (Number(khis.matched) || 0) +

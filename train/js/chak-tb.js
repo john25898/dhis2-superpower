@@ -34,31 +34,31 @@ registerChakRenderer("tb", "tb", function (el, data) {
     existingHtml +
     `
     <div class="chak-page-info" style="margin-top:0">
-      <h2><i class="fas fa-lungs"></i> TB Cascade · Screening → Diagnosis → ART Integration</h2>
-      <p>TB screening-to-treatment cascade: Everyone screened → confirmed TB+ → linked to ART</p>
+      <h2><i class="fas fa-lungs"></i> TB Cascade · Testing → HIV Status Known → ART Integration</h2>
+      <p>TB cascade: TB cases with known HIV status → those who are HIV+ → linked to ART</p>
     </div>
 
     <!-- Row 1: Screening & Diagnosis -->
     <div class="chak-kpi-grid">
       <div class="chak-kpi-card">
-        <div class="chak-kpi-label">❶ TB Screened</div>
+        <div class="chak-kpi-label">❶ TB Cases with Known HIV Status</div>
         <div class="chak-kpi-value blue">${chakFmt(totScreened)}</div>
-        <div class="chak-kpi-sub">Total TB screening encounters (universe)</div>
+        <div class="chak-kpi-sub">TB_STAT(Num) — TB cases whose HIV status is known</div>
       </div>
       <div class="chak-kpi-card">
         <div class="chak-kpi-label">❷ TB Positive</div>
         <div class="chak-kpi-value red">${chakFmt(totPos)}</div>
-        <div class="chak-kpi-sub">Confirmed bacteriologically positive</div>
+        <div class="chak-kpi-sub">TB cases who are HIV-positive <code>TB_ART(Den)</code></div>
       </div>
       <div class="chak-kpi-card">
         <div class="chak-kpi-label">❸ Positivity Rate</div>
         <div class="chak-kpi-value orange">${posPct}%</div>
-        <div class="chak-kpi-sub">% of screened that tested positive</div>
+        <div class="chak-kpi-sub">HIV+ among TB cases with known status <code>%TB Pos</code></div>
       </div>
       <div class="chak-kpi-card">
         <div class="chak-kpi-label">❹ Not Positive</div>
         <div class="chak-kpi-value" style="color:#94a3b8">${chakFmt(notPositive)}</div>
-        <div class="chak-kpi-sub">Screened but negative (Screened − Positive)</div>
+        <div class="chak-kpi-sub">HIV-negative (Known status − HIV+)</div>
       </div>
     </div>
 
@@ -67,33 +67,33 @@ registerChakRenderer("tb", "tb", function (el, data) {
       <div class="chak-kpi-card" style="border-left:4px solid #ea580c">
         <div class="chak-kpi-label">❺ TB on ART</div>
         <div class="chak-kpi-value purple">${chakFmt(totOnArt)}</div>
-        <div class="chak-kpi-sub">TB patients on ART (treatment integration)</div>
+        <div class="chak-kpi-sub">HIV+ TB cases on ART (TB_ART(Num))</div>
       </div>
       <div class="chak-kpi-card">
         <div class="chak-kpi-label">❻ ART Uptake</div>
         <div class="chak-kpi-value green">${artPct}%</div>
-        <div class="chak-kpi-sub">% of TB+ patients on ART</div>
+        <div class="chak-kpi-sub">% HIV+ TB cases on ART (% TB on ART)</div>
       </div>
       <div class="chak-kpi-card" style="border-left:4px solid #dc2626">
         <div class="chak-kpi-label">❼ Not on ART</div>
         <div class="chak-kpi-value" style="color:#dc2626">${chakFmt(notOnArt)}</div>
-        <div class="chak-kpi-sub">TB+ not on ART (gap − <strong>target: 0</strong>)</div>
+        <div class="chak-kpi-sub">HIV+ TB cases not on ART (Missed ART)</div>
       </div>
       <div class="chak-kpi-card" style="border-left:4px solid #16a34a">
         <div class="chak-kpi-label">❽ Treatment Gap Closed</div>
         <div class="chak-kpi-value" style="color:#16a34a">${totPos > 0 ? Math.round((totOnArt / totPos) * 100) : 0}%</div>
-        <div class="chak-kpi-sub">% of TB+ on ART (on ART ÷ Positive)</div>
+        <div class="chak-kpi-sub">% of HIV+ TB cases on ART</div>
       </div>
     </div>
 
     <!-- Cascade Charts (7) — Top: Full horizontal cascade, 4 detail charts + 2 PBIX-style combo charts -->
     <div class="chak-chart-grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
       ${chakHighchartsCard("📊 TB All-Indicators Cascade — Full Flow (Horizontal)", "chakTbTopCascade", "full")}
-      ${chakChartCard("📊 TB Cascade — Screened → TB+ → On ART", "chakTbCascade1")}
-      ${chakChartCard("📊 Screening Outcome — Screened · Positive · Not Positive", "chakTbCascade2")}
-      ${chakChartCard("📊 Treatment Gap — TB+ · On ART · Not on ART", "chakTbCascade3")}
-      ${chakChartCard("📊 ART Integration — TB+ · On ART · Uptake %", "chakTbCascade4")}
-      ${chakChartCard("📈 Monthly TB Trend — Screened + % Positivity (Combo)", "chakTbTrendCombo")}
+      ${chakChartCard("📊 TB Cascade — Known status → HIV+ → On ART", "chakTbCascade1")}
+      ${chakChartCard("📊 HIV Status Outcome — Known status · HIV+ · HIV-", "chakTbCascade2")}
+      ${chakChartCard("📊 Treatment Gap — HIV+ · On ART · Not on ART", "chakTbCascade3")}
+      ${chakChartCard("📊 ART Integration — HIV+ · On ART · Uptake %", "chakTbCascade4")}
+      ${chakChartCard("📈 Monthly TB Trend — Known HIV Status + %TB Pos (Combo)", "chakTbTrendCombo")}
       ${chakChartCard("📊 Monthly TB by Outcome (Clustered)", "chakTbMonthly")}
     </div>
 
@@ -101,22 +101,22 @@ registerChakRenderer("tb", "tb", function (el, data) {
     <div class="chak-chart-card full" style="margin-top:4px">
       <div class="chak-chart-header"><h3>🔍 How to read this cascade</h3></div>
       <div style="font-size:12px;color:#4b5563;line-height:1.7">
-        <p><strong>Step 1 (Screening):</strong> <code>TB Screened</code> — All patients screened for TB (universe). <code>Positivity Rate</code> = % who test positive.</p>
-        <p><strong>Step 2 (Diagnosis):</strong> <code>TB Positive</code> = confirmed bacteriologically. <code>Not Positive</code> = screened but negative.</p>
-        <p><strong>Step 3 (ART Integration):</strong> <code>TB on ART</code> = TB+ patients on antiretroviral therapy. <code>Not on ART</code> = the treatment gap.</p>
-        <p><strong>Step 4 (Goal):</strong> 100% of TB+ patients on ART. <span style="color:#16a34a;font-weight:600">Target: Gap = 0, ART Uptake = 100%.</span></p>
-        <p style="margin-top:6px;color:#6b7280;font-size:11px"><strong>Charts:</strong> ① Full cascade (horizontal, all indicators) · ② Cascade (stepped) · ③ Screening outcome (Screened, Positive, Not Positive) · ④ Treatment gap (TB+, On ART, Not on ART) · ⑤ ART integration (TB+, On ART, Uptake %)</p>
+        <p><strong>Step 1 (TB &amp; HIV status):</strong> <code>TB_STAT(Num)</code> — TB cases whose HIV status is known. <code>Positivity Rate</code> (<code>%TB Pos</code>) = HIV+ among those cases.</p>
+        <p><strong>Step 2 (HIV status):</strong> <code>TB_ART(Den)</code> = TB cases who are HIV-positive. <code>Not Positive</code> = known status but HIV-negative.</p>
+        <p><strong>Step 3 (ART Integration):</strong> <code>TB_ART(Num)</code> = HIV+ TB cases on antiretroviral therapy. <code>Not on ART</code> = the treatment gap (<code>Missed ART</code>).</p>
+        <p><strong>Step 4 (Goal):</strong> 100% of HIV+ TB cases on ART. <span style="color:#16a34a;font-weight:600">Target: Gap = 0, ART Uptake = 100%.</span></p>
+        <p style="margin-top:6px;color:#6b7280;font-size:11px"><strong>Charts:</strong> ① Full cascade (horizontal, all indicators) · ② Cascade (stepped) · ③ HIV status outcome (Known status, HIV+, HIV-) · ④ Treatment gap (HIV+, On ART, Not on ART) · ⑤ ART integration (HIV+, On ART, Uptake %)</p>
       </div>
     </div>`;
 
   el.setAttribute("data-chak-slug", "tb");
   _chakSetData("tb", data);
 
-  // ── Chart 1: TB Cascade (Screened → TB+ → On ART) ──
+  // ── Chart 1: TB Cascade (Known status → HIV+ → On ART) ──
   chakCreateChart("chakTbCascade1", {
     type: "bar",
     data: {
-      labels: ["TB Screened", "TB Positive", "On ART"],
+      labels: ["Known HIV Status", "HIV Positive", "On ART"],
       datasets: [
         {
           label: "Patients",
@@ -162,11 +162,11 @@ registerChakRenderer("tb", "tb", function (el, data) {
     },
   });
 
-  // ── Chart 2: Screening Outcome (Screened · Positive · Not Positive) ──
+  // ── Chart 2: HIV Status Outcome (Known status · HIV+ · HIV-) ──
   chakCreateChart("chakTbCascade2", {
     type: "bar",
     data: {
-      labels: ["TB Screened", "TB Positive", "Not Positive"],
+      labels: ["Known HIV Status", "HIV Positive", "HIV Negative"],
       datasets: [
         {
           label: "Patients",
@@ -185,9 +185,9 @@ registerChakRenderer("tb", "tb", function (el, data) {
           callbacks: {
             label: function (ctx) {
               const labels = [
-                "Total TB screening encounters",
-                "Confirmed TB positive",
-                "Screened − Positive (negative)",
+                "TB cases with known HIV status (TB_STAT(Num))",
+                "TB cases who are HIV-positive (TB_ART(Den))",
+                "Known status − HIV+ (negative)",
               ];
               return (
                 (ctx.raw || 0).toLocaleString() +
@@ -212,11 +212,11 @@ registerChakRenderer("tb", "tb", function (el, data) {
     },
   });
 
-  // ── Chart 3: Treatment Gap (TB+ · On ART · Not on ART) ──
+  // ── Chart 3: Treatment Gap (HIV+ · On ART · Not on ART) ──
   chakCreateChart("chakTbCascade3", {
     type: "bar",
     data: {
-      labels: ["TB Positive", "On ART", "Not on ART"],
+      labels: ["HIV+ TB Cases", "On ART", "Not on ART"],
       datasets: [
         {
           label: "Patients",
@@ -235,9 +235,9 @@ registerChakRenderer("tb", "tb", function (el, data) {
           callbacks: {
             label: function (ctx) {
               const labels = [
-                "Confirmed TB positive (total)",
-                "TB patients on ART",
-                "TB+ not on ART (gap)",
+                "HIV-positive TB cases (TB_ART(Den))",
+                "HIV+ TB patients on ART",
+                "HIV+ not on ART (missed ART)",
               ];
               return (
                 (ctx.raw || 0).toLocaleString() +
@@ -262,12 +262,12 @@ registerChakRenderer("tb", "tb", function (el, data) {
     },
   });
 
-  // ── Chart 4: ART Integration (TB+ · On ART · Uptake %) ──
+  // ── Chart 4: ART Integration (HIV+ · On ART · Uptake %) ──
   // Mixed: bars for counts + line for %
   chakCreateChart("chakTbCascade4", {
     type: "bar",
     data: {
-      labels: ["TB Positive", "On ART", "ART Uptake"],
+      labels: ["HIV+ TB Cases", "On ART", "ART Uptake"],
       datasets: [
         {
           label: "Patients",
@@ -290,9 +290,9 @@ registerChakRenderer("tb", "tb", function (el, data) {
           callbacks: {
             label: function (ctx) {
               const labels = [
-                "Confirmed TB positive (total)",
-                "TB patients on ART",
-                "ART uptake % among TB+",
+                "HIV-positive TB cases (TB_ART(Den))",
+                "HIV+ TB patients on ART (TB_ART(Num))",
+                "ART uptake % among HIV+ TB cases",
               ];
               return (
                 (ctx.raw || 0).toLocaleString() +
@@ -318,7 +318,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
   });
 
   // ── TOP CASCADE: Horizontal bar showing ALL 8 TB indicators ──
-  const totPresumptive = chakSum(trend, "tb_presumptive");
+  const totPresumptive = chakSum(trend, "tb_stat_den");
   setTimeout(function () {
     const topEl = document.getElementById("chakTbTopCascade");
     if (!topEl) return;
@@ -330,14 +330,14 @@ registerChakRenderer("tb", "tb", function (el, data) {
         style: { fontSize: "14px", fontWeight: "bold" },
       },
       subtitle: {
-        text: "TB screening-to-treatment cascade · Flow: Step ❶ → Step ❽",
+        text: "TB cascade: known HIV status → HIV+ → linked to ART · Flow: Step ❶ → Step ❽",
         style: { fontSize: "11px", color: "#6b7280" },
       },
       xAxis: {
         categories: [
-          "❶ TB Screened",
-          "❷ TB Presumptive",
-          "❸ TB Positive",
+          "❶ Known HIV Status",
+          "❷ STAT Den",
+          "❸ HIV Positive",
           "❹ Not Positive",
           "❺ TB on ART",
           "❻ ART Uptake %",
@@ -362,14 +362,14 @@ registerChakRenderer("tb", "tb", function (el, data) {
         shared: true,
         formatter: function () {
           const descs = [
-            "Total TB screening encounters (universe)",
-            "TB presumptive cases identified",
-            "Confirmed TB bacteriologically positive",
-            "Screened but negative (Screened − Positive)",
-            "TB patients on ART (treatment integration)",
-            "% of TB+ patients on ART",
-            "TB+ not on ART (gap — target: 0)",
-            "% of TB+ on ART (on ART ÷ Positive)",
+            "TB cases with known HIV status (TB_STAT(Num))",
+            "TB_STAT denominator (known status universe)",
+            "TB cases who are HIV-positive (TB_ART(Den))",
+            "Known status − HIV+ (HIV-negative)",
+            "HIV+ TB cases on ART (TB_ART(Num))",
+            "% of HIV+ TB cases on ART (% TB on ART)",
+            "HIV+ not on ART (missed ART — target: 0)",
+            "% of HIV+ TB cases on ART (gap closed)",
           ];
           const pt = this.points?.[0];
           if (!pt) return "";
@@ -429,7 +429,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
     });
   }, 100);
 
-  // ── PBIX-style Combo Chart: Monthly TB Screened + % Positivity ──
+  // ── PBIX-style Combo Chart: Monthly known HIV status + %TB Pos ──
   chakCreateChart("chakTbTrendCombo", {
     type: "bar",
     data: {
@@ -438,7 +438,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
       }),
       datasets: [
         {
-          label: "TB Screened",
+          label: "Known HIV Status",
           data: trend.map(function (d) {
             return d.tb_screened || 0;
           }),
@@ -447,7 +447,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
           order: 2,
         },
         {
-          label: "TB Positive",
+          label: "HIV Positive",
           data: trend.map(function (d) {
             return d.tb_pos || 0;
           }),
@@ -456,7 +456,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
           order: 2,
         },
         {
-          label: "% Positivity",
+          label: "%TB Pos",
           data: trend.map(function (d) {
             return d.tb_positivity_pct || 0;
           }),
@@ -494,7 +494,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
           position: "right",
           max: 100,
           grid: { display: false },
-          title: { display: true, text: "% Positivity" },
+          title: { display: true, text: "%TB Pos" },
         },
       },
     },
@@ -509,7 +509,7 @@ registerChakRenderer("tb", "tb", function (el, data) {
       }),
       datasets: [
         {
-          label: "Screened",
+          label: "Known Status",
           data: trend.map(function (d) {
             return d.tb_screened || 0;
           }),
@@ -517,15 +517,15 @@ registerChakRenderer("tb", "tb", function (el, data) {
           borderRadius: 3,
         },
         {
-          label: "Presumptive",
+          label: "STAT Den",
           data: trend.map(function (d) {
-            return d.tb_presumptive || 0;
+            return d.tb_stat_den || 0;
           }),
           backgroundColor: CHAK_COLORS.teal + "80",
           borderRadius: 3,
         },
         {
-          label: "Positive",
+          label: "HIV Positive",
           data: trend.map(function (d) {
             return d.tb_pos || 0;
           }),

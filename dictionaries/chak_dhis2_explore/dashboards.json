@@ -1,0 +1,507 @@
+{
+  "dashboards": [
+    {
+      "name": "01_01 Chap Stawisha HTS",
+      "id": "YcoF4RBMSEJ",
+      "dashboardItems": [
+        {
+          "height": 19,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "WK14sieajnb"
+        },
+        {
+          "height": 19,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "GZACoqMmQfM"
+        },
+        {
+          "height": 19,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "kbQsKaCUB8x"
+        },
+        {
+          "height": 19,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "TCTsasEoMbE"
+        },
+        {
+          "height": 18,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "wrzPq8CvT2S"
+        },
+        {
+          "height": 18,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "PlHUA5Z4wSi"
+        }
+      ]
+    },
+    {
+      "name": "01_02 Chap Stawisha Care and Treatment",
+      "id": "K85HrESt61m",
+      "dashboardItems": [
+        {
+          "height": 24,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "SBJ03MaMPH9"
+        },
+        {
+          "height": 24,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "hO3ijJSNo84"
+        },
+        {
+          "height": 24,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "oafmgURYxFH"
+        },
+        {
+          "height": 20,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "dukFp0VOsyS"
+        },
+        {
+          "height": 21,
+          "width": 17,
+          "type": "VISUALIZATION",
+          "id": "fO2Ct8L0UOB"
+        },
+        {
+          "height": 20,
+          "width": 16,
+          "type": "VISUALIZATION",
+          "id": "OLHFrDG9QlR"
+        },
+        {
+          "height": 24,
+          "width": 16,
+          "type": "VISUALIZATION",
+          "id": "xvfWI1MrXSo"
+        },
+        {
+          "height": 20,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "LyfH66uSJoM"
+        },
+        {
+          "height": 20,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "bvVA1KXPCgN"
+        },
+        {
+          "height": 21,
+          "width": 30,
+          "type": "VISUALIZATION",
+          "id": "ZiHnhDd7ubz"
+        },
+        {
+          "height": 21,
+          "width": 30,
+          "type": "VISUALIZATION",
+          "id": "sl8NEuWeSPo"
+        },
+        {
+          "height": 20,
+          "width": 30,
+          "type": "VISUALIZATION",
+          "id": "u6vpiRG382d"
+        },
+        {
+          "height": 21,
+          "width": 33,
+          "type": "VISUALIZATION",
+          "id": "Spq8yd9m8BJ"
+        }
+      ]
+    },
+    {
+      "name": "01_03 CHAP Stawisha AHD",
+      "id": "EOdHXXKsPAg",
+      "dashboardItems": [
+        {
+          "height": 18,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "S9urIcWBYrA"
+        },
+        {
+          "height": 18,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "Chw3T5JYf9g"
+        },
+        {
+          "height": 18,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "kZiutIDKJs1"
+        },
+        {
+          "height": 16,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "Sg0gflvgwv2"
+        },
+        {
+          "height": 16,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "o5eawra3BxK"
+        },
+        {
+          "height": 16,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "qv6K0Knj5jK"
+        },
+        {
+          "height": 16,
+          "width": 13,
+          "type": "VISUALIZATION",
+          "id": "RMmXuhp0ypQ"
+        },
+        {
+          "height": 16,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "mUxz5MaAbqM"
+        },
+        {
+          "height": 16,
+          "width": 14,
+          "type": "VISUALIZATION",
+          "id": "impeenCtA7a"
+        }
+      ]
+    },
+    {
+      "name": "01_04 CHAP Stawisha CaCX",
+      "id": "meA5kLnL4VF",
+      "dashboardItems": [
+        {
+          "height": 15,
+          "width": 12,
+          "type": "VISUALIZATION",
+          "id": "rDvEtcYGFyc"
+        }
+      ]
+    },
+    {
+      "name": "01_05 CHAP Stawisha PrEP",
+      "id": "KBRAcvrH3At",
+      "dashboardItems": [
+        {
+          "height": 24,
+          "width": 17,
+          "type": "VISUALIZATION",
+          "id": "ZueQ1hho4L9"
+        },
+        {
+          "height": 24,
+          "width": 17,
+          "type": "VISUALIZATION",
+          "id": "rYX3wsMKKmD"
+        },
+        {
+          "height": 24,
+          "width": 17,
+          "type": "VISUALIZATION",
+          "id": "DZCPuzu0t0w"
+        },
+        {
+          "height": 25,
+          "width": 34,
+          "type": "VISUALIZATION",
+          "id": "ZFOFBrlSq2f"
+        }
+      ]
+    },
+    {
+      "name": "01_06 CHAP Stawisha PMTCT Dashboard",
+      "id": "P6U6sWbjSOG",
+      "dashboardItems": [
+        {
+          "height": 17,
+          "width": 60,
+          "type": "VISUALIZATION",
+          "id": "Cdn0W5KFgrg"
+        },
+        {
+          "height": 21,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "V7kZUsTLWK8"
+        },
+        {
+          "height": 21,
+          "width": 31,
+          "type": "VISUALIZATION",
+          "id": "ivyV1uBvQLY"
+        },
+        {
+          "height": 20,
+          "width": 31,
+          "type": "VISUALIZATION",
+          "id": "bPkonCDqbb2"
+        },
+        {
+          "height": 20,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "N2tMAnePHhZ"
+        },
+        {
+          "height": 18,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "w4cp7XyybRI"
+        },
+        {
+          "height": 18,
+          "width": 31,
+          "type": "VISUALIZATION",
+          "id": "ouDmMtQBil6"
+        },
+        {
+          "height": 18,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "ub3WspEZ1mE"
+        },
+        {
+          "height": 18,
+          "width": 31,
+          "type": "VISUALIZATION",
+          "id": "KyQQ6qYDUtu"
+        }
+      ]
+    },
+    {
+      "name": "03 GF - RMNCH Dashboard",
+      "id": "WxPPfMc1lV1",
+      "dashboardItems": [
+        {
+          "height": 20,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "HBXJTWJ7Klt"
+        },
+        {
+          "height": 20,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "zGFVZohMuWO"
+        },
+        {
+          "height": 20,
+          "width": 19,
+          "type": "VISUALIZATION",
+          "id": "SidkJaoOzLf"
+        },
+        {
+          "height": 21,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "YARTtPVeBZm"
+        },
+        {
+          "height": 21,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "UBPdoZ6lj6C"
+        },
+        {
+          "height": 21,
+          "width": 19,
+          "type": "VISUALIZATION",
+          "id": "iir7qvfzy7o"
+        },
+        {
+          "height": 26,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "F0vQuLxncrJ"
+        },
+        {
+          "height": 25,
+          "width": 15,
+          "type": "VISUALIZATION",
+          "id": "YAExTmrN15O"
+        }
+      ]
+    },
+    {
+      "name": "04 - ACSP Dashboard",
+      "id": "eXQKlgUONaR",
+      "dashboardItems": [
+        {
+          "height": 24,
+          "width": 18,
+          "type": "VISUALIZATION",
+          "id": "KVxmV8xKRKC"
+        },
+        {
+          "height": 24,
+          "width": 18,
+          "type": "VISUALIZATION",
+          "id": "Q8iuQESMdM0"
+        },
+        {
+          "height": 24,
+          "width": 18,
+          "type": "VISUALIZATION",
+          "id": "VmqJCcT6m0M"
+        },
+        {
+          "height": 24,
+          "width": 18,
+          "type": "VISUALIZATION",
+          "id": "xF7SF60ZQ95"
+        },
+        {
+          "height": 24,
+          "width": 18,
+          "type": "VISUALIZATION",
+          "id": "cyK34wo7qXg"
+        }
+      ]
+    },
+    {
+      "name": "JTP Care & Treatment",
+      "id": "cCwOwAhaarH",
+      "dashboardItems": [
+        {
+          "height": 13,
+          "width": 24,
+          "type": "VISUALIZATION",
+          "id": "crvGRI0wpCc"
+        },
+        {
+          "height": 20,
+          "width": 35,
+          "type": "VISUALIZATION",
+          "id": "SUn6KMKMw36"
+        },
+        {
+          "height": 22,
+          "width": 24,
+          "type": "VISUALIZATION",
+          "id": "v8icnN2LSxr"
+        },
+        {
+          "height": 15,
+          "width": 35,
+          "type": "VISUALIZATION",
+          "id": "LXkoF39gVM2"
+        },
+        {
+          "height": 29,
+          "width": 30,
+          "type": "VISUALIZATION",
+          "id": "ZwzSDjaUnMp"
+        },
+        {
+          "height": 29,
+          "width": 29,
+          "type": "VISUALIZATION",
+          "id": "A7ee3bT56Sl"
+        },
+        {
+          "height": 21,
+          "width": 23,
+          "type": "VISUALIZATION",
+          "id": "KZUCXVe36sd"
+        },
+        {
+          "height": 21,
+          "width": 36,
+          "type": "VISUALIZATION",
+          "id": "FcRUylAzHv4"
+        },
+        {
+          "height": 24,
+          "width": 27,
+          "type": "VISUALIZATION",
+          "id": "HjlRQ6T27Jj"
+        },
+        {
+          "height": 24,
+          "width": 32,
+          "type": "VISUALIZATION",
+          "id": "Oql4m9BVOgQ"
+        },
+        {
+          "height": 21,
+          "width": 23,
+          "type": "VISUALIZATION",
+          "id": "vMnyS03622m"
+        },
+        {
+          "height": 21,
+          "width": 36,
+          "type": "VISUALIZATION",
+          "id": "lKmPaXe6MX5"
+        },
+        {
+          "height": 21,
+          "width": 59,
+          "type": "VISUALIZATION",
+          "id": "vcSOZ4nHuYn"
+        }
+      ]
+    },
+    {
+      "name": "JTP HTS Testing Dashboards",
+      "id": "lURU0uUlLrT",
+      "dashboardItems": [
+        {
+          "height": 15,
+          "width": 10,
+          "type": "VISUALIZATION",
+          "id": "T5Vb2xMRlZE"
+        },
+        {
+          "height": 15,
+          "width": 9,
+          "type": "VISUALIZATION",
+          "id": "x9wyYoGeJAq"
+        },
+        {
+          "height": 23,
+          "width": 59,
+          "type": "VISUALIZATION",
+          "id": "wC5XjzZIm3m"
+        },
+        {
+          "height": 15,
+          "width": 40,
+          "type": "VISUALIZATION",
+          "id": "Wi57nVFA743"
+        },
+        {
+          "height": 23,
+          "width": 59,
+          "type": "VISUALIZATION",
+          "id": "fZzZ3SSUq6N"
+        }
+      ]
+    },
+    {
+      "name": "Untitled dashboard",
+      "id": "cFwEtPSluUE",
+      "dashboardItems": []
+    }
+  ]
+}

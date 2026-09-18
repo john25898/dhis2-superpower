@@ -2,7 +2,14 @@
 // daraja.js  (extracted from main.js lines 10881-12325)
 // Daraja page
 // ============================================================
+
+// County the Daraja project opens on. Kept in step with DEFAULT_COUNTY in
+// train/services/ou_resolver.py — the server uses it as the fallback when a
+// request arrives without a usable county.
+const DEFAULT_DARAJA_COUNTY = "Meru County";
+
 async function renderDarajaPage(container, activeSlug) {
+  syncDarajaDefaultCounty();
   if (activeSlug === "overview") {
     renderDarajaOverview(container);
   } else if (activeSlug === "tx-curr-analytics") {
@@ -30,25 +37,82 @@ function resetTopPeriodFilterUI() {
   if (input) input.value = "";
 }
 
-// Period to use for single-month snapshot pages. Defaults to July 2026 (the
-// pinned reference month) unless the user actively picked a month in the top
-// period picker — then that month is honoured.
+// Period to use for single-month snapshot pages. Defaults to the current
+// calendar month (the endpoint returns the latest month that actually has
+// reports within the window) unless the user actively picked a month in the
+// top period picker — then that month is honoured.
 function jtSnapshotMonthYm() {
   const f = state.periodFilter;
   if (f && f !== "all" && /^\d{4}-\d{2}$/.test(f)) return f.replace("-", "");
-  return "202607";
+  return currentYmParam();
+}
+
+// `pe` value for the snapshot pages: the explicitly picked month, or a short
+// trailing window so the endpoint can resolve the latest month that actually
+// has reports.
+function jtSnapshotPeriodParam() {
+  const f = state.periodFilter;
+  if (f && f !== "all" && /^\d{4}-\d{2}$/.test(f)) return f.replace("-", "");
+  return buildMonthRangeParam(currentYmParam(), 3);
+}
+
+// Newest month label present in a `/api/homepage/summary` payload.
+function jtSummaryLatestLabel(d) {
+  const trends = [d.tx_curr_trend, d.tx_new_trend, d.hts_trend];
+  for (const t of trends) {
+    const last = (t || []).slice(-1)[0];
+    if (last && last.label) return last.label;
+  }
+  return perYmShortLabel(jtSnapshotMonthYm());
+}
+
+// County scope parameter for every Daraja API call.
+//
+// "All Counties" is a REAL scope, not shorthand for Meru: the server expands
+// `county=all` to the whole Daraja roster — all 15 counties, all 259
+// facilities. The top bar defaults to Meru County (see DEFAULT_COUNTY on the
+// server) so the first paint stays cheap; picking "All Counties" widens it.
+function darajaCountyParam() {
+  return selectedCountyParam();
+}
+
+// The Daraja views open on Meru, so the top-bar county dropdown has to say so.
+// Previously the dropdown read "All Counties" while every Daraja endpoint was
+// silently narrowed to Meru, which made the page look like it was showing
+// whole-project numbers. This runs on each Daraja render but only ever applies
+// the default while the user has not chosen a county for themselves, so an
+// explicit "All Counties" or named county always wins.
+function syncDarajaDefaultCounty() {
+  if (state.countyFilterTouched) return;
+  if (state.countyFilter && state.countyFilter !== "all") return;
+
+  state.countyFilter = DEFAULT_DARAJA_COUNTY;
+  state.subCountyFilter = "all";
+  state.facilityFilter = "all";
+
+  const countyEl = document.getElementById("countyFilter");
+  const subEl = document.getElementById("subCountyFilter");
+  const facEl = document.getElementById("facilityFilter");
+  if (countyEl) countyEl.value = DEFAULT_DARAJA_COUNTY;
+  if (subEl) subEl.value = "all";
+  if (facEl) facEl.value = "all";
+
+  // Rebuild the sub-county / facility lists for the county we just selected.
+  if (typeof populateFilterOptions === "function") populateFilterOptions();
+  if (countyEl) countyEl.value = DEFAULT_DARAJA_COUNTY;
+  if (subEl) subEl.value = "all";
+  if (facEl) facEl.value = "all";
 }
 
 async function renderDarajaProgrammeHighlights(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights · ${perYmShortLabel(jtSnapshotMonthYm())}</div>
+      <div class="text-xs font-semibold text-slate-700 mb-3">📊 Programme highlights · <span id="darajaHighlightsPeriod">${perYmShortLabel(jtSnapshotMonthYm())}</span></div>
       <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="darajaHighlightsLoading">Loading snapshot…</div>
     </div>
   `;
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = darajaCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -61,21 +125,21 @@ async function renderDarajaProgrammeHighlights(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotMonthYm()}`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotPeriodParam()}`;
 
   try {
     const resp = await fetch(url);
     const d = await resp.json();
     if (d.error) throw new Error(d.error);
+    const periodEl = document.getElementById("darajaHighlightsPeriod");
+    if (periodEl) periodEl.textContent = jtSummaryLatestLabel(d);
     const latest = d.latest || {};
     const txCurr = Number(latest.tx_curr || 0);
     const txNew = Number(latest.tx_new || 0);
     const tested = Number(latest.hts_tested || 0);
     const positivity = Number(latest.positivity_rate || 0);
-    const serviceContinuity =
-      txCurr > 0 && txNew > 0 ? Math.round((txNew / txCurr) * 100) : 0;
-    const htsMomentum =
-      tested > 0 ? Math.round((tested / Math.max(1, txCurr)) * 100) : 0;
+    const serviceContinuity = txCurr > 0 ? (txNew / txCurr) * 100 : 0;
+    const htsMomentum = txCurr > 0 ? (tested / txCurr) * 100 : 0;
 
     const loadingEl = document.getElementById("darajaHighlightsLoading");
     if (!loadingEl || !container.contains(loadingEl)) return; // superseded render
@@ -84,12 +148,12 @@ async function renderDarajaProgrammeHighlights(container) {
         <div class="grid gap-3 md:grid-cols-2">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Care continuity</div>
-            <div class="mt-2 text-2xl font-bold text-slate-800">${serviceContinuity}%</div>
+            <div class="mt-2 text-2xl font-bold text-slate-800">${serviceContinuity.toFixed(1)}%</div>
             <div class="mt-1 text-[11px] text-slate-500">New initiations relative to the active caseload.</div>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">HTS momentum</div>
-            <div class="mt-2 text-2xl font-bold text-slate-800">${htsMomentum}%</div>
+            <div class="mt-2 text-2xl font-bold text-slate-800">${htsMomentum.toFixed(1)}%</div>
             <div class="mt-1 text-[11px] text-slate-500">Recent testing volume against the current treatment pool.</div>
           </div>
         </div>
@@ -111,13 +175,12 @@ async function renderDarajaProgrammeHighlights(container) {
 async function renderDarajaWorkloadPage(container) {
   container.innerHTML = `
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus · ${perYmShortLabel(jtSnapshotMonthYm())}</div>
+      <div class="text-xs font-semibold text-slate-700 mb-3">🚐 Workload & MHU focus · <span id="darajaWorkloadPeriod">${perYmShortLabel(jtSnapshotMonthYm())}</span></div>
       <div class="flex items-center justify-center py-10 text-sm text-slate-500" id="darajaWorkloadLoading">Loading workload view…</div>
     </div>
   `;
 
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = darajaCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -130,25 +193,23 @@ async function renderDarajaWorkloadPage(container) {
     state.projectFilter !== "all"
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
-  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotMonthYm()}`;
+  const url = `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${jtSnapshotPeriodParam()}`;
 
   try {
     const resp = await fetch(url);
     const d = await resp.json();
     if (d.error) throw new Error(d.error);
+    const periodEl = document.getElementById("darajaWorkloadPeriod");
+    if (periodEl) periodEl.textContent = jtSummaryLatestLabel(d);
     const latest = d.latest || {};
     const txCurr = Number(latest.tx_curr || 0);
     const txNew = Number(latest.tx_new || 0);
     const tested = Number(latest.hts_tested || 0);
     const positivity = Number(latest.positivity_rate || 0);
-    const workloadIndex = Math.max(
-      0,
-      Math.min(100, Math.round((txCurr / Math.max(1, tested)) * 100)),
-    );
-    const servicePressure = Math.max(
-      0,
-      Math.min(100, Math.round((txNew / Math.max(1, txCurr)) * 100)),
-    );
+    const workloadIndex = tested > 0 ? txCurr / tested : 0;
+    const servicePressure = txCurr > 0 ? (txNew / txCurr) * 1000 : 0;
+    // The progress bar needs a 0-100 scale; 10 new starts per 1,000 is full.
+    const servicePressureBar = Math.min(100, servicePressure * 10);
 
     const loadingEl = document.getElementById("darajaWorkloadLoading");
     if (!loadingEl || !container.contains(loadingEl)) return; // superseded render
@@ -158,8 +219,8 @@ async function renderDarajaWorkloadPage(container) {
           <div class="text-sm font-semibold text-slate-700">Service workload summary</div>
           <div class="mt-3 grid gap-3 md:grid-cols-3">
             <div class="rounded-xl border border-slate-200 bg-white p-3">
-              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Caseload pressure</div>
-              <div class="mt-2 text-2xl font-bold text-slate-800">${workloadIndex}%</div>
+              <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Caseload per test</div>
+              <div class="mt-2 text-2xl font-bold text-slate-800">${workloadIndex.toFixed(1)}&times;</div>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-3">
               <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">New starts</div>
@@ -175,8 +236,8 @@ async function renderDarajaWorkloadPage(container) {
           <div class="text-xs font-semibold text-slate-700">🧪 MHU-style workload notes</div>
           <div class="mt-3 space-y-3 text-sm text-slate-600">
             <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
-              <div class="flex items-center justify-between text-[12px] font-semibold text-slate-700"><span>Service pressure</span><span>${servicePressure}%</span></div>
-              <div class="mt-2 h-2 w-full rounded-full bg-slate-200"><div class="h-2 rounded-full bg-orange-500" style="width:${servicePressure}%"></div></div>
+              <div class="flex items-center justify-between text-[12px] font-semibold text-slate-700"><span>New starts per 1,000 in care</span><span>${servicePressure.toFixed(1)}</span></div>
+              <div class="mt-2 h-2 w-full rounded-full bg-slate-200"><div class="h-2 rounded-full bg-orange-500" style="width:${servicePressureBar}%"></div></div>
             </div>
             <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">The workload view now surfaces the same operational signals as the MHU board: active caseload, initiation pace, and routine testing yield.</div>
           </div>
@@ -189,6 +250,7 @@ async function renderDarajaWorkloadPage(container) {
 }
 
 async function renderDarajaOverview(container) {
+  syncDarajaDefaultCounty();
   // Old charts from a previous overview render still live inside this
   // container — free them before replacing the DOM.
   destroyChartsIn(container);
@@ -227,8 +289,7 @@ async function renderDarajaOverview(container) {
   }
 
   const rangeMonths = rangeMonthsOf(state.darajaRangeMonths); // default 6
-  const county =
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County";
+  const county = darajaCountyParam();
   const scParam =
     state.subCountyFilter !== "all"
       ? `&subcounty=${encodeURIComponent(state.subCountyFilter)}`
@@ -242,18 +303,29 @@ async function renderDarajaOverview(container) {
       ? `&project=${encodeURIComponent(state.projectFilter)}`
       : "";
   // If the user picked a single month in the top period filter, respect it;
-  // otherwise send an explicit month list ending at 202607 (July 2026).
+  // otherwise send an explicit month list ending at the current calendar
+  // month. The endpoint simply omits months that have no reports yet, so the
+  // KPI cards land on the latest month CHAK has actually reported rather than
+  // a hard-coded month that goes stale.
   const selectedPeriod =
     state.periodFilter && state.periodFilter !== "all"
       ? state.periodFilter
-      : buildMonthRangeParam("202607", rangeMonths);
+      : buildMonthRangeParam(currentYmParam(), rangeMonths);
   const monthPicked = !!(state.periodFilter && state.periodFilter !== "all");
   const pickedYm = monthPicked
     ? String(state.periodFilter).replace("-", "")
     : "";
 
   try {
-    const [summaryResp, vlResp, linkageResp, prepResp] = await Promise.all([
+    const [
+      summaryResp,
+      vlResp,
+      linkageResp,
+      prepResp,
+      pnsResp,
+      currGenderResp,
+      newGenderResp,
+    ] = await Promise.all([
       fetch(
         `/api/homepage/summary?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
       ),
@@ -266,13 +338,38 @@ async function renderDarajaOverview(container) {
       fetch(
         `/api/hiv-testing/dhis-live?type=prep&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
       ),
+      // PNS index offered/accepted lives in its own payload — the
+      // hts_linkage payload only carries linked_within / linked_outside /
+      // total_tested.
+      fetch(
+        `/api/hiv-testing/dhis-live?type=partner_notification&county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      // Sex splits come from the shared 30 age x sex category option combos
+      // of the Jamii + CHAP Stawisha TX_CURR / TX_NEW data elements.
+      fetch(
+        `/api/hiv-treatment/tx-curr-gender-split?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
+      fetch(
+        `/api/hiv-treatment/tx-new-gender-split?county=${encodeURIComponent(county)}${scParam}${facParam}${projParam}&period=${encodeURIComponent(selectedPeriod)}`,
+      ),
     ]);
 
-    const [summaryJson, vlJson, linkageJson, prepJson] = await Promise.all([
+    const [
+      summaryJson,
+      vlJson,
+      linkageJson,
+      prepJson,
+      pnsJson,
+      currGenderJson,
+      newGenderJson,
+    ] = await Promise.all([
       summaryResp.json(),
       vlResp.json(),
       linkageResp.json(),
       prepResp.json(),
+      pnsResp.json(),
+      currGenderResp.json(),
+      newGenderResp.json(),
     ]);
 
     if (
@@ -318,6 +415,7 @@ async function renderDarajaOverview(container) {
     const latestVl = (vlJson.trend || []).slice(-1)[0] || {};
     const latestLinkage = (linkageJson.trend || []).slice(-1)[0] || {};
     const latestPrep = (prepJson.trend || []).slice(-1)[0] || {};
+    const latestPns = (pnsJson.trend || []).slice(-1)[0] || {};
 
     const txCurrCategories = txCurrTrend.map((p) => p.label);
     const txNewCategories = txNewTrend.map((p) => p.label);
@@ -329,28 +427,41 @@ async function renderDarajaOverview(container) {
     const htsPositiveValues = htsTrend.map((p) => p.positive);
     const htsPositivityValues = htsTrend.map((p) => p.positivity_rate);
 
+    // Month the KPI cards represent: the newest month present in the payload.
+    const latestPeriodLabel =
+      (txCurrTrend.slice(-1)[0] || {}).label ||
+      (txNewTrend.slice(-1)[0] || {}).label ||
+      (htsTrend.slice(-1)[0] || {}).label ||
+      "no reports";
+
     const latestTxCurr = Number(latest.tx_curr || 0);
     const latestTxNew = Number(latest.tx_new || 0);
     const latestTested = Number(latest.hts_tested || 0);
     const latestPositive = Number(latest.hts_positive || 0);
     const latestPositivity = Number(latest.positivity_rate || 0);
     const vlUptake = Number(latestVl.vl_uptake || 0);
-    const linkageAccepted = Number(latestLinkage.index_accepted || 0);
-    const linkageOffered = Number(latestLinkage.index_offered || 0);
+    // Partner-notification services (PNS), not ART linkage: index_offered /
+    // index_accepted come from the `partner_notification` spec.
+    const linkageAccepted = Number(latestPns.index_accepted || 0);
+    const linkageOffered = Number(latestPns.index_offered || 0);
     const linkageDeclined = Math.max(0, linkageOffered - linkageAccepted);
+    // True ART linkage = (linked within + linked outside) ÷ HTS positives.
+    const linkageLinked =
+      Number(latestLinkage.linked_within || 0) +
+      Number(latestLinkage.linked_outside || 0);
     const prepCurr = Number(latestPrep.prep_curr || 0);
+    // These used to be Math.round(x * 100) percentages, which collapsed to a
+    // flat 0% (90 ÷ 22,851 rounds to zero) or clamped to 100% (22,851 ÷ 3,328).
+    // Express them at the resolution where they actually carry information.
     const serviceContinuity =
-      latestTxCurr > 0 ? Math.round((latestTxNew / latestTxCurr) * 100) : 0;
+      latestTxCurr > 0 ? (latestTxNew / latestTxCurr) * 100 : 0;
     const htsMomentum =
-      latestTxCurr > 0 ? Math.round((latestTested / latestTxCurr) * 100) : 0;
-    const workloadIndex =
-      latestTested > 0
-        ? Math.min(100, Math.round((latestTxCurr / latestTested) * 100))
-        : 0;
+      latestTxCurr > 0 ? (latestTested / latestTxCurr) * 100 : 0;
+    // Clients in care per test conducted this month (a workload ratio, not a %).
+    const workloadIndex = latestTested > 0 ? latestTxCurr / latestTested : 0;
+    // New initiations per 1,000 clients in care — readable next to positivity.
     const servicePressure =
-      latestTxCurr > 0
-        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
-        : 0;
+      latestTxCurr > 0 ? (latestTxNew / latestTxCurr) * 1000 : 0;
     const vlRemaining = Math.max(0, 100 - vlUptake);
 
     container.innerHTML = `
@@ -374,7 +485,7 @@ async function renderDarajaOverview(container) {
           <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-2">
             <div>
               <div class="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400">Trend range</div>
-              <div class="text-[10px] text-slate-400">KPI cards show the latest month; charts cover the selected window</div>
+              <div class="text-[10px] text-slate-400">KPI cards show <b>${latestPeriodLabel}</b> (latest reported month); charts cover the selected window</div>
             </div>
             <div class="inline-flex gap-0.5 rounded-full bg-white p-0.5 shadow-sm">
               ${[3, 6, 12]
@@ -439,7 +550,7 @@ async function renderDarajaOverview(container) {
                 <canvas id="darajaTreatmentCurrentDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
-                <div class="text-sm font-semibold text-slate-700 mb-2">Continuity gauge</div>
+                <div class="text-sm font-semibold text-slate-700 mb-2">Retention gauge</div>
                 <canvas id="darajaTreatmentCurrentGauge"></canvas>
               </div>
             </div>
@@ -471,7 +582,7 @@ async function renderDarajaOverview(container) {
                 <canvas id="darajaTreatmentNewDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
-                <div class="text-sm font-semibold text-slate-700 mb-2">Uptake gauge</div>
+                <div class="text-sm font-semibold text-slate-700 mb-2">ART uptake among positives</div>
                 <canvas id="darajaTreatmentNewGauge"></canvas>
               </div>
             </div>
@@ -546,14 +657,14 @@ async function renderDarajaOverview(container) {
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <div class="text-base font-semibold text-slate-800">Linkage & partner notification</div>
-              <div class="text-sm text-slate-500">An index cascade section with acceptance trend, outreach volume, acceptance split, and linkage gauge.</div>
+              <div class="text-sm text-slate-500">Partner-notification (index) cascade — notified, accepted, declined — alongside an ART-linkage completeness gauge.</div>
             </div>
             <button data-tab="hiv_testing" class="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100">Open Linkage</button>
           </div>
           <div class="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div class="space-y-4">
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:260px">
-                <div class="text-sm font-semibold text-slate-700 mb-2">Linkage acceptance trend</div>
+                <div class="text-sm font-semibold text-slate-700 mb-2">Index notification acceptance trend</div>
                 <canvas id="darajaTestingLinkageLine"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:220px">
@@ -567,7 +678,7 @@ async function renderDarajaOverview(container) {
                 <canvas id="darajaTestingLinkageDonut"></canvas>
               </div>
               <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4" style="height:160px">
-                <div class="text-sm font-semibold text-slate-700 mb-2">Linkage gauge</div>
+                <div class="text-sm font-semibold text-slate-700 mb-2">ART linkage completeness (linked \u00f7 positives)</div>
                 <canvas id="darajaTestingLinkageGauge"></canvas>
               </div>
             </div>
@@ -618,18 +729,18 @@ async function renderDarajaOverview(container) {
           <div class="mt-4 grid gap-4 lg:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Continuity</div>
-              <div class="mt-2 text-3xl font-bold text-slate-900">${serviceContinuity}%</div>
-              <div class="mt-1 text-xs text-slate-600">New starts relative to active caseload</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${serviceContinuity.toFixed(1)}%</div>
+              <div class="mt-1 text-xs text-slate-600">New starts as a share of the active caseload</div>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">HTS momentum</div>
-              <div class="mt-2 text-3xl font-bold text-slate-900">${htsMomentum}%</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${htsMomentum.toFixed(1)}%</div>
               <div class="mt-1 text-xs text-slate-600">Testing volume compared to treatment pool</div>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Workload index</div>
-              <div class="mt-2 text-3xl font-bold text-slate-900">${workloadIndex}%</div>
-              <div class="mt-1 text-xs text-slate-600">Active caseload versus HTS capacity</div>
+              <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Caseload per test</div>
+              <div class="mt-2 text-3xl font-bold text-slate-900">${workloadIndex.toFixed(1)}&times;</div>
+              <div class="mt-1 text-xs text-slate-600">Clients in care for every test conducted</div>
             </div>
           </div>
 
@@ -665,26 +776,49 @@ async function renderDarajaOverview(container) {
     });
 
     if (window.Chart) {
-      const currentTrend = (txCurrTrend || []).map((p) => Number(p.value) || 0);
-      const currentMale = (txCurrTrend || []).map((p) => Number(p.males) || 0);
-      const currentFemale = (txCurrTrend || []).map(
-        (p) => Number(p.females) || 0,
+      // Sex splits: `/api/homepage/summary` returns only {period,label,value}
+      // per trend point, so the male/female donuts are fed from the shared
+      // 30 age x sex COC space via the tx-curr / tx-new gender-split routes.
+      const currSplitTrend = currGenderJson.trend || [];
+      const newSplitTrend = newGenderJson.trend || [];
+      const lastCurrLabel = String(
+        (txCurrTrend.slice(-1)[0] || {}).label || "",
       );
+      const lastNewLabel = String((txNewTrend.slice(-1)[0] || {}).label || "");
+      const currSplitLast =
+        currSplitTrend.find((p) => String(p.label) === lastCurrLabel) ||
+        currSplitTrend.slice(-1)[0] ||
+        currGenderJson ||
+        {};
+      const newSplitLast =
+        newSplitTrend.find((p) => String(p.label) === lastNewLabel) ||
+        newSplitTrend.slice(-1)[0] ||
+        newGenderJson ||
+        {};
+
+      const currentTrend = (txCurrTrend || []).map((p) => Number(p.value) || 0);
+      const currentMale = [Number(currSplitLast.male) || 0];
+      const currentFemale = [Number(currSplitLast.female) || 0];
       const currentChange = currentTrend.map((value, index) =>
         index === 0 ? 0 : value - currentTrend[index - 1],
       );
+      // Gauges live on a 0-100 dial. A raw new-starts share (90 ÷ 22,851 =
+      // 0.4%) is accurate but invisible there, so the TX_CURR dial shows the
+      // complementary retention figure (share of the caseload carried over).
       const currentGaugeValue = Number(latestTxCurr)
-        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
+        ? Math.max(0, 100 - (latestTxNew / latestTxCurr) * 100)
         : 0;
 
       const newTrend = (txNewTrend || []).map((p) => Number(p.value) || 0);
-      const newMale = (txNewTrend || []).map((p) => Number(p.males) || 0);
-      const newFemale = (txNewTrend || []).map((p) => Number(p.females) || 0);
+      const newMale = [Number(newSplitLast.male) || 0];
+      const newFemale = [Number(newSplitLast.female) || 0];
       const newChange = newTrend.map((value, index) =>
         index === 0 ? 0 : value - newTrend[index - 1],
       );
-      const newGaugeValue = Number(latestTxCurr)
-        ? Math.min(100, Math.round((latestTxNew / latestTxCurr) * 100))
+      // ART uptake among HTS positives: of everyone who tested positive in
+      // the latest month, what share was newly started on treatment.
+      const newGaugeValue = Number(latestPositive)
+        ? Math.min(100, (latestTxNew / latestPositive) * 100)
         : 0;
 
       const vlTrend = (vlJson.trend || []).map((p) => Number(p.vl_uptake) || 0);
@@ -698,21 +832,30 @@ async function renderDarajaOverview(container) {
       );
       const htsUptakeGauge = htsMomentum;
 
+      // Partner-notification services (PNS): index_offered / index_accepted
+      // come from the `partner_notification` spec. The hts_linkage payload
+      // only carries linked_within / linked_outside / total_tested, which is
+      // why these three charts used to render all zeros.
+      const pnsTrend = pnsJson.trend || [];
       const linkageCategories = (linkageJson.trend || []).map((p) => p.label);
-      const linkageAcceptedTrend = (linkageJson.trend || []).map(
-        (p) => Number(p.index_accepted) || 0,
-      );
-      const linkageOfferedTrend = (linkageJson.trend || []).map(
-        (p) => Number(p.index_offered) || 0,
-      );
-      const linkageGaugeValue = latestLinkage.index_offered
-        ? Math.min(
-            100,
-            Math.round(
-              (latestLinkage.index_accepted / latestLinkage.index_offered) *
-                100,
-            ),
-          )
+      const linkageAcceptedTrend = linkageCategories.map((lbl, i) => {
+        const row =
+          pnsTrend.find((p) => String(p.label) === String(lbl)) ||
+          pnsTrend[i] ||
+          {};
+        return Number(row.index_accepted) || 0;
+      });
+      const linkageOfferedTrend = linkageCategories.map((lbl, i) => {
+        const row =
+          pnsTrend.find((p) => String(p.label) === String(lbl)) ||
+          pnsTrend[i] ||
+          {};
+        return Number(row.index_offered) || 0;
+      });
+      // Linkage gauge = ART linkage completeness for the latest month:
+      // (linked within + linked outside) / HTS positives.
+      const linkageGaugeValue = Number(latestPositive)
+        ? Math.min(100, Math.round((linkageLinked / latestPositive) * 100))
         : 0;
 
       const prepCategories = (prepJson.trend || []).map((p) => p.label);
@@ -794,7 +937,9 @@ async function renderDarajaOverview(container) {
         });
       }
 
-      const currentBarCtx = document.getElementById("darajaTreatmentCurrentBar");
+      const currentBarCtx = document.getElementById(
+        "darajaTreatmentCurrentBar",
+      );
       if (currentBarCtx) {
         new Chart(currentBarCtx, {
           type: "bar",
@@ -1167,7 +1312,7 @@ async function renderDarajaOverview(container) {
             labels: linkageCategories,
             datasets: [
               {
-                label: "Accepted",
+                label: "Index accepted",
                 data: linkageAcceptedTrend,
                 borderColor: "#2563eb",
                 backgroundColor: "rgba(37,99,235,0.12)",
@@ -1200,7 +1345,7 @@ async function renderDarajaOverview(container) {
             labels: linkageCategories,
             datasets: [
               {
-                label: "Offered",
+                label: "Notified",
                 data: linkageOfferedTrend,
                 backgroundColor: "#0f766e",
                 borderRadius: 6,
@@ -1387,8 +1532,10 @@ async function renderDarajaOverview(container) {
                 pointBackgroundColor: "#f97316",
               },
               {
-                label: "Service pressure",
-                data: htsCategories.map(() => servicePressure),
+                label: "New starts per 1,000 in care",
+                data: htsCategories.map(() =>
+                  Number(servicePressure.toFixed(1)),
+                ),
                 borderColor: "#0f766e",
                 backgroundColor: "rgba(15,118,110,0.12)",
                 fill: false,
@@ -1404,7 +1551,7 @@ async function renderDarajaOverview(container) {
             plugins: { legend: { position: "bottom" } },
             scales: {
               x: { ticks: { maxRotation: -45, font: { size: 10 } } },
-              y: { beginAtZero: true, ticks: { callback: (v) => v + "%" } },
+              y: { beginAtZero: true, ticks: { callback: (v) => v } },
             },
           },
         });
@@ -1415,11 +1562,11 @@ async function renderDarajaOverview(container) {
         new Chart(workloadDonutCtx, {
           type: "doughnut",
           data: {
-            labels: ["Pressure", "Headroom"],
+            labels: ["New starts this month", "Continuing in care"],
             datasets: [
               {
-                data: [servicePressure, Math.max(0, 100 - servicePressure)],
-                backgroundColor: ["#f97316", "#e2e8f0"],
+                data: [latestTxNew, Math.max(0, latestTxCurr - latestTxNew)],
+                backgroundColor: ["#14b8a6", "#e2e8f0"],
                 borderWidth: 0,
               },
             ],
@@ -1431,7 +1578,10 @@ async function renderDarajaOverview(container) {
             plugins: {
               legend: { position: "bottom", labels: { boxWidth: 12 } },
               tooltip: {
-                callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}%` },
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.label}: ${Number(ctx.parsed).toLocaleString()}`,
+                },
               },
             },
           },
@@ -1471,14 +1621,14 @@ async function renderDarajaTxCurrAnalytics(container) {
   if (!tabsEl || !analyticsContainer) return;
 
   const locationParams = new URLSearchParams();
-  locationParams.set(
-    "county",
-    state.countyFilter !== "all" ? state.countyFilter : "Meru County",
-  );
+  locationParams.set("county", darajaCountyParam());
   if (state.subCountyFilter !== "all")
     locationParams.set("subcounty", state.subCountyFilter);
   if (state.facilityFilter !== "all")
     locationParams.set("facility", state.facilityFilter);
+  // Anchor the reporting window the same way the Overview does; without it
+  // every route silently fell back to its own LAST_12_MONTHS default.
+  locationParams.set("period", buildMonthRangeParam(currentYmParam(), 12));
 
   tabsEl.addEventListener("click", (e) => {
     const btn = e.target.closest(".dhis-analytics-btn");
@@ -1496,11 +1646,15 @@ async function renderDarajaTxCurrAnalytics(container) {
     if (view === "trend") {
       renderDarajaTrendView(analyticsContainer, locationParams.toString());
     } else {
+      // Each tab must point at the endpoint that actually carries that
+      // dimension. `tx-curr-gender`, `tx-curr-age` and `tx-curr-mmd` all
+      // returned the *undifferentiated* TX_CURR monthly total, so the Gender,
+      // Age and MMD tabs were each redrawing the same number.
       const endpointMap = {
-        gender: "/api/hiv-treatment/tx-curr-gender",
-        age: "/api/hiv-treatment/tx-curr-age",
+        gender: "/api/hiv-treatment/tx-curr-gender-split",
+        age: "/api/hiv-treatment/tx-curr-age-split",
         yearly: "/api/hiv-treatment/tx-curr-yearly",
-        mmd: "/api/hiv-treatment/tx-curr-mmd",
+        mmd: "/api/hiv-treatment/daraja-regimens",
         mom: "/api/hiv-treatment/tx-curr-mom",
       };
       const url = endpointMap[view];
@@ -1514,16 +1668,16 @@ async function renderDarajaTxCurrAnalytics(container) {
           }
           switch (view) {
             case "gender":
-              renderGenderAnalytics(analyticsContainer, d);
+              renderDarajaGenderSplit(analyticsContainer, d);
               break;
             case "age":
-              renderAgeAnalytics(analyticsContainer, d);
+              renderDarajaAgeSplit(analyticsContainer, d);
               break;
             case "yearly":
               renderYearlyAnalytics(analyticsContainer, d);
               break;
             case "mmd":
-              renderMmdAnalytics(analyticsContainer, d);
+              renderDarajaRegimens(analyticsContainer, d);
               break;
             case "mom":
               renderMomAnalytics(analyticsContainer, d);
@@ -1554,5 +1708,425 @@ async function renderDarajaTrendView(container, params) {
     renderMomAnalytics(container, d);
   } catch (err) {
     container.innerHTML = `<div class="text-center py-6 text-xs text-red-500">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+// ── Daraja-local analytics renderers ───────────────────────────────
+// The shared renderers in `js/analytics.js` expect a flat {label: value}
+// map, which is why the Gender/Age/MMD tabs were fed an undifferentiated
+// TX_CURR total. These three consume the real dimension payloads instead.
+
+const DARAJA_ANALYTICS_COLORS = {
+  male: "#1B7F96",
+  female: "#8B5FBF",
+  primary: "#0F3D5C",
+  accent: "#20B2AA",
+};
+
+// Male vs Female TX_CURR — payload from /api/hiv-treatment/tx-curr-gender-split
+// {male, female, total, latest_period, trend:[{label, male, female}]}
+function renderDarajaGenderSplit(container, d) {
+  const trend = d.trend || [];
+  if (!trend.length) {
+    container.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">No gender data available for this location.</div>`;
+    return;
+  }
+
+  const labels = trend.map((p) => p.label);
+  const males = trend.map((p) => Number(p.male) || 0);
+  const females = trend.map((p) => Number(p.female) || 0);
+  const last = trend[trend.length - 1];
+  const male = Number(last.male) || 0;
+  const female = Number(last.female) || 0;
+  const total = male + female;
+  const femalePct = total ? ((female / total) * 100).toFixed(1) : "0";
+
+  container.innerHTML = `
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 mb-1">👫 TX_CURR by sex</h3>
+        <div class="text-[10px] text-slate-400 mb-3">Latest reported month: <b>${escapeHtml(d.latest_period || last.label || "")}</b></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Total (latest)</div>
+            <div class="text-2xl font-bold text-slate-900">${total.toLocaleString()}</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Male</div>
+            <div class="text-2xl font-bold text-sky-700">${male.toLocaleString()}</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Female</div>
+            <div class="text-2xl font-bold text-violet-700">${female.toLocaleString()}</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">% Female</div>
+            <div class="text-2xl font-bold text-slate-900">${femalePct}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs font-semibold text-slate-600 mb-1">Male / female composition by month</div>
+          <div style="height:300px"><canvas id="darajaGenderSplitTrend"></canvas></div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs font-semibold text-slate-600 mb-1">Latest month</div>
+          <div style="height:300px"><canvas id="darajaGenderSplitDonut"></canvas></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!window.Chart) return;
+  const trendCtx = document.getElementById("darajaGenderSplitTrend");
+  if (trendCtx) {
+    new Chart(trendCtx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Female",
+            data: females,
+            backgroundColor: DARAJA_ANALYTICS_COLORS.female,
+            stack: "txc",
+          },
+          {
+            label: "Male",
+            data: males,
+            backgroundColor: DARAJA_ANALYTICS_COLORS.male,
+            stack: "txc",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 12, font: { size: 10 } },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { font: { size: 9 }, maxRotation: -45 },
+            grid: { display: false },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { font: { size: 10 } },
+            grid: { color: "rgba(0,0,0,0.05)" },
+          },
+        },
+      },
+    });
+  }
+
+  const donutCtx = document.getElementById("darajaGenderSplitDonut");
+  if (donutCtx) {
+    new Chart(donutCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["Male", "Female"],
+        datasets: [
+          {
+            data: [male, female],
+            backgroundColor: [
+              DARAJA_ANALYTICS_COLORS.male,
+              DARAJA_ANALYTICS_COLORS.female,
+            ],
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 12, font: { size: 10 } },
+          },
+        },
+      },
+    });
+  }
+}
+
+// Age-band TX_CURR — payload from /api/hiv-treatment/tx-curr-age-split
+// {age_data:[{age, value}], latest_period, trend:[{label, value}]}
+function renderDarajaAgeSplit(container, d) {
+  const bands = (d.age_data || []).filter((b) => b && b.age != null);
+  if (!bands.length) {
+    container.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">No age data available for this location.</div>`;
+    return;
+  }
+
+  const labels = bands.map((b) => String(b.age));
+  const values = bands.map((b) => Number(b.value) || 0);
+  const total = values.reduce((s, v) => s + v, 0);
+  const peakIdx = values.indexOf(Math.max(...values));
+
+  const palette = [
+    "#0F3D5C",
+    "#14556F",
+    "#1B7F96",
+    "#20B2AA",
+    "#2CC0A8",
+    "#48BB78",
+    "#7BC67E",
+    "#F59E0B",
+    "#E08B2B",
+    "#DC3545",
+    "#C0455A",
+    "#8B5FBF",
+    "#9D7BD8",
+    "#6B7280",
+    "#374151",
+  ];
+
+  container.innerHTML = `
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 mb-1">👶 TX_CURR by age band</h3>
+        <div class="text-[10px] text-slate-400 mb-3">Latest reported month: <b>${escapeHtml(d.latest_period || "")}</b> · 15 DHIS2 COC age bands</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Total across bands</div>
+            <div class="text-2xl font-bold text-slate-900">${total.toLocaleString()}</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Largest band</div>
+            <div class="text-2xl font-bold text-slate-900">${escapeHtml(labels[peakIdx])}</div>
+            <div class="text-xs text-slate-500">${values[peakIdx].toLocaleString()} patients</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Bands reported</div>
+            <div class="text-2xl font-bold text-slate-900">${values.filter((v) => v > 0).length} / ${labels.length}</div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-lg p-4">
+        <div class="text-xs font-semibold text-slate-600 mb-1">Patients per age band</div>
+        <div style="height:360px"><canvas id="darajaAgeSplitChart"></canvas></div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold text-slate-900">Age band</th>
+              <th class="px-4 py-3 text-right font-semibold text-slate-900">Patients</th>
+              <th class="px-4 py-3 text-right font-semibold text-slate-900">% Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bands
+              .map((b) => {
+                const v = Number(b.value) || 0;
+                const pct = total > 0 ? ((v / total) * 100).toFixed(1) : "0.0";
+                return `<tr class="border-b border-slate-200 hover:bg-slate-50">
+                  <td class="px-4 py-3 font-semibold text-slate-900">${escapeHtml(String(b.age))}</td>
+                  <td class="px-4 py-3 text-right text-slate-700">${v.toLocaleString()}</td>
+                  <td class="px-4 py-3 text-right text-slate-700">${pct}%</td>
+                </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  if (!window.Chart) return;
+  const ctx = document.getElementById("darajaAgeSplitChart");
+  if (ctx) {
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Patients",
+            data: values,
+            backgroundColor: values.map((_, i) => palette[i % palette.length]),
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { font: { size: 10 }, maxRotation: -45 },
+            grid: { display: false },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { font: { size: 10 } },
+            grid: { color: "rgba(0,0,0,0.05)" },
+          },
+        },
+      },
+    });
+  }
+}
+
+// ART regimen mix — payload from /api/hiv-treatment/daraja-regimens
+// {regimens:[{id, label, value}], total, latest_period}
+function renderDarajaRegimens(container, d) {
+  const all = d.regimens || [];
+  const rows = all
+    .map((r) => ({ label: String(r.label || ""), value: Number(r.value) || 0 }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  if (!rows.length) {
+    container.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">No regimen data reported for this location.</div>`;
+    return;
+  }
+
+  const labels = rows.map((r) => r.label);
+  const values = rows.map((r) => r.value);
+  const total = values.reduce((s, v) => s + v, 0);
+  const dtg = rows
+    .filter((r) => r.label.toLowerCase().includes("dtg"))
+    .reduce((s, r) => s + r.value, 0);
+  const dtgPct = total ? ((dtg / total) * 100).toFixed(1) : "0";
+
+  const palette = [
+    "#0F3D5C",
+    "#1B7F96",
+    "#20B2AA",
+    "#48BB78",
+    "#F59E0B",
+    "#8B5BFB",
+    "#DC3545",
+    "#6B7280",
+  ];
+
+  container.innerHTML = `
+    <div class="space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 mb-1">💊 ART regimen mix</h3>
+        <div class="text-[10px] text-slate-400 mb-3">Latest reported month: <b>${escapeHtml(d.latest_period || "")}</b> · CHAK Stawisha TX_CURR regimen elements</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Total on a reported regimen</div>
+            <div class="text-2xl font-bold text-slate-900">${total.toLocaleString()}</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">On DTG</div>
+            <div class="text-2xl font-bold text-emerald-700">${dtg.toLocaleString()}</div>
+            <div class="text-xs text-slate-500">${dtgPct}% of reported</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3">
+            <div class="text-xs text-slate-500 mb-1">Regimens with data</div>
+            <div class="text-2xl font-bold text-slate-900">${rows.length} / ${all.length}</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs font-semibold text-slate-600 mb-1">Patients per regimen</div>
+          <div style="height:340px"><canvas id="darajaRegimenBar"></canvas></div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs font-semibold text-slate-600 mb-1">Share of reported total</div>
+          <div style="height:340px"><canvas id="darajaRegimenDonut"></canvas></div>
+        </div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold text-slate-900">Regimen</th>
+              <th class="px-4 py-3 text-right font-semibold text-slate-900">Patients</th>
+              <th class="px-4 py-3 text-right font-semibold text-slate-900">% Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map((r) => {
+                const pct =
+                  total > 0 ? ((r.value / total) * 100).toFixed(1) : "0.0";
+                return `<tr class="border-b border-slate-200 hover:bg-slate-50">
+                  <td class="px-4 py-3 text-slate-700">${escapeHtml(r.label)}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-900">${r.value.toLocaleString()}</td>
+                  <td class="px-4 py-3 text-right text-slate-700">${pct}%</td>
+                </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  if (!window.Chart) return;
+  const barCtx = document.getElementById("darajaRegimenBar");
+  if (barCtx) {
+    new Chart(barCtx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Patients",
+            data: values,
+            backgroundColor: values.map((_, i) => palette[i % palette.length]),
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { font: { size: 10 } },
+            grid: { color: "rgba(0,0,0,0.05)" },
+          },
+          y: { ticks: { font: { size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  const donutCtx = document.getElementById("darajaRegimenDonut");
+  if (donutCtx) {
+    new Chart(donutCtx, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [
+          {
+            data: values,
+            backgroundColor: values.map((_, i) => palette[i % palette.length]),
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "58%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 10, font: { size: 9 } },
+          },
+        },
+      },
+    });
   }
 }
