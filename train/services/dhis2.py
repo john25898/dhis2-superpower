@@ -56,6 +56,22 @@ _CHAK_COOLDOWN = float(os.getenv("CHAK_BASE_COOLDOWN", "120"))
 _CHAK_CONNECT_TIMEOUT = float(os.getenv("CHAK_CONNECT_TIMEOUT", "4"))
 _CHAK_DEFAULT_READ_TIMEOUT = float(os.getenv("CHAK_READ_TIMEOUT", "240"))
 
+# Read budgets for the two heavy analytics shapes.  Both are env-tunable so an
+# operator can shorten them on a platform whose worker timeout is smaller than
+# CHAK's worst-case latency.
+_CHAK_ANALYTICS_READ_TIMEOUT = float(
+    os.getenv("CHAK_ANALYTICS_READ_TIMEOUT", "120"))
+_CHAK_COC_READ_TIMEOUT = float(
+    os.getenv("CHAK_COC_READ_TIMEOUT", "240"))
+
+# A base already inside its cooldown window is only being *probed* to notice
+# CHAK recovering, so it must not re-pay a full 120/240 s budget.  A read
+# timeout is a RequestException, so it is recorded as a failure too — before
+# this cap, ONE blackholed call made every later call in the same build hang
+# for the whole budget (measured: a single cold milestone build took 380 s).
+_CHAK_PROBE_READ_TIMEOUT = float(
+    os.getenv("CHAK_PROBE_READ_TIMEOUT", "6"))
+
 
 def chak_bases():
     """Ordered CHAK base URLs: last known good, then the default, then env."""
@@ -87,8 +103,10 @@ def chak_get(path, params, read_timeout=None, auth=None):
 
     if auth is None:
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
-    timeout = (_CHAK_CONNECT_TIMEOUT,
-               read_timeout or _CHAK_DEFAULT_READ_TIMEOUT)
+    # Caller-pinned read budget, else the generous default.  The heavy
+    # analytics callers pass their own via _CHAK_ANALYTICS_READ_TIMEOUT /
+    # _CHAK_COC_READ_TIMEOUT.
+    want_read = read_timeout or _CHAK_DEFAULT_READ_TIMEOUT
 
     last_exc = None
     tried = []
@@ -107,11 +125,20 @@ def chak_get(path, params, read_timeout=None, auth=None):
         # request for the whole window, so probe anyway — a half-open retry
         # that recovers the moment CHAK is back.
         print("[DHIS2] all CHAK bases in cooldown; probing anyway "
-              f"({', '.join(candidates) or 'none'})")
+              f"(read budget capped at {_CHAK_PROBE_READ_TIMEOUT:g}s for "
+              f"{', '.join(candidates) or 'none'})")
         live = list(candidates)
 
     for base in live:
         url = base.rstrip("/") + path
+        # Cap the read budget for a base we are only probing.  Without this
+        # a base that just blackholed would be re-probed at the full
+        # 120/240 s budget on every subsequent call in the same build.
+        if _in_cooldown(base):
+            timeout = (_CHAK_CONNECT_TIMEOUT,
+                       min(want_read, _CHAK_PROBE_READ_TIMEOUT))
+        else:
+            timeout = (_CHAK_CONNECT_TIMEOUT, want_read)
         try:
             resp = _req.get(url, params=params, auth=auth, verify=False,
                             timeout=timeout)
@@ -238,7 +265,8 @@ def _dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS", coc_ids=None):
     # round-trip was removed rather than repaired.  (Superpower's parsed output
     # also drops the `co` dimension, so it could never have served the
     # COC-disaggregated callers anyway.)
-    resp = chak_get("/analytics.json", params, read_timeout=120, auth=auth)
+    resp = chak_get("/analytics.json", params,
+                    read_timeout=_CHAK_ANALYTICS_READ_TIMEOUT, auth=auth)
     if not resp.ok:
         return {}
     data = resp.json()
@@ -282,7 +310,8 @@ def _chak_analytics_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
         "displayProperty": "NAME",
     }
     try:
-        resp = chak_get("/analytics.json", params, read_timeout=120, auth=auth)
+        resp = chak_get("/analytics.json", params,
+                        read_timeout=_CHAK_ANALYTICS_READ_TIMEOUT, auth=auth)
         if not resp.ok:
             return {}
         data = resp.json()
@@ -347,8 +376,8 @@ def _chak_analytics_fetch_coc(dx_id, ou_ids, pe="LAST_12_MONTHS",
                           "ou:" + ";".join(chunk)],
             "paging": "false",
         }
-        resp = chak_get("/analytics.json", params, read_timeout=240,
-                        auth=auth)
+        resp = chak_get("/analytics.json", params,
+                        read_timeout=_CHAK_COC_READ_TIMEOUT, auth=auth)
         if not resp.ok:
             raise RuntimeError(f"CHAK COC fetch HTTP {resp.status_code}")
         data = resp.json()
@@ -435,8 +464,8 @@ def _chak_analytics_coc_cells(dx_ids, ou_ids, pe="LAST_12_MONTHS",
             "paging": "false",
         }
         try:
-            resp = chak_get("/analytics.json", params, read_timeout=240,
-                            auth=auth)
+            resp = chak_get("/analytics.json", params,
+                            read_timeout=_CHAK_COC_READ_TIMEOUT, auth=auth)
         except Exception as exc:  # noqa: BLE001
             print(f"[DHIS2] CHAK COC cells fetch failed: {exc}")
             return {}
@@ -524,8 +553,8 @@ def _chak_coc_name_totals(dx_ids, ou_ids, pe="LAST_12_MONTHS",
             "paging": "false",
         }
         try:
-            resp = chak_get("/analytics.json", params, read_timeout=240,
-                            auth=auth)
+            resp = chak_get("/analytics.json", params,
+                            read_timeout=_CHAK_COC_READ_TIMEOUT, auth=auth)
         except Exception as exc:  # noqa: BLE001
             print(f"[DHIS2] CHAK typology fetch failed: {exc}")
             return {}

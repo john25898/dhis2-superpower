@@ -11,8 +11,11 @@ for modname in list(sys.modules.keys()):
     if 'app' in modname:
         del sys.modules[modname]
 
-from app import create_app
+# app.py already builds and exposes a module-level `app`; importing it runs
+# create_app() exactly once.  Calling create_app() again here built the whole
+# app (and re-registered every blueprint, re-reading the metadata CSVs) a
+# second time — ~1.7 s of pure waste on every local start.
+from app import app
 
-app = create_app()
 port = int(os.environ.get("FLASK_PORT", sys.argv[1] if len(sys.argv) > 1 else "5000"))
 app.run(host='0.0.0.0', port=port, debug=False)

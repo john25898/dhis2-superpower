@@ -45,6 +45,13 @@ _MILESTONE_TTL = int(os.getenv("MILESTONE_CACHE_TTL", "300"))
 _BUILD_LOCK = threading.Lock()
 _PREWARM_STARTED = False
 
+# Guards the "start a background refresh?" decision so two concurrent cold
+# requests cannot each spawn their own builder.
+_REFRESH_DECISION_LOCK = threading.Lock()
+
+# Seconds a client should wait before re-polling while a cold build runs.
+_WARMING_RETRY_SECONDS = int(os.getenv("MILESTONE_WARMING_RETRY", "5"))
+
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 
@@ -90,7 +97,13 @@ def _start_prewarm():
         time.sleep(float(os.getenv("MILESTONE_PREWARM_DELAY", "10")))
         t0 = time.time()
         try:
-            _ensure_payload()
+            # Build under the lock ourselves.  _ensure_payload() is now
+            # deliberately non-blocking (it answers "warming" rather than
+            # waiting on a cold build), so the pre-warm must not route
+            # through it — here we *want* to pay the build cost.
+            with _BUILD_LOCK:
+                if not _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
+                    _build_locked()
             print(f"[MILESTONE] Pre-warm complete in {time.time() - t0:.1f}s")
         except Exception as exc:  # noqa: BLE001
             print(f"[MILESTONE] Pre-warm failed after "
@@ -625,6 +638,12 @@ _MONTH_ORD = {
 }
 
 _DARJA_OUS_CACHE = None
+_DARJA_OUS_CACHE_AT = 0.0
+# A scope resolved *without* the live CHAK code lookup is name-matched only
+# and may be missing facilities, so it is cached on a short TTL and retried
+# once CHAK is reachable again — instead of being pinned for the process life.
+_DARJA_SCOPE_LIVE_OK = False
+_DARJA_SCOPE_DEGRADED_TTL = float(os.getenv("DARJA_SCOPE_DEGRADED_TTL", "300"))
 
 
 def _daraja_scope():
@@ -642,9 +661,12 @@ def _daraja_scope():
     with exact-first then containment matching.
     Returns (daraja_names, matched_ou_ids, matched_count).
     """
-    global _DARJA_OUS_CACHE
+    global _DARJA_OUS_CACHE, _DARJA_OUS_CACHE_AT, _DARJA_SCOPE_LIVE_OK
     if _DARJA_OUS_CACHE is not None:
-        return _DARJA_OUS_CACHE
+        if _DARJA_SCOPE_LIVE_OK or (
+            time.time() - _DARJA_OUS_CACHE_AT <= _DARJA_SCOPE_DEGRADED_TTL
+        ):
+            return _DARJA_OUS_CACHE
 
     daraja_rows = []  # each: {"mfl": code, "name": census display name}
     census_path = BASE_DIR / "Site_Census - Daraja.xlsx"
@@ -707,6 +729,7 @@ def _daraja_scope():
     by_code = _fetch_chak_ou_by_code(
         [r["mfl"] for r in daraja_rows]
     )
+    live_ok = bool(by_code)
 
     matched_ids = []
     for row in daraja_rows:
@@ -724,6 +747,12 @@ def _daraja_scope():
     # unique, order-preserving
     matched_ids = list(dict.fromkeys(matched_ids))
     _DARJA_OUS_CACHE = (daraja_names, matched_ids, len(matched_ids))
+    _DARJA_OUS_CACHE_AT = time.time()
+    _DARJA_SCOPE_LIVE_OK = live_ok
+    if not live_ok:
+        print(f"[MILESTONE] Daraja scope resolved WITHOUT the live CHAK code "
+              f"lookup ({len(matched_ids)}/{len(daraja_names)} name-matched); "
+              f"will retry in {_DARJA_SCOPE_DEGRADED_TTL:g}s")
     return _DARJA_OUS_CACHE
 
 
@@ -1628,9 +1657,10 @@ _BACKGROUND_REFRESH = False
 def _spawn_refresh():
     """Rebuild the payload on a daemon thread so no request blocks on it."""
     global _BACKGROUND_REFRESH
-    if _BACKGROUND_REFRESH:
-        return
-    _BACKGROUND_REFRESH = True
+    with _REFRESH_DECISION_LOCK:
+        if _BACKGROUND_REFRESH:
+            return
+        _BACKGROUND_REFRESH = True
 
     def _run():
         global _BACKGROUND_REFRESH
@@ -1640,7 +1670,8 @@ def _spawn_refresh():
         except Exception as exc:  # noqa: BLE001
             print(f"[MILESTONE] Background refresh failed: {exc}")
         finally:
-            _BACKGROUND_REFRESH = False
+            with _REFRESH_DECISION_LOCK:
+                _BACKGROUND_REFRESH = False
 
     threading.Thread(
         target=_run, name="milestone-refresh", daemon=True
@@ -1651,30 +1682,51 @@ def _fresh(payload, at):
     return payload is not None and (time.time() - at) <= _MILESTONE_TTL
 
 
+class _PayloadWarming(Exception):
+    """The payload is still being built and the caller must not wait for it."""
+
+
 def _ensure_payload(force=False):
-    """Return the tracker payload, never making a request wait on a build.
+    """Return the tracker payload.  Never makes a request wait on a cold build.
 
-    Three cases:
-      * fresh cache           -> return it
-      * stale cache           -> return it now, refresh on a daemon thread
-      * no cache / ?refresh=1 -> build synchronously (cold start only;
-                                 _start_prewarm() normally prevents this)
+    Cases:
+      * fresh cache    -> return it
+      * stale cache    -> return it now, refresh on a daemon thread
+      * ?refresh=1     -> build synchronously (the caller explicitly asked)
+      * nothing cached -> start the build on a daemon thread and raise
+                          _PayloadWarming so the request answers instantly
 
-    Double-checked locking: a request that blocks behind the boot pre-warm
-    re-checks freshness once it owns the lock, so it returns the payload
-    the pre-warm just built instead of triggering a second full build.
+    The last case is the important one.  A cold build loads both FAA workbooks
+    and pulls LAST_12_MONTHS of MOH 731 from CHAK; when CHAK is unreachable
+    that could take minutes.  Blocking the request on _BUILD_LOCK while it ran
+    is exactly what made the Milestone tab hang for 2-6 minutes (measured
+    380 s).  The route now answers 202 "warming" instead and the client
+    re-polls, so the tab is usable immediately and fills in when the build
+    lands.
     """
     if not force and _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
         return _MILESTONE_CACHE
-    with _BUILD_LOCK:
-        has_cache = _MILESTONE_CACHE is not None
-        stale = not _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT)
-        if not (stale or force):
-            return _MILESTONE_CACHE
-        if has_cache and not force:
+
+    if force:
+        with _BUILD_LOCK:
+            if _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
+                return _MILESTONE_CACHE
+            return _build_locked()
+
+    if _MILESTONE_CACHE is not None:
+        # Serve the last good payload immediately; refresh behind the scenes.
+        with _BUILD_LOCK:
+            if _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
+                return _MILESTONE_CACHE
             _spawn_refresh()
-            return _MILESTONE_CACHE
-        return _build_locked()
+        return _MILESTONE_CACHE
+
+    # Nothing cached.  Do NOT take _BUILD_LOCK: the boot pre-warm (or another
+    # request) may already hold it, and waiting on it is the multi-minute hang
+    # this function exists to avoid.
+    if not _BUILD_LOCK.locked():
+        _spawn_refresh()
+    raise _PayloadWarming()
 
 
 @milestone_bp.get("/api/milestone/data")
@@ -1694,5 +1746,17 @@ def milestone_data():
     try:
         force = request.args.get("refresh") in ("1", "true", "yes")
         return jsonify(dict(_ensure_payload(force=force)))
+    except _PayloadWarming:
+        resp = jsonify({
+            "ok": False,
+            "warming": True,
+            "retryAfter": _WARMING_RETRY_SECONDS,
+            "message": ("Milestone data is still being prepared from CHAK "
+                        "DHIS2 — retrying shortly."),
+        })
+        resp.status_code = 202
+        resp.headers["Retry-After"] = str(_WARMING_RETRY_SECONDS)
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
     except Exception as exc:  # noqa: BLE001 - surface friendly error
         return jsonify({"ok": False, "error": str(exc)})

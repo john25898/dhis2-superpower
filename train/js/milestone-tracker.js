@@ -6,17 +6,72 @@
 
 let _milestoneDataPromise = null;
 
+// dashboard.js reuses the same #chart shell for every view, and on the Home
+// view it nests `#homepageRoot` *inside* it.  So the cold-build placeholder
+// must only ever be painted while the Milestone Tracker itself is on screen:
+// painting it unconditionally wiped out #homepageRoot, and the Home dashboard
+// then rendered into a detached node, leaving the placeholder stranded.
+function _milestoneViewActive() {
+  return (
+    typeof state !== "undefined" &&
+    !!state &&
+    state.activePage === "milestone_tracker"
+  );
+}
+
+function _milestoneNoticeVisible() {
+  return !!(
+    elements.chartRoot && elements.chartRoot.querySelector("[data-ms-warming]")
+  );
+}
+
+// Friendly placeholder shown while the server builds a cold payload.
+function milestoneWarmingNotice() {
+  if (!elements.chartRoot) return;
+  elements.chartRoot.innerHTML = `<div data-ms-warming="1" class="p-10 text-center text-slate-400">
+    <div class="inline-flex items-center gap-3">
+      <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500"></span>
+      <span>Preparing milestone data from CHAK DHIS2…</span>
+    </div>
+    <div class="mt-2 text-[11px] text-slate-400">This only happens on the first load after a restart.</div>
+  </div>`;
+}
+
+async function _fetchMilestoneData() {
+  const started = Date.now();
+  // The server answers 202 {warming:true} while a cold build runs instead of
+  // holding the request open for minutes.  Poll until the real payload lands
+  // (bounded so a permanently broken build cannot spin forever).
+  const maxWaitMs = 15 * 60 * 1000;
+  for (;;) {
+    const r = await fetch("/api/milestone/data", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    if (data && data.warming) {
+      // Re-paint only when the tracker is on screen and the placeholder is not
+      // already showing (covers navigating away and back mid-build).
+      if (_milestoneViewActive() && !_milestoneNoticeVisible()) {
+        milestoneWarmingNotice();
+      }
+      if (Date.now() - started > maxWaitMs) {
+        throw new Error("milestone data is taking too long to prepare");
+      }
+      const wait = Math.max(1, Number(data.retryAfter) || 5) * 1000;
+      await new Promise(function (res) {
+        setTimeout(res, wait);
+      });
+      continue;
+    }
+    return data;
+  }
+}
+
 async function loadMilestoneData() {
   if (!_milestoneDataPromise) {
-    _milestoneDataPromise = fetch("/api/milestone/data")
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .catch(function (err) {
-        _milestoneDataPromise = null;
-        throw err;
-      });
+    _milestoneDataPromise = _fetchMilestoneData().catch(function (err) {
+      _milestoneDataPromise = null;
+      throw err;
+    });
   }
   return _milestoneDataPromise;
 }
@@ -620,15 +675,26 @@ async function renderMilestoneTrackerPage() {
 
   if (elements.chartRoot) destroyChartsIn(elements.chartRoot);
 
+  // Paint the cold-build placeholder straight away so the tab responds
+  // instantly even while loadMilestoneData() is still polling a 202.  When the
+  // payload is already cached this resolves in the same microtask batch, so no
+  // flash reaches the screen.
+  if (!_milestoneNoticeVisible()) milestoneWarmingNotice();
+
   let data;
   try {
     data = await loadMilestoneData();
   } catch (err) {
+    if (!_milestoneViewActive()) return;
     elements.chartRoot.innerHTML = `<div class="p-10 text-center text-slate-400">
       Failed to load milestone data. Please try again later.
     </div>`;
     return;
   }
+
+  // A cold build can take a while, and the user may have navigated away in the
+  // meantime; never write this page over whatever view is now showing.
+  if (!_milestoneViewActive()) return;
 
   if (!data || !data.ok || !Array.isArray(data.months)) {
     elements.chartRoot.innerHTML = `<div class="p-10 text-center text-slate-400">
@@ -728,6 +794,7 @@ async function renderMilestoneTrackerPage() {
           ${metaBits.length ? `<div class="mt-1 text-[10px] font-medium text-slate-400">${escapeHtml(metaBits.join(" · "))}</div>` : ""}
         </td>
         <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-700 whitespace-nowrap">${fmtMoney(row.allocation)}</td>
+        <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, false)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
@@ -736,7 +803,7 @@ async function renderMilestoneTrackerPage() {
     })
     .join("");
 
-  const homeEmptyRowHtml = `<tr><td colspan="7" class="px-3 py-8 text-center text-[13px] text-slate-400">
+  const homeEmptyRowHtml = `<tr><td colspan="8" class="px-3 py-8 text-center text-[13px] text-slate-400">
     No milestones found for Year 1.
   </td></tr>`;
 
@@ -758,12 +825,13 @@ async function renderMilestoneTrackerPage() {
     <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="mb-2 text-[13px] font-bold text-slate-800">📋 General Milestone Table</div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[900px] border-collapse">
+        <table class="w-full min-w-[1000px] border-collapse">
           <thead>
             <tr class="bg-slate-50">
               <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">ID</th>
               <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">Milestone</th>
               <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">6-Month Allocation</th>
+              <th class="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">Alerts</th>
               <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Earned</th>
               <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Paid</th>
               <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Balance</th>

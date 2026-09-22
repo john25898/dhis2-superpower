@@ -712,6 +712,19 @@ def mhu_chak_data():
 
 
 # ── CHAK org unit lookup by name ──────────────────────────────────
+# The CHAK facility name index.  `CHAK_Visuals_4_explore/` is git-ignored (it
+# is the PBIX exploration workspace), so a copy ships inside the app and the
+# explore path is only a fallback for a checkout that predates the copy.
+_CHAK_FACILITY_INDEX_CANDIDATES = (
+    BASE_DIR / "data" / "all_chak_facilities.csv",
+    BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv",
+)
+_CHAK_FACILITY_INDEX = next(
+    (p for p in _CHAK_FACILITY_INDEX_CANDIDATES if p.exists()),
+    _CHAK_FACILITY_INDEX_CANDIDATES[0],
+)
+
+
 @mhu_bp.get("/api/mhu/chak-ou-lookup")
 def mhu_chak_ou_lookup():
     """Look up CHAK org unit ID by facility name.
@@ -725,7 +738,7 @@ def mhu_chak_ou_lookup():
     if _CHAK_OUS_CACHE is None:
         _CHAK_OUS_CACHE = []
         # Load from all_chak_facilities.csv (PBIX export)
-        csv_path = BASE_DIR.parent / "CHAK_Visuals_4_explore" / "all_chak_facilities.csv"
+        csv_path = _CHAK_FACILITY_INDEX
         if csv_path.exists():
             with open(csv_path, encoding="utf-8-sig") as f:
                 for row in csv.DictReader(f):
