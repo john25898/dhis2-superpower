@@ -288,7 +288,7 @@ function _buildHomeMsPanel(plan) {
           <canvas id="hp-ms-home-canvas"></canvas>
         </div>
         <div class="mt-2 space-y-1">${legend}</div>
-        <p class="mt-2 text-[10px] leading-relaxed text-slate-400">Only M1 milestones 1–3 (Plan &amp; Workplan, Personnel, MEL/DQA protocol) carry verified statuses so far — the remaining ${(total - (bucket.counts[0] + bucket.counts[1] + bucket.counts[2])).toLocaleString("en-US")} milestones in the M1–M6 schedule are shown grey until their reporting month is assessed.</p>
+        <p class="mt-2 text-[10px] leading-relaxed text-slate-400">M1 milestones 1–3 (Plan &amp; Workplan, Personnel, MEL/DQA protocol) carry verified tracker statuses, and the nine DHIS2-measurable milestones (6–9, 11, 14, 15, 16, 21) are banded from the live CHAK baseline pending GOR verification — the remaining ${(total - (bucket.counts[0] + bucket.counts[1] + bucket.counts[2])).toLocaleString("en-US")} milestones in the M1–M6 schedule are shown grey until their reporting month is assessed.</p>
         <button type="button" class="hp-ms-open-tracker hp-ms-btn">🗓️ Open Milestone Tracker →</button>
       </div>`;
 }
@@ -975,8 +975,7 @@ async function renderHomepageDashboard() {
         if (!pid) return;
         if (pid === "daraja") {
           state.activeProject = "daraja";
-          if (elements.projectFilter)
-            elements.projectFilter.value = "daraja";
+          if (elements.projectFilter) elements.projectFilter.value = "daraja";
           state.activePage = "overview";
           setPageHash("overview");
           renderCurrentView();

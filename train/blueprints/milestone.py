@@ -1149,6 +1149,34 @@ def _unlock_bands(band, pct):
     return 0, "<70% of target — no payment"
 
 
+def _alert_for_unlock(unlock):
+    """Read a milestone's Alerts chip off the payment scale it earned.
+
+    The Alerts column uses the Summary2 tracker's own vocabulary, so only
+    "On Track" / "Watch" / "Off Track" are renderable (`_ALERT_SET`).  The
+    tracker seeds only exist for M1 ids 1–3, which left every
+    DHIS2-measured milestone blank in that column even once its
+    PERFORMANCE and EARNED cells filled in.
+
+    A live baseline is a real measurement, so it can be banded honestly
+    rather than left blank: a full unlock is On Track, a partial unlock is
+    Watch, and no unlock is Off Track.  Returns None when there is no
+    baseline, so milestones with no DHIS2 source still stay "—" instead of
+    inventing a status.
+    """
+    if unlock is None:
+        return None
+    try:
+        unlock = float(unlock)
+    except (TypeError, ValueError):
+        return None
+    if unlock >= 100:
+        return "On Track"
+    if unlock > 0:
+        return "Watch"
+    return "Off Track"
+
+
 def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
                 band, formula):
     return {
@@ -1597,6 +1625,20 @@ def _build_payload():
             perf = perf_by_id.get(row["id"])
             if perf:
                 row["perf"] = perf
+            # Alerts.  A Summary2 seed is the GOR-verified status and always
+            # wins.  Every OTHER row used to stay blank, which left the
+            # DHIS2-measured milestones with a PERFORMANCE figure, an EARNED
+            # figure and no Alerts chip — and made the Milestone Status
+            # donut report them all as "Not yet assessed".  Rows carrying a
+            # live baseline now band that baseline instead; `alertsSource`
+            # records which of the two the chip came from, so the UI can be
+            # explicit that a baseline alert is an estimate pending GOR
+            # verification.
+            if not row.get("alerts"):
+                alert = _alert_for_unlock((perf or {}).get("unlock"))
+                if alert:
+                    row["alerts"] = alert
+                    row["alertsSource"] = "baseline"
 
     return {
         "ok": True,
