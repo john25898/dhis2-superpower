@@ -597,36 +597,47 @@ def _dhis2_fetch_safe(dx_ids, ou_id, pe="LAST_12_MONTHS", cocs=None):
 
 
 def _direct_dhis2_fetch(dx_ids, ou_id, pe="LAST_12_MONTHS"):
-    """Direct DHIS2 analytics fetch fallback (no COC support)."""
-    import requests as req
+    """Direct DHIS2 analytics fetch fallback (no COC support).
+
+    Only reached when this module is imported without `app.py` having supplied
+    its own `_dhis2_fetch` closure (probe scripts).  It goes through the shared
+    `chak_get` so it inherits the base-walk, the per-base cooldowns and the
+    CHAK cross-year period split, rather than quietly returning ``{}`` for any
+    window that spans two calendar years.
+
+    Keys by raw period CODE, unlike `services.dhis2._dhis2_fetch` which keys by
+    display name; `_pe_code` / `_pick` exist to bridge the two.
+    """
     from requests.auth import HTTPBasicAuth
+
+    from services.dhis2 import (CHAK_PASS, CHAK_USER,
+                                _CHAK_ANALYTICS_READ_TIMEOUT, chak_get)
 
     dx_str = ";".join(dx_ids) if isinstance(dx_ids, list) else dx_ids
     ou_str = ";".join(ou_id) if isinstance(ou_id, list) else ou_id
     pe = _normalize_pe(pe)
 
-    dhis_base = os.getenv("DHIS_BASE_URL") or "https://ereporting.chak.or.ke/api/"
-    url = (
-        f"{dhis_base.rstrip('/')}/analytics.json?"
-        f"dimension=dx:{dx_str}&dimension=pe:{pe}&dimension=ou:{ou_str}"
-        f"&displayProperty=NAME"
-    )
-    username = os.getenv("DHIS_USERNAME") or "Johnbrian"
-    password = os.getenv("DHIS_PASSWORD") or "JOHNb123\\"
-    auth = HTTPBasicAuth(username, password)
-
-    resp = req.get(url, auth=auth, timeout=120)
+    auth = HTTPBasicAuth(os.getenv("DHIS_USERNAME") or CHAK_USER,
+                         os.getenv("DHIS_PASSWORD") or CHAK_PASS)
+    resp = chak_get("/analytics.json", {
+        "dimension": [f"dx:{dx_str}", f"pe:{pe}", f"ou:{ou_str}"],
+        "displayProperty": "NAME",
+    }, read_timeout=_CHAK_ANALYTICS_READ_TIMEOUT, auth=auth)
     if not resp.ok:
         return {}
+    try:
+        data = resp.json()
+    except ValueError:
+        return {}
 
-    data = resp.json()
     hdrs = [h.get("name", "").lower() for h in data.get("headers", [])]
     pe_idx = next((i for i, h in enumerate(hdrs) if h in ("pe", "period")), 0)
-    dx_idx = next((i for i, h in enumerate(hdrs) if h == "dx"), 0)
     val_idx = next((i for i, h in enumerate(hdrs) if h == "value"), len(hdrs) - 1)
 
     out = {}
     for row in data.get("rows", []):
+        if len(row) <= max(pe_idx, val_idx):
+            continue
         pe_name = str(row[pe_idx])
         val = float(row[val_idx]) if row[val_idx] else 0
         out[pe_name] = out.get(pe_name, 0) + val
@@ -843,6 +854,28 @@ _ANALYTICS_SESSION = None
 
 
 def _analytics_get(params, timeout=180, attempts=3):
+    """GET ``analytics.json``, splitting cross-year period sets when needed.
+
+    A thin wrapper over `_analytics_get_once`: this session deliberately
+    bypasses `services.dhis2.chak_get`, so the CHAK cross-year workaround
+    (which chak_get applies centrally) has to be applied here too — otherwise
+    every ``co:``-based measure on this page set stays blank for eleven months
+    of the year.  When the period set sits inside one calendar year nothing
+    changes: one request, returned verbatim.
+    """
+    from services.dhis2 import chak_analytics_query
+
+    def _once(query_params):
+        body = _analytics_get_once(query_params, timeout, attempts)
+        if body is None:
+            return False, None, None
+        return True, body, None
+
+    body, _raw, _merged = chak_analytics_query(params, _once)
+    return body
+
+
+def _analytics_get_once(params, timeout=180, attempts=3):
     """GET ``analytics.json`` through a retrying, keep-alive-free session.
 
     The CHAK server intermittently truncates large ``dimension=co`` responses

@@ -264,6 +264,44 @@ def analytics_response_to_frame(payload: dict[str, Any]) -> pd.DataFrame:
     return frame[["dx", "pe", "ou", "value"]]
 
 
+def fetch_analytics_payload(
+    session: requests.Session,
+    settings: dict[str, str],
+    params: dict[str, Any] | list[tuple[str, str]],
+    *,
+    context: str,
+    timeout: int = 180,
+) -> dict[str, Any]:
+    """Fetch one analytics query, splitting cross-year period sets if needed.
+
+    CHAK DHIS2 answers a period set that spans two calendar years with zero
+    rows, so a ``pe:LAST_12_MONTHS`` export silently wrote empty CSVs from
+    January to November.  Going through the shared splitter makes the exporter
+    ask once per calendar year and merge the answers, which is exact because a
+    period belongs to exactly one year.
+
+    A rejected batch raises out of the splitter rather than being trimmed, so
+    the export aborts instead of writing a short CSV.
+    """
+    from services.dhis2 import chak_analytics_query
+
+    auth = auth_for(settings)
+    base_url = settings["base_url"]
+
+    def _once(query_params, _label=context):
+        response = session.get(
+            f"{base_url}/api/analytics.json",
+            auth=auth,
+            params=query_params,
+            timeout=timeout,
+        )
+        raise_for_dhis(response, _label)
+        return True, response.json(), None
+
+    payload, _raw, _merged = chak_analytics_query(params, _once)
+    return payload or {}
+
+
 def fetch_section_analytics(
     session: requests.Session,
     settings: dict[str, str],
@@ -271,8 +309,6 @@ def fetch_section_analytics(
     *,
     context: str,
 ) -> pd.DataFrame:
-    auth = auth_for(settings)
-    base_url = settings["base_url"]
     org_unit = settings["org_unit"]
 
     if not element_ids:
@@ -295,9 +331,13 @@ def fetch_section_analytics(
             ],
             "displayProperty": "NAME",
         }
-        response = session.get(f"{base_url}/api/analytics.json", auth=auth, params=params, timeout=180)
-        raise_for_dhis(response, f"{context}:batch:{batch_index + 1}")
-        batch_frame = analytics_response_to_frame(response.json())
+        payload = fetch_analytics_payload(
+            session,
+            settings,
+            params,
+            context=f"{context}:batch:{batch_index + 1}",
+        )
+        batch_frame = analytics_response_to_frame(payload)
         if not batch_frame.empty:
             frames.append(batch_frame)
 
@@ -357,8 +397,6 @@ def export_hiv_treatment_sections(
 
 
 def export_analytics(session: requests.Session, settings: dict[str, str], output_dir: Path) -> dict[str, Path]:
-    auth = auth_for(settings)
-    base_url = settings["base_url"]
     org_unit = settings["org_unit"]
     discovered = discover_metadata(session, settings)
     data_elements = discovered.get("dataElements", [])
@@ -389,9 +427,9 @@ def export_analytics(session: requests.Session, settings: dict[str, str], output
             ],
             "displayProperty": "NAME",
         }
-        response = session.get(f"{base_url}/api/analytics.json", auth=auth, params=params, timeout=120)
-        raise_for_dhis(response, f"analytics:{name}")
-        payload = response.json()
+        payload = fetch_analytics_payload(
+            session, settings, params, context=f"analytics:{name}", timeout=120
+        )
         headers = [header.get("name", "") for header in payload.get("headers", [])]
         frame = pd.DataFrame(payload.get("rows", []), columns=headers)
         csv_path = output_dir / "raw" / f"{name}.csv"

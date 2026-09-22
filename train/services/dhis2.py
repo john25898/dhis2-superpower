@@ -1,6 +1,8 @@
 """DHIS2 live-query clients (CHAK server) and indicator specifications."""
 from __future__ import annotations
 
+import datetime as dt
+import json
 import os
 import re
 import threading
@@ -93,6 +95,12 @@ def chak_get(path, params, read_timeout=None, auth=None):
     triggering another base, because a server that rejects the query on one
     transport would reject it on the other too.
 
+    An `/analytics.json` query whose period set spans two calendar years is
+    transparently re-issued one year at a time and merged, because this CHAK
+    instance answers such a set with zero rows (see `plan_pe_chunks`).  The
+    merged body is returned in a response object, so callers cannot tell the
+    difference.
+
     Raises the last transport exception when no base is reachable, so each
     caller's existing `except` handling keeps working unchanged.
     """
@@ -129,36 +137,62 @@ def chak_get(path, params, read_timeout=None, auth=None):
               f"{', '.join(candidates) or 'none'})")
         live = list(candidates)
 
-    for base in live:
-        url = base.rstrip("/") + path
-        # Cap the read budget for a base we are only probing.  Without this
-        # a base that just blackholed would be re-probed at the full
-        # 120/240 s budget on every subsequent call in the same build.
-        if _in_cooldown(base):
-            timeout = (_CHAK_CONNECT_TIMEOUT,
-                       min(want_read, _CHAK_PROBE_READ_TIMEOUT))
-        else:
-            timeout = (_CHAK_CONNECT_TIMEOUT, want_read)
-        try:
-            resp = _req.get(url, params=params, auth=auth, verify=False,
-                            timeout=timeout)
-        except _req.exceptions.RequestException as exc:
-            with _CHAK_LOCK:
-                _CHAK_FAILED_AT[base] = time.monotonic()
-            last_exc = exc
-            tried.append(f"{base} ({type(exc).__name__})")
-            print(f"[DHIS2] CHAK base unreachable: {base} - "
-                  f"{type(exc).__name__}: {exc}")
-            continue
-        with _CHAK_LOCK:
-            _CHAK_GOOD_BASE = base
-            _CHAK_FAILED_AT.pop(base, None)
-        return resp
+    def _attempt(query_params):
+        """One base-walking request, including the cooldown bookkeeping.
 
-    print(f"[DHIS2] no reachable CHAK base (tried: {'; '.join(tried) or 'none'})")
-    if last_exc is not None:
-        raise last_exc
-    raise ConnectionError("all CHAK base URLs are in cooldown")
+        A closure rather than inline code because an analytics query may need
+        several of these (one per calendar year) to answer a single caller.
+        """
+        nonlocal last_exc
+        for base in live:
+            url = base.rstrip("/") + path
+            # Cap the read budget for a base we are only probing.  Without
+            # this a base that just blackholed would be re-probed at the full
+            # 120/240 s budget on every subsequent call in the same build.
+            if _in_cooldown(base):
+                timeout = (_CHAK_CONNECT_TIMEOUT,
+                           min(want_read, _CHAK_PROBE_READ_TIMEOUT))
+            else:
+                timeout = (_CHAK_CONNECT_TIMEOUT, want_read)
+            try:
+                resp = _req.get(url, params=query_params, auth=auth,
+                                verify=False, timeout=timeout)
+            except _req.exceptions.RequestException as exc:
+                with _CHAK_LOCK:
+                    _CHAK_FAILED_AT[base] = time.monotonic()
+                last_exc = exc
+                tried.append(f"{base} ({type(exc).__name__})")
+                print(f"[DHIS2] CHAK base unreachable: {base} - "
+                      f"{type(exc).__name__}: {exc}")
+                continue
+            with _CHAK_LOCK:
+                _CHAK_GOOD_BASE = base
+                _CHAK_FAILED_AT.pop(base, None)
+            return resp
+
+        print("[DHIS2] no reachable CHAK base "
+              f"(tried: {'; '.join(tried) or 'none'})")
+        if last_exc is not None:
+            raise last_exc
+        raise ConnectionError("all CHAK base URLs are in cooldown")
+
+    def _request(query_params):
+        """`request_fn` for chak_analytics_query -> (ok, body, raw)."""
+        resp = _attempt(query_params)
+        if not resp.ok:
+            return False, None, resp
+        try:
+            return True, resp.json(), resp
+        except ValueError:
+            # A non-JSON body (a proxy's HTML error page, say) is a failure,
+            # and the response is handed back so the caller's own
+            # `.ok`/`.json()` handling behaves exactly as before.
+            return False, None, resp
+
+    body, raw, merged = chak_analytics_query(params, _request, path)
+    if not merged:
+        return raw
+    return _analytics_response(body or {}, raw)
 
 
 def _normalize_pe(pe):
@@ -180,6 +214,381 @@ def _normalize_pe(pe):
     if re.fullmatch(r"\d{4}-\d{2}", txt):
         return txt.replace("-", "")
     return txt
+
+
+# ── CHAK 2.40 cross-year period defect: the year-split workaround ─────
+#
+# CHAK DHIS2 (ereporting.chak.or.ke, v2.40.11.1) answers a period set that
+# spans TWO CALENDAR YEARS with HTTP 200 and ZERO rows.  Verified 2026-09-23
+# at 259-facility and single-facility scope across four data elements and two
+# indicators, so it is not a data, UID, scope or auth problem:
+#
+#   pe=202511;202512   -> 2 rows     pe=202512;202601   -> 0 rows
+#   pe=202601;202602   -> 2 rows     pe=2025Q4;2026Q1   -> 0 rows
+#   pe=202501;…;202512 -> 12 rows    pe=2025;2026       -> 0 rows
+#   pe=LAST_6_MONTHS   -> 6 rows     pe=LAST_12_MONTHS  -> 0 rows
+#
+# Walking the window start forward puts the break exactly where the window
+# first reaches back past 1 January ("last 8 months" answers, "last 9" does
+# not).  Raw `dataValueSets` proves the values are present, and the same
+# 92-element query answers every element under `pe=2026`, so the defect is in
+# the server's cross-year period resolution.
+#
+# The practical effect is that EVERY `LAST_12_MONTHS` panel on this instance
+# is blank from 1 January to 31 December.  That is how the Daraja milestone
+# tracker lost its MOH 731 baseline: it read `ok` on 2026-09-17 with a
+# December-2025 start, then `empty` once the window rolled into a second year.
+#
+# Workaround: ask for each calendar year separately.  A period belongs to
+# exactly one year, so the per-year answers are DISJOINT — concatenating them
+# reproduces the original window exactly, with nothing dropped and nothing
+# double-counted.  Checked against the server's own resolution: on 2026-09-23
+# `LAST_6_MONTHS` returned the same periods AND the same values as the
+# explicit list 202603;202604;202605;202606;202607;202608.
+_PE_REL_MONTHS = re.compile(r"^LAST_(\d+)_MONTHS?$", re.IGNORECASE)
+
+# A period token that starts with four digits is absolute and therefore
+# splittable ("202601", "2026Q1", "2026", "20260101"); anything else is
+# relative and its membership cannot be enumerated locally.
+_PE_ABS_YEAR = re.compile(r"^(\d{4})")
+
+# Operator switch.  Splitting is the reason most CHAK panels show anything at
+# all, so it defaults ON; the flag exists so a suspected regression can be
+# A/B tested without a redeploy.
+_PE_SPLIT_ENABLED = (os.getenv("CHAK_PERIOD_SPLIT", "1") or "1").strip().lower() \
+    not in ("0", "false", "no", "off")
+
+# Positive evidence that the server can now answer a cross-year window itself
+# parks the workaround for a while.  It is never parked on a guess — only
+# after an un-split cross-year request actually came back with rows — and
+# verification resumes by itself when the deadline expires.
+_SPLIT_STATE_LOCK = threading.Lock()
+_SPLIT_USELESS_UNTIL = 0.0
+_SPLIT_PROBED_AT = 0.0
+_SPLIT_USELESS_SECONDS = float(os.getenv("CHAK_SPLIT_USELESS_SECONDS", "900"))
+_SPLIT_PROBE_INTERVAL = float(os.getenv("CHAK_SPLIT_PROBE_INTERVAL", "1800"))
+
+# The split is announced once per distinct window, not once per request —
+# otherwise a 25-panel dashboard would print it hundreds of times.
+_LAST_SPLIT_LOG = None
+
+
+def _pe_year(token):
+    """Calendar year of an absolute DHIS2 period token, else None."""
+    match = _PE_ABS_YEAR.match(str(token).strip())
+    return int(match.group(1)) if match else None
+
+
+def _months_ending_before(year, month, count):
+    """`count` YYYYMM periods ending with the month BEFORE (year, month).
+
+    CHAK's `LAST_<n>_MONTHS` windows EXCLUDE the month in progress: on
+    2026-09-23, `LAST_MONTH` was 202608 and `LAST_6_MONTHS` was
+    202603..202608.  The expansion has to reproduce that exactly, or the
+    workaround would silently shift every dashboard by one month.
+    """
+    y, m = year, month - 1
+    if m < 1:
+        y, m = y - 1, 12
+    months = []
+    for _ in range(count):
+        months.append(f"{y:04d}{m:02d}")
+        m -= 1
+        if m < 1:
+            y, m = y - 1, 12
+    months.reverse()
+    return months
+
+
+def plan_pe_chunks(pe):
+    """Split a `pe:` expression into one request per calendar year.
+
+    Returns the expressions to request, in order.  A one-element list means
+    "send this unchanged", which is the case whenever the window already sits
+    inside a single calendar year (CHAK answers those itself, in one round
+    trip) or the expression cannot be split safely.  Anything that is neither
+    fully absolute nor a plain `LAST_<n>_MONTHS` is deliberately left alone:
+    rewriting a set whose membership we cannot enumerate could drop or
+    double-count periods.
+    """
+    if not pe:
+        return [pe]
+
+    txt = _normalize_pe(pe)
+    tokens = [t.strip() for t in str(txt).split(";") if t.strip()]
+    if not tokens:
+        return [txt]
+
+    rel = _PE_REL_MONTHS.match(tokens[0])
+    if rel and len(tokens) == 1:
+        today = dt.date.today()
+        months = _months_ending_before(today.year, today.month,
+                                       int(rel.group(1)))
+        if len({m[:4] for m in months}) < 2:
+            return [txt]          # window is inside one year — leave it alone
+        tokens = months
+
+    years = [_pe_year(t) for t in tokens]
+    if any(y is None for y in years):
+        return [txt]              # relative token mixed in — not enumerable
+    if len(set(years)) < 2:
+        return [txt]              # one calendar year — CHAK is happy
+    return [
+        ";".join(t for t, y in zip(tokens, years) if y == year)
+        for year in sorted(set(years))
+    ]
+
+
+def _log_split(pe, chunks):
+    """Announce a split once per distinct window."""
+    global _LAST_SPLIT_LOG
+    window = (str(pe), tuple(chunks))
+    if window == _LAST_SPLIT_LOG:
+        return
+    _LAST_SPLIT_LOG = window
+    print(f"[DHIS2] CHAK cannot answer {pe!r} in one period set (its "
+          f"cross-year pe defect); splitting into {len(chunks)} calendar-"
+          f"year requests: {' | '.join(chunks)}")
+
+
+def split_standdown_remaining():
+    """Seconds until the year split is re-tried (0.0 = it is active)."""
+    with _SPLIT_STATE_LOCK:
+        return max(0.0, _SPLIT_USELESS_UNTIL - time.monotonic())
+
+
+def _split_probe_due():
+    with _SPLIT_STATE_LOCK:
+        return (time.monotonic() - _SPLIT_PROBED_AT) >= _SPLIT_PROBE_INTERVAL
+
+
+def _note_split_probed():
+    global _SPLIT_PROBED_AT
+    with _SPLIT_STATE_LOCK:
+        _SPLIT_PROBED_AT = time.monotonic()
+
+
+def _stand_down_split(reason):
+    global _SPLIT_USELESS_UNTIL
+    with _SPLIT_STATE_LOCK:
+        _SPLIT_USELESS_UNTIL = time.monotonic() + _SPLIT_USELESS_SECONDS
+    print(f"[DHIS2] CHAK answered an un-split cross-year window, so the "
+          f"year split is parked for {_SPLIT_USELESS_SECONDS:g}s "
+          f"({reason})")
+
+
+def _params_pairs(params):
+    """Normalize a requests ``params`` value to ``[(key, value), ...]``.
+
+    Returns None for anything unrecognised.  Both shapes are in use: dicts
+    (`services.dhis2`) and sequences of ``(key, value)`` tuples
+    (`pbix_dashboards._fetch_coc_named`), and a query is only splittable if we
+    can rebuild it in its original shape.
+    """
+    if isinstance(params, dict):
+        return list(params.items())
+    if isinstance(params, (list, tuple)):
+        pairs = []
+        for item in params:
+            if not isinstance(item, (list, tuple)) or len(item) != 2:
+                return None
+            pairs.append((item[0], item[1]))
+        return pairs
+    return None
+
+
+def _rebuild_params(params, pairs):
+    """Rebuild a params value in the shape it was given in."""
+    if isinstance(params, dict):
+        return dict(pairs)
+    return [tuple(pair) for pair in pairs]
+
+
+def _split_dimension_value(value):
+    """``"pe:LAST_12_MONTHS"`` -> ``["pe:202509;…", "pe:202601;…"]``, else None."""
+    if not isinstance(value, str) or not value.startswith("pe:"):
+        return None
+    chunks = plan_pe_chunks(value[3:])
+    if len(chunks) < 2:
+        return None
+    _log_split(value[3:], chunks)
+    return [f"pe:{chunk}" for chunk in chunks]
+
+
+def _dimension_split(pair):
+    """Per-request values for one `dimension` param, or None to leave it alone.
+
+    Copes with both dimension shapes: a bare string (``"pe:LAST_12_MONTHS"``)
+    and a list of dimension strings (``["dx:…", "pe:…", "ou:…"]``).
+    """
+    key, value = pair
+    if str(key).strip() != "dimension":
+        return None
+    if isinstance(value, str):
+        return _split_dimension_value(value)
+    if isinstance(value, (list, tuple)):
+        for i, item in enumerate(value):
+            replacements = _split_dimension_value(item)
+            if replacements:
+                variants = []
+                for replacement in replacements:
+                    new = list(value)
+                    new[i] = replacement
+                    variants.append(new)
+                return variants
+    return None
+
+
+def chak_analytics_request_variants(params, path="/analytics.json"):
+    """The request(s) `params` must be sent as to get an answer from CHAK.
+
+    Every CHAK analytics reader — `chak_get` and pbix dashboards' own
+    `requests.Session`, which deliberately bypasses it — routes through here,
+    so the cross-year workaround is applied consistently.  A one-element list
+    is the fast path and preserves the historical request exactly.
+    """
+    if not _PE_SPLIT_ENABLED or "analytics" not in str(path):
+        return [params]
+    with _SPLIT_STATE_LOCK:
+        parked = time.monotonic() < _SPLIT_USELESS_UNTIL
+    if parked:
+        return [params]
+
+    pairs = _params_pairs(params)
+    if pairs is None:
+        return [params]
+
+    # A `filter=pe:` is intersected with the dimension server-side; splitting
+    # only the dimension could then widen or narrow the answer, so such a
+    # query is left exactly as the caller wrote it.
+    if any(str(k).strip() == "filter" and str(v).strip().startswith("pe:")
+           for k, v in pairs):
+        return [params]
+
+    for pair in pairs:
+        values = _dimension_split(pair)
+        if not values:
+            continue
+        variants = []
+        for value in values:
+            swapped = []
+            for existing in pairs:
+                if existing is pair:
+                    swapped.append((existing[0], value))
+                else:
+                    swapped.append(existing)
+            variants.append(_rebuild_params(params, swapped))
+        return variants
+    return [params]
+
+
+def merge_analytics_payloads(payloads):
+    """Concatenate the bodies of disjoint analytics chunks into one body.
+
+    The chunks differ only in their `pe` dimension, so their rows describe
+    different periods and are APPENDED, never summed.  `metaData.items` is
+    what turns a period code into its display name and is therefore unioned
+    too — without that, every period contributed by the second chunk would
+    come back keyed by its raw code and no caller would recognise it.
+    """
+    bodies = [b for b in payloads if isinstance(b, dict)]
+    if not bodies:
+        return {}
+    if len(bodies) == 1:
+        return bodies[0]
+
+    merged = {"headers": bodies[0].get("headers") or [], "rows": []}
+    items = {}
+    dimensions = {}
+    for body in bodies:
+        merged["rows"].extend(body.get("rows") or [])
+        meta = body.get("metaData") or {}
+        for code, item in (meta.get("items") or {}).items():
+            items.setdefault(code, item)
+        for dim, uids in (meta.get("dimensions") or {}).items():
+            seen = dimensions.setdefault(dim, [])
+            for uid in uids or []:
+                if uid not in seen:
+                    seen.append(uid)
+    merged["metaData"] = {"items": items}
+    if dimensions:
+        merged["metaData"]["dimensions"] = dimensions
+    merged["rowCount"] = len(merged["rows"])
+    return merged
+
+
+def chak_analytics_query(params, request_fn, path="/analytics.json"):
+    """Run one analytics query against CHAK, splitting cross-year windows.
+
+    `request_fn(params)` performs a SINGLE request and returns
+    ``(ok, body, raw)``: `ok` is False when the call failed, `body` the parsed
+    JSON when it succeeded, and `raw` whatever the caller hands back on
+    failure.  Returns the same triple for the query as a whole plus a
+    `merged` flag saying whether `body` is a synthesised merge that still
+    needs wrapping up as a response.
+
+    A one-element plan means the query went out unchanged, so the caller's own
+    response is returned untouched: the single-year fast path is byte-for-byte
+    what it always was.
+    """
+    variants = chak_analytics_request_variants(params, path)
+    if len(variants) < 2:
+        ok, body, raw = request_fn(params)
+        return (body if ok else None), raw, False
+
+    bodies = []
+    first_raw = None
+    for variant in variants:
+        ok, body, raw = request_fn(variant)
+        if first_raw is None:
+            first_raw = raw
+        if not ok:
+            # Preserve each caller's error path: a server that rejects one
+            # year would reject the query, so hand back the real failure.
+            return None, raw, False
+        bodies.append(body or {})
+
+    merged = merge_analytics_payloads(bodies)
+    if merged.get("rows"):
+        return merged, first_raw, True
+
+    # Every year came back empty.  Before reporting an empty window, ask for
+    # the un-split expression once: if the server answers it, the workaround
+    # is pointless work and parks itself; if it does not, the window really is
+    # empty and that answer is returned unchanged.
+    if not _split_probe_due():
+        return merged, first_raw, True
+    ok, body, raw = request_fn(params)
+    if ok and (body or {}).get("rows"):
+        _stand_down_split("it returned rows for the original window")
+        return body, raw, True
+    _note_split_probed()
+    return merged, first_raw, True
+
+
+def _analytics_response(payload, template):
+    """Wrap a synthesised analytics body in a real `requests.Response`.
+
+    `chak_get` is contractually a response-returning function — every caller
+    inspects `.ok` and `.json()` — so a merged body is re-wrapped rather than
+    handed back as a bare dict.  Hop-by-hop and length headers are dropped
+    because the body no longer matches them.
+    """
+    import requests as _req
+
+    resp = _req.Response()
+    resp.status_code = template.status_code
+    resp.reason = template.reason
+    resp.url = template.url
+    for key, value in (template.headers or {}).items():
+        if key.lower() in ("content-length", "content-encoding",
+                           "transfer-encoding"):
+            continue
+        resp.headers[key] = value
+    resp.headers["Content-Type"] = "application/json"
+    resp.encoding = "utf-8"
+    resp._content = json.dumps(payload).encode("utf-8")
+    return resp
 
 
 def _parse_dhis2_rows(rows, meta, coc_ids=None):
@@ -364,15 +773,25 @@ def _chak_analytics_fetch_coc(dx_id, ou_ids, pe="LAST_12_MONTHS",
     chunks = [ou_list[i:i + ou_chunk]
               for i in range(0, len(ou_list), ou_chunk)]
 
-    def _one_chunk(chunk):
-        """Fetch and parse a single OU chunk -> {period_name: summed_value}.
+    # The cross-year period split is applied HERE rather than being left to
+    # chak_get, so that the extra requests join the existing parallel pool
+    # instead of being issued back to back inside every worker.  Each job
+    # therefore carries a single-year `pe`, which chak_get passes through
+    # untouched — leaving it to chak_get as well would cost chunks x years x 2
+    # requests and serialise the years behind each OU chunk.
+    jobs = [(chunk, span) for span in plan_pe_chunks(pe) for chunk in chunks]
+
+    def _one_job(job):
+        """Fetch and parse one (OU chunk, period span) job.
 
         Raises on transport/HTTP failure so the caller can abort the whole
         read: a silently dropped chunk would UNDER-count IIT, which is far
         worse than returning no data at all.
         """
+        chunk, pe_span = job
         params = {
-            "dimension": [f"dx:{dx_id}", "co:categoryOptions", f"pe:{pe}",
+            "dimension": [f"dx:{dx_id}", "co:categoryOptions",
+                          f"pe:{pe_span}",
                           "ou:" + ";".join(chunk)],
             "paging": "false",
         }
@@ -414,9 +833,9 @@ def _chak_analytics_fetch_coc(dx_id, ou_ids, pe="LAST_12_MONTHS",
     from concurrent.futures import ThreadPoolExecutor
 
     out = {}
-    with ThreadPoolExecutor(max_workers=min(4, len(chunks))) as ex:
+    with ThreadPoolExecutor(max_workers=min(4, len(jobs))) as ex:
         try:
-            for part in ex.map(_one_chunk, chunks):
+            for part in ex.map(_one_job, jobs):
                 for pe_name, val in part.items():
                     out[pe_name] = out.get(pe_name, 0) + val
         except Exception as exc:  # noqa: BLE001
