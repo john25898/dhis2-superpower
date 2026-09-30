@@ -53,6 +53,25 @@ _REFRESH_DECISION_LOCK = threading.Lock()
 # Seconds a client should wait before re-polling while a cold build runs.
 _WARMING_RETRY_SECONDS = int(os.getenv("MILESTONE_WARMING_RETRY", "5"))
 
+# ── Baseline anchor (the Baseline tab's month) ──────────────────────────
+# The Baseline tab is a DELIBERATE freeze, not a moving target.  It is
+# pinned to one calendar month here and stays on it until this line is
+# changed by hand — it does NOT follow whichever month last received data.
+#
+# Why the pin: the anchor used to be "the latest month with any non-zero
+# value".  That reads correctly while exactly one month is complete, but the
+# moment a single facility submits one September return, September becomes
+# the latest month and the headline baseline silently drops from a
+# 259-facility August read to a one-facility September read.  The arithmetic
+# stays honest and ≤100%, but the number is not a baseline any more and it
+# can flip the payment band — so the whole panel would lurch on one site's
+# data entry.
+#
+# Format: DHIS2 period id 'YYYYMM' (e.g. '202608' = August 2026).  A month
+# NAME also works ('August 2026').  Set it to "" to restore the old
+# auto-follow behaviour.  Env override: MILESTONE_BASELINE_PERIOD.
+_BASELINE_PERIOD = os.getenv("MILESTONE_BASELINE_PERIOD", "202608").strip()
+
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 
@@ -1091,6 +1110,20 @@ def _period_label_ym(label):
     return (int(m.group(2)), ord_ + 1)
 
 
+def _baseline_period_ym():
+    """(year, month) pinned as the Baseline tab's anchor, or None.
+
+    `_BASELINE_PERIOD` is a hand-edited setting, so it is parsed defensively:
+    an unparseable value yields None (auto-follow) rather than crashing the
+    build or silently pinning to January.  Returning None is also what makes
+    the pin optional — `_compute_khis_metrics` treats it as a soft default.
+    """
+    if not _BASELINE_PERIOD:
+        return None
+    key = _pe_key(_BASELINE_PERIOD)
+    return key if key and key[0] else None
+
+
 def _periods_with_activity(data):
     """{(year, month): period_label} for months carrying any reported value.
 
@@ -1504,17 +1537,22 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
     return metrics, anchor
 
 
-def _compute_khis_metrics(target_period=None):
+def _compute_khis_metrics(target_period=None, default_period=None):
     """Resolve Daraja → CHAK DHIS2, fetch MOH 731, score the milestones.
 
-    `target_period` pins the scores to one calendar month — either a
-    (year, month) tuple or a DHIS2 period id ('202609').  Without it the
-    anchor is the latest month that reported anything, which is what the
-    "Baseline" view wants.
-
-    When the requested month has no returns yet the payload comes back with
+    `target_period` HARD-pins the scores to one calendar month — either a
+    (year, month) tuple or a DHIS2 period id ('202609').  A hard pin is
+    always honoured: if the month has no returns the payload comes back with
     status 'pending' rather than a wall of zeros, so the UI can say "awaiting
-    September returns" instead of "Off Track" everywhere.
+    September returns" instead of "Off Track" everywhere.  This is what the
+    M1 tab uses.
+
+    `default_period` SOFT-pins the anchor — the pinned Baseline month.  It is
+    a preference, not a requirement: CHAK is used for that month when it has
+    returns for it, and the latest reported month is used otherwise, so a
+    stale or mistyped pin degrades the baseline instead of blanking it.
+
+    With neither, the anchor follows the latest month that reported anything.
 
     Always returns a khis dict — on any failure the payload carries
     status 'empty'/'error'/'pending' and the UI simply keeps the placeholders.
@@ -1572,20 +1610,26 @@ def _compute_khis_metrics(target_period=None):
             return khis
 
         latest = _pick_anchor_period(data)
-        wanted = None
-        if target_period:
-            wanted = (tuple(target_period)
-                      if not isinstance(target_period, str)
-                      else _pe_key(target_period))
-            active = _periods_with_activity(data)
-            if wanted not in active:
+        active = _periods_with_activity(data)
+
+        def _resolve(spec):
+            """(year, month) for a period spec — tuple, label or None."""
+            if not spec:
+                return None
+            key = (tuple(spec) if not isinstance(spec, str)
+                   else _pe_key(spec))
+            return key if key and key[0] else None
+
+        hard = _resolve(target_period)
+        if hard is not None:
+            if hard not in active:
                 # Nothing has been entered for the requested month yet.  Say
                 # so explicitly — scoring zeros would read as a cliff-edge
                 # collapse in performance on every one of the nine metrics.
                 khis["status"] = "pending"
-                khis["pendingFor"] = _month_human(wanted)
+                khis["pendingFor"] = _month_human(hard)
                 khis["note"] = (
-                    f"{_month_human(wanted)} has no CHAK DHIS2 (MOH 731) "
+                    f"{_month_human(hard)} has no CHAK DHIS2 (MOH 731) "
                     f"returns yet across the {matched} matched Daraja "
                     f"facilities. Latest reporting month is "
                     f"{_month_human(_pe_key(latest)) or latest}. This tab "
@@ -1593,9 +1637,17 @@ def _compute_khis_metrics(target_period=None):
                     "month starts."
                 )
                 return khis
-            _anchor = active[wanted]
+            _anchor = active[hard]
         else:
-            _anchor = latest
+            # Soft (pinned) month — a default, not a requirement.  Honour it so
+            # the Baseline stays where it was set, but slide to the latest
+            # reported month rather than blanking if CHAK has nothing for it.
+            soft = _resolve(default_period)
+            if soft in active:
+                _anchor = active[soft]
+                khis["pinnedFor"] = _month_human(soft)
+            else:
+                _anchor = latest
 
         _y, _m = _pe_key(_anchor)
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
@@ -1622,6 +1674,17 @@ def _compute_khis_metrics(target_period=None):
                 "baseline with confirmed values."
             ),
         })
+        soft = _resolve(default_period) if target_period is None else None
+        if soft is not None and soft not in active:
+            # The pin could not be honoured.  Say so on the face of the panel
+            # rather than quietly showing a different month than promised.
+            khis["note"] += (
+                f" Baseline is pinned to {_month_human(soft)} "
+                "(MILESTONE_BASELINE_PERIOD) but CHAK DHIS2 has no returns "
+                "for that month, so this is the latest reported month "
+                "instead."
+            )
+            khis.pop("pinnedFor", None)
         return khis
     except Exception as exc:  # noqa: BLE001
         khis["status"] = "error"
@@ -1739,23 +1802,25 @@ def _build_payload():
     tiers = sorted(tier_set)
     award_total = months[-1]["cumulative"] if months else 0
 
-    khis = _compute_khis_metrics()
+    khis = _compute_khis_metrics(default_period=_baseline_period_ym())
     for month in months:
         _attach_perf(month["rows"], khis.get("metrics"))
         month["khis"] = khis
 
     # ── Baseline vs M1-Sep split ─────────────────────────────────────────
     # M1 covers September 2026, but the live CHAK baseline is anchored to the
-    # latest month that has actually reported — August 2026 today.  One tab
+    # month pinned in _BASELINE_PERIOD — August 2026 today.  One tab
     # therefore cannot say both things: it conflates "the September schedule"
     # with "August performance", and its alerts would swing the moment a
     # September return lands.
     #
     # So M1 is duplicated.  The copy becomes a frozen "Baseline" tab pinned to
-    # the latest reported month; the M1 tab itself is re-scored against the
-    # calendar month its own sheet covers.  Until September returns arrive,
-    # M1 reports status 'pending' instead of a row of zeros, and it lights up
-    # by itself once data entry starts — no code change, no redeploy.
+    # the pinned month; the M1 tab itself is re-scored against the calendar
+    # month its own sheet covers.  Until September returns arrive, M1 reports
+    # status 'pending' instead of a row of zeros, and it lights up by itself
+    # once data entry starts — no code change, no redeploy.  The Baseline tab
+    # stays on its pinned month regardless, so a single early September
+    # submission can never move it.
     if months:
         # The deep copy is taken AFTER the perf attach above, so the baseline
         # arrives already carrying the latest-reported-month scores, and the

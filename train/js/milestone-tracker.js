@@ -103,19 +103,21 @@ function milestoneMonthLong(month) {
   if (!month) return "";
   if (month.isBaseline)
     return (
-      "Frozen snapshot of the latest reported month" +
-      (month.perfAsOf ? " — " + month.perfAsOf : "") +
-      ". The M1 tab carries the same schedule scored against its own month."
+      "Frozen baseline pinned to " +
+      (month.perfAsOf || "a fixed month") +
+      " (MILESTONE_BASELINE_PERIOD). It does not advance when a new month " +
+      "starts reporting — each project-month tab scores the same schedule " +
+      "against its own month."
     );
   if (month.isFinalPay) return "Final Pay — Year 1 Close-Out";
   const m = /\(\s*([\s\S]*?)\)/.exec(month.period || "");
   return m ? m[1] : month.period || month.key || "";
 }
 
-// Tab-pill label. The Baseline tab is a frozen snapshot of the latest
-// reported month, so its pill names that month rather than the project month
-// its rows were copied from; a month carrying its own `label` (e.g. "M1 Sep")
-// shows that label, so the two M1-flavoured tabs can never be confused.
+// Tab-pill label. The Baseline tab is pinned to a fixed month, so its pill
+// names that month rather than the project month its rows were copied from;
+// a month carrying its own `label` (e.g. "M1 Sep") shows that label, so the
+// two M1-flavoured tabs can never be confused.
 function milestonePillText(month) {
   if (!month) return "";
   if (month.isBaseline)
@@ -769,8 +771,8 @@ async function renderMilestoneTrackerPage() {
     activeKey = activeMonth ? activeMonth.key : "M1";
 
   // Each project month carries its OWN baseline reading — the Baseline tab
-  // is pinned to the latest reported month, M1 to the month its sheet covers
-  // — so every chip, note and card on this page must read the active tab's
+  // is pinned to a fixed reporting month, M1 to the month its sheet covers —
+  // so every chip, note and card on this page must read the active tab's
   // `khis`, falling back to the workbook-wide one for older payloads.
   const activeKhis = (activeMonth && activeMonth.khis) || data.khis;
 
