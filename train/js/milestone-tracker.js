@@ -79,6 +79,10 @@ async function loadMilestoneData() {
 // "Month 1: (September 1 - September 30, 2026)" -> "Sep 2026"
 function milestoneMonthShort(month) {
   if (!month) return "";
+  // The Baseline tab is a snapshot of the latest reported month, so its
+  // calendar month is the month that reading came from — not the project
+  // month its rows were copied from (they share M1's September sheet).
+  if (month.isBaseline) return month.perfAsOf || "Baseline";
   if (month.isFinalPay) return "Final Pay";
   const m = /\(\s*([A-Za-z]+)\s+\d{1,2}[\s\S]*?(\d{4})/.exec(
     month.period || "",
@@ -97,9 +101,28 @@ function milestoneMonthShort(month) {
 
 function milestoneMonthLong(month) {
   if (!month) return "";
+  if (month.isBaseline)
+    return (
+      "Frozen snapshot of the latest reported month" +
+      (month.perfAsOf ? " — " + month.perfAsOf : "") +
+      ". The M1 tab carries the same schedule scored against its own month."
+    );
   if (month.isFinalPay) return "Final Pay — Year 1 Close-Out";
   const m = /\(\s*([\s\S]*?)\)/.exec(month.period || "");
   return m ? m[1] : month.period || month.key || "";
+}
+
+// Tab-pill label. The Baseline tab is a frozen snapshot of the latest
+// reported month, so its pill names that month rather than the project month
+// its rows were copied from; a month carrying its own `label` (e.g. "M1 Sep")
+// shows that label, so the two M1-flavoured tabs can never be confused.
+function milestonePillText(month) {
+  if (!month) return "";
+  if (month.isBaseline)
+    return "Baseline" + (month.perfAsOf ? " · " + month.perfAsOf : "");
+  const label = month.label || month.key || "";
+  const short = milestoneMonthShort(month);
+  return short ? label + " · " + short : label;
 }
 
 function fmtMoney(value) {
@@ -258,6 +281,12 @@ function msKhisChipHtml(khis) {
     return `<span class="rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700"
       title="${escapeHtml(khis.note || "")}">📡 KHIS baseline · ${escapeHtml(khis.asOf || "latest month")} · ${Number(khis.matched) || 0} Daraja facilities</span>`;
   }
+  // The month this tab covers has not started reporting yet. Saying so is
+  // better than banding nineteen milestones Off Track against zeros.
+  if (khis.status === "pending") {
+    return `<span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-500"
+      title="${escapeHtml(khis.note || "")}">📡 Awaiting ${escapeHtml(khis.pendingFor || "the month")} returns</span>`;
+  }
   if (khis.status === "empty" || khis.status === "error") {
     return `<span class="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"
       title="${escapeHtml(khis.error || khis.note || "")}">📡 KHIS baseline unavailable</span>`;
@@ -266,7 +295,15 @@ function msKhisChipHtml(khis) {
 }
 
 function msKhisNoteHtml(khis) {
-  if (!khis || khis.status !== "ok") return "";
+  if (!khis) return "";
+  if (khis.status === "pending") {
+    return (
+      " This tab follows its own project month: " +
+      escapeHtml(khis.note || "") +
+      " Use the Baseline tab for the live read of the latest reported month."
+    );
+  }
+  if (khis.status !== "ok") return "";
   return (
     " The nine DHIS2-measurable milestones (6–9, 11, 14, 15, 16, 21) show a live baseline from the CHAK DHIS2 (MOH 731) " +
     escapeHtml(String(khis.asOf || "latest reporting month")) +
@@ -431,7 +468,9 @@ function msDonutBlock(title, emoji, sub, canvasId, legend) {
 }
 
 function msAnalyticsCardHtml(stats, activeKey, activeMonth) {
-  const short = milestoneMonthShort(activeMonth);
+  // The Baseline tab has no project month of its own — its pill names the
+  // latest reported month instead of the sheet its rows were copied from.
+  const tabLabel = milestonePillText(activeMonth) || activeKey;
 
   const healthSub =
     stats.assessed > 0
@@ -446,7 +485,7 @@ function msAnalyticsCardHtml(stats, activeKey, activeMonth) {
     "Donuts include all " +
     stats.total +
     " milestones scheduled for " +
-    activeKey +
+    tabLabel +
     " — the tier / payment filters above apply only to the table below.";
 
   const foot = [
@@ -462,7 +501,7 @@ function msAnalyticsCardHtml(stats, activeKey, activeMonth) {
     <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
         <div class="text-[15px] font-bold text-slate-800">📊 Milestone Analytics</div>
-        <span class="inline-block rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-semibold text-sky-700">${escapeHtml(activeKey)} · ${escapeHtml(short)}</span>
+        <span class="inline-block rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-semibold text-sky-700">${escapeHtml(tabLabel)}</span>
       </div>
       <div class="mb-3 text-[11px] text-slate-500">${escapeHtml(note)}</div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -550,15 +589,23 @@ function mountMsTrendChart(months, awardTotalNum) {
   const tCanvas = document.getElementById("msTrendChart");
   if (!tCanvas) return;
 
-  const labels = months.map(function (m) {
-    const mk = m.key || "";
+  // The Baseline tab is a snapshot of the latest reported month, not a
+  // seventh project month — plotting it would duplicate M1's bar and shift
+  // the cumulative line off the award total.
+  const schedMonths = (months || []).filter(function (m) {
+    return m && !m.isBaseline;
+  });
+  if (!schedMonths.length) return;
+
+  const labels = schedMonths.map(function (m) {
+    const mk = m.label || m.key || "";
     const s = milestoneMonthShort(m);
     return s ? mk + " · " + s : mk;
   });
-  const totals = months.map(function (m) {
+  const totals = schedMonths.map(function (m) {
     return Number(m.total) || 0;
   });
-  const cums = months.map(function (m) {
+  const cums = schedMonths.map(function (m) {
     return Number(m.cumulative) || 0;
   });
   const award = Number(awardTotalNum) || 0;
@@ -721,6 +768,12 @@ async function renderMilestoneTrackerPage() {
   if (!isHomeView && monthIndex < 0)
     activeKey = activeMonth ? activeMonth.key : "M1";
 
+  // Each project month carries its OWN baseline reading — the Baseline tab
+  // is pinned to the latest reported month, M1 to the month its sheet covers
+  // — so every chip, note and card on this page must read the active tab's
+  // `khis`, falling back to the workbook-wide one for older payloads.
+  const activeKhis = (activeMonth && activeMonth.khis) || data.khis;
+
   const tierFilter = state.milestoneTier || "all";
   const payFilter = state.milestonePayment || "all";
 
@@ -762,17 +815,28 @@ async function renderMilestoneTrackerPage() {
       <button data-ms-month="${m.key}" class="px-4 py-1.5 text-[12px] font-semibold rounded-t-lg transition cursor-pointer
         ${active ? "bg-sky-50 text-sky-700 border-b-2 border-sky-500" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border-b-2 border-transparent"}"
         title="${escapeHtml(m.period || m.sheet || m.key)}">
-        ${escapeHtml(m.key)} · ${escapeHtml(milestoneMonthShort(m))}
+        ${escapeHtml(milestonePillText(m))}
       </button>`;
       })
       .join("");
 
   // ── Home overview rows: dedupe milestone ids across all months ──
+  // The Baseline tab is listed first and is the frozen snapshot of the
+  // latest reported month, so first-seen-wins already yields the right row
+  // for every id. The extra guard keeps that true if the month order ever
+  // changes: a row carrying a live baseline never loses to one that does not
+  // (the M1 tab posts the same ids with no baseline until its own month
+  // starts reporting).
   const homeSeen = {};
   months.forEach(function (m) {
     (m.rows || []).forEach(function (r) {
       if (r.id === null || r.id === undefined || r.id === "") return;
-      if (!homeSeen[r.id]) homeSeen[r.id] = r;
+      const prev = homeSeen[r.id];
+      if (!prev) {
+        homeSeen[r.id] = r;
+      } else if (!prev.perf && r.perf) {
+        homeSeen[r.id] = r;
+      }
     });
   });
   const homeRows = Object.keys(homeSeen)
@@ -908,7 +972,7 @@ async function renderMilestoneTrackerPage() {
     .join("");
 
   const emptyRowsHtml = `<tr><td colspan="12" class="px-3 py-8 text-center text-[13px] text-slate-400">
-    No milestones match the selected filters for ${escapeHtml(activeKey)}.
+    No milestones match the selected filters for ${escapeHtml(activeMonth.label || activeMonth.key || "")}.
   </td></tr>`;
 
   const countChip =
@@ -941,7 +1005,7 @@ async function renderMilestoneTrackerPage() {
           <span class="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Award Total: <span class="text-slate-800">${awardTotal}</span></span>
           <span class="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Tiers: ${escapeHtml((data.tiers || []).join(" · "))}</span>
           <span class="text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Read-only · tracking update coming with sign-in</span>
-          ${msKhisChipHtml(data.khis)}
+          ${msKhisChipHtml(activeKhis)}
         </div>
       </div>
 
@@ -960,7 +1024,7 @@ async function renderMilestoneTrackerPage() {
       <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div class="text-[15px] font-bold text-slate-800">${escapeHtml(activeKey)} — ${escapeHtml(milestoneMonthShort(activeMonth))}</div>
+            <div class="text-[15px] font-bold text-slate-800">${escapeHtml(activeMonth.label || activeMonth.key || "")} — ${escapeHtml(milestoneMonthShort(activeMonth))}</div>
             <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(milestoneMonthLong(activeMonth))}</div>
             <div class="flex flex-wrap gap-2 mt-2 text-[11px] font-semibold">
               <span class="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Schedule Payment: ${monthTotal}</span>
@@ -1018,7 +1082,7 @@ async function renderMilestoneTrackerPage() {
         <div class="mt-2 text-[10px] text-slate-400">
           Source: ${escapeHtml(activeMonth.sheet || "")} · Milestone Summary columns follow the
           "Milestones Summary2" tracker layout, with the monthly allocation added ahead of the
-          6-month allocation so the two can be read side by side. Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(data.khis)}
+          6-month allocation so the two can be read side by side. Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}
         </div>
       </div>
       `

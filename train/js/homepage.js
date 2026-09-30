@@ -197,6 +197,11 @@ const _HP_MS_COLORS = {
 };
 
 // Dedupe rows across all months by milestone id → counts per health bucket.
+// The Baseline tab is listed first and is the frozen snapshot of the latest
+// reported month, so first-seen-wins already yields the right row for every
+// id; a row carrying a live baseline additionally never loses to one that
+// does not (the M1 tab posts the same ids with no baseline until its own
+// month starts reporting).
 function _homeMsHealthCounts(plan) {
   const counts = {
     "On Track": 0,
@@ -204,18 +209,22 @@ function _homeMsHealthCounts(plan) {
     "Off Track": 0,
     "Not yet assessed": 0,
   };
-  const seen = new Set();
+  const seen = {};
   const months = plan && Array.isArray(plan.months) ? plan.months : [];
   months.forEach(function (mo) {
     (mo.rows || []).forEach(function (row) {
       if (!row || row.id === undefined || row.id === null) return;
       const key = String(row.id);
-      if (seen.has(key)) return;
-      seen.add(key);
-      const al = String(row.alerts || "").trim();
-      if (Object.prototype.hasOwnProperty.call(counts, al)) counts[al] += 1;
-      else counts["Not yet assessed"] += 1;
+      const prev = seen[key];
+      if (!prev) seen[key] = row;
+      else if (!prev.perf && row.perf) seen[key] = row;
     });
+  });
+  const rowIds = Object.keys(seen);
+  rowIds.forEach(function (key) {
+    const al = String(seen[key].alerts || "").trim();
+    if (Object.prototype.hasOwnProperty.call(counts, al)) counts[al] += 1;
+    else counts["Not yet assessed"] += 1;
   });
   return {
     counts: _HP_MS_ORDER.map(function (l) {
@@ -224,7 +233,7 @@ function _homeMsHealthCounts(plan) {
     colors: _HP_MS_ORDER.map(function (l) {
       return _HP_MS_COLORS[l] || "#94a3b8";
     }),
-    total: seen.size,
+    total: rowIds.length,
   };
 }
 
@@ -234,8 +243,14 @@ function _buildHomeMsPanel(plan) {
   const total = bucket.total;
   const planMonths =
     (plan && Array.isArray(plan.months) ? plan.months : []) || [];
-  const firstM = planMonths[0];
-  const lastM = planMonths[planMonths.length - 1];
+  // The Baseline tab is a snapshot of the latest reported month, not a
+  // project month, so it must not stretch the M1–M6 schedule range.
+  const schedMonths = planMonths.filter(function (m) {
+    return m && !m.isBaseline;
+  });
+  const rangeMonths = schedMonths.length ? schedMonths : planMonths;
+  const firstM = rangeMonths[0];
+  const lastM = rangeMonths[rangeMonths.length - 1];
   const awardNum = Number(plan && plan.awardTotal) || 0;
   const awardStr = awardNum ? "$" + awardNum.toLocaleString("en-US") : "—";
 

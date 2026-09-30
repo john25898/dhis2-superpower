@@ -11,6 +11,7 @@ Serves a single read-only API:  GET /api/milestone/data
 """
 from __future__ import annotations
 
+import copy
 import csv
 import json
 import os
@@ -637,6 +638,11 @@ _MONTH_ORD = {
     )
 }
 
+_MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+]
+
 _DARJA_OUS_CACHE = None
 _DARJA_OUS_CACHE_AT = 0.0
 # A scope resolved *without* the live CHAK code lookup is name-matched only
@@ -1048,6 +1054,60 @@ def _quarter_months_to(year, month):
     return [(year, mm) for mm in range(start, month + 1)]
 
 
+def _month_human(ym):
+    """'September 2026' for a (year, month) tuple; '' when unusable."""
+    try:
+        year, month = int(ym[0]), int(ym[1])
+    except (TypeError, ValueError, IndexError):
+        return ""
+    if not (1 <= month <= 12) or not year:
+        return ""
+    return f"{_MONTH_NAMES[month - 1]} {year}"
+
+
+def _period_label_ym(label):
+    """(year, month) from a schedule label.
+
+    'Month 1: (September 1 - September 30, 2026)' -> (2026, 9).  Reading the
+    calendar month straight off the workbook keeps each tab's CHAK baseline
+    anchor tied to the sheet instead of a hard-coded date, so the tabs roll
+    forward on their own when the workbook is refreshed.
+
+    The match is anchored on real month NAMES rather than a loose
+    "word + digits + year" pattern — the label opens with "Month 1:", and a
+    loose pattern happily returns ('Month', 2026).
+    """
+    m = re.search(
+        r"\b(January|February|March|April|May|June|July|August|September|"
+        r"October|November|December)\s+\d{1,2}[^0-9]*(\d{4})",
+        str(label or ""),
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    ord_ = _MONTH_ORD.get(m.group(1).lower()[:3])
+    if ord_ is None:
+        return None
+    return (int(m.group(2)), ord_ + 1)
+
+
+def _periods_with_activity(data):
+    """{(year, month): period_label} for months carrying any reported value.
+
+    Zero-valued periods are excluded, so a month only becomes an anchor once
+    a facility has actually submitted a return for it.
+    """
+    out = {}
+    for de_map in (data or {}).values():
+        for p, v in (de_map or {}).items():
+            if not v:
+                continue
+            key = _pe_key(p)
+            if key[0]:
+                out.setdefault(key, p)
+    return out
+
+
 def _pick_anchor_period(data):
     """Latest month (chronological) with any reported activity.
 
@@ -1056,19 +1116,17 @@ def _pick_anchor_period(data):
     """
     if not data:
         return None
-    periods = set()
-    for de_map in data.values():
-        for p, v in (de_map or {}).items():
-            if v:
-                periods.add(p)
+    tx_curr_de = data.get(_DE_TX_CURR, {})
+    tx_curr_62_de = data.get(_DE_TX_CURR_62, {})
+    periods = _periods_with_activity(data)
     if not periods:
         return None
     tx_periods = [
-        p for p in periods
-        if (float(data.get(_DE_TX_CURR, {}).get(p, 0) or 0)
-            + float(data.get(_DE_TX_CURR_62, {}).get(p, 0) or 0)) > 0
+        label for (year, month), label in periods.items()
+        if (float(tx_curr_de.get(label, 0) or 0)
+            + float(tx_curr_62_de.get(label, 0) or 0)) > 0
     ]
-    ordered = sorted(tx_periods or periods, key=_pe_key)
+    ordered = sorted(tx_periods or list(periods.values()), key=_pe_key)
     return ordered[-1] if ordered else None
 
 
@@ -1446,11 +1504,20 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
     return metrics, anchor
 
 
-def _compute_khis_metrics():
+def _compute_khis_metrics(target_period=None):
     """Resolve Daraja → CHAK DHIS2, fetch MOH 731, score the milestones.
 
+    `target_period` pins the scores to one calendar month — either a
+    (year, month) tuple or a DHIS2 period id ('202609').  Without it the
+    anchor is the latest month that reported anything, which is what the
+    "Baseline" view wants.
+
+    When the requested month has no returns yet the payload comes back with
+    status 'pending' rather than a wall of zeros, so the UI can say "awaiting
+    September returns" instead of "Off Track" everywhere.
+
     Always returns a khis dict — on any failure the payload carries
-    status 'empty'/'error' and the UI simply keeps the placeholders.
+    status 'empty'/'error'/'pending' and the UI simply keeps the placeholders.
     """
     khis = {
         "status": "error",
@@ -1503,7 +1570,33 @@ def _compute_khis_metrics():
                 "matched Daraja facilities."
             )
             return khis
-        _anchor = _pick_anchor_period(data)
+
+        latest = _pick_anchor_period(data)
+        wanted = None
+        if target_period:
+            wanted = (tuple(target_period)
+                      if not isinstance(target_period, str)
+                      else _pe_key(target_period))
+            active = _periods_with_activity(data)
+            if wanted not in active:
+                # Nothing has been entered for the requested month yet.  Say
+                # so explicitly — scoring zeros would read as a cliff-edge
+                # collapse in performance on every one of the nine metrics.
+                khis["status"] = "pending"
+                khis["pendingFor"] = _month_human(wanted)
+                khis["note"] = (
+                    f"{_month_human(wanted)} has no CHAK DHIS2 (MOH 731) "
+                    f"returns yet across the {matched} matched Daraja "
+                    f"facilities. Latest reporting month is "
+                    f"{_month_human(_pe_key(latest)) or latest}. This tab "
+                    "fills in automatically as soon as data entry for the "
+                    "month starts."
+                )
+                return khis
+            _anchor = active[wanted]
+        else:
+            _anchor = latest
+
         _y, _m = _pe_key(_anchor)
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
@@ -1519,6 +1612,7 @@ def _compute_khis_metrics():
         khis.update({
             "status": "ok",
             "asOf": anchor,
+            "asOfHuman": _month_human(_pe_key(anchor)),
             "metrics": metrics,
             "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "note": (
@@ -1533,6 +1627,47 @@ def _compute_khis_metrics():
         khis["status"] = "error"
         khis["error"] = str(exc)
         return khis
+
+
+def _attach_perf(rows, metrics):
+    """Overlay a live CHAK DHIS2 baseline on a month's rows.
+
+    The baseline is ONE measurement, so it lands on every project month
+    rather than on M1 alone — the front-end renders "Monthly Payments -
+    Earned" as the schedule max × the unlock % the baseline earns (with a
+    "Final-pay max" variant for the M6 close-out tab) and documents the
+    figure as an estimate that GOR verification of each project month
+    replaces with confirmed values.
+
+    Alerts.  A Summary2 seed is the GOR-verified status and always wins.
+    Every OTHER row used to stay blank, which left the DHIS2-measured
+    milestones with a PERFORMANCE figure, an EARNED figure and no Alerts
+    chip — and made the Milestone Status donut report them all as "Not yet
+    assessed".  Rows carrying a live baseline now band that baseline
+    instead; `alertsSource` records which of the two the chip came from, so
+    the UI can be explicit that a baseline alert is an estimate pending GOR
+    verification.
+
+    Safe to call more than once on the same rows: a stale baseline-derived
+    alert is cleared first, so re-scoring a month against a different
+    reporting period cannot leave the previous period's chip behind.
+    """
+    by_id = {m["id"]: m for m in (metrics or [])}
+    for row in rows:
+        perf = by_id.get(row["id"])
+        if perf:
+            row["perf"] = perf
+        else:
+            row.pop("perf", None)
+        # Never clear a Summary2 seed — only a previous *baseline* guess.
+        if row.get("alertsSource") == "baseline":
+            row.pop("alerts", None)
+            row.pop("alertsSource", None)
+        if not row.get("alerts"):
+            alert = _alert_for_unlock((perf or {}).get("unlock"))
+            if alert:
+                row["alerts"] = alert
+                row["alertsSource"] = "baseline"
 
 
 def _build_payload():
@@ -1604,41 +1739,45 @@ def _build_payload():
     tiers = sorted(tier_set)
     award_total = months[-1]["cumulative"] if months else 0
 
-    # Live performance (CHAK DHIS2 / Daraja baseline) for the eight
-    # DHIS2-measurable milestones (ids 6, 7, 8, 9, 11, 14, 15, 16) — plus
-    # #21, whose baseline comes from KHIS national (see _KHIS_MOH_FORMS).
-    #
-    # The baseline is ONE measurement — "as of" the latest reported month,
-    # across the Daraja facility roster — so it belongs on EVERY project
-    # month, not on M1 alone.  The front-end is written for exactly that:
-    # it renders "Monthly Payments - Earned" as the schedule max × the
-    # unlock % the baseline earns (with a dedicated "Final-pay max" variant
-    # for the M6 close-out tab) and documents the figure as an estimate that
-    # GOR verification of each project month replaces with confirmed values.
-    # Attaching it to M1 only left the PERFORMANCE and MONTHLY PAYMENTS -
-    # EARNED columns blank on five of the six tabs while the "KHIS baseline"
-    # chip stayed visible on all of them.
     khis = _compute_khis_metrics()
-    perf_by_id = {m["id"]: m for m in (khis.get("metrics") or [])}
     for month in months:
-        for row in month["rows"]:
-            perf = perf_by_id.get(row["id"])
-            if perf:
-                row["perf"] = perf
-            # Alerts.  A Summary2 seed is the GOR-verified status and always
-            # wins.  Every OTHER row used to stay blank, which left the
-            # DHIS2-measured milestones with a PERFORMANCE figure, an EARNED
-            # figure and no Alerts chip — and made the Milestone Status
-            # donut report them all as "Not yet assessed".  Rows carrying a
-            # live baseline now band that baseline instead; `alertsSource`
-            # records which of the two the chip came from, so the UI can be
-            # explicit that a baseline alert is an estimate pending GOR
-            # verification.
-            if not row.get("alerts"):
-                alert = _alert_for_unlock((perf or {}).get("unlock"))
-                if alert:
-                    row["alerts"] = alert
-                    row["alertsSource"] = "baseline"
+        _attach_perf(month["rows"], khis.get("metrics"))
+        month["khis"] = khis
+
+    # ── Baseline vs M1-Sep split ─────────────────────────────────────────
+    # M1 covers September 2026, but the live CHAK baseline is anchored to the
+    # latest month that has actually reported — August 2026 today.  One tab
+    # therefore cannot say both things: it conflates "the September schedule"
+    # with "August performance", and its alerts would swing the moment a
+    # September return lands.
+    #
+    # So M1 is duplicated.  The copy becomes a frozen "Baseline" tab pinned to
+    # the latest reported month; the M1 tab itself is re-scored against the
+    # calendar month its own sheet covers.  Until September returns arrive,
+    # M1 reports status 'pending' instead of a row of zeros, and it lights up
+    # by itself once data entry starts — no code change, no redeploy.
+    if months:
+        # The deep copy is taken AFTER the perf attach above, so the baseline
+        # arrives already carrying the latest-reported-month scores, and the
+        # two tabs' rows are fully independent objects — re-scoring M1 for
+        # September cannot leak back into the August baseline.
+        baseline = copy.deepcopy(months[0])
+        baseline["key"] = "baseline"
+        baseline["label"] = "Baseline"
+        baseline["isBaseline"] = True
+        baseline["khis"] = khis
+        baseline["perfAsOf"] = khis.get("asOfHuman") or None
+        months.insert(0, baseline)
+
+    if len(months) > 1:
+        m1 = months[1]
+        m1_ym = _period_label_ym(m1.get("period"))
+        if m1_ym:
+            m1["label"] = f"M1 {_MONTH_NAMES[m1_ym[1] - 1][:3]}"
+            khis_m1 = _compute_khis_metrics(target_period=m1_ym)
+            m1["khis"] = khis_m1
+            m1["perfAsOf"] = khis_m1.get("asOfHuman") or None
+            _attach_perf(m1["rows"], khis_m1.get("metrics"))
 
     return {
         "ok": True,
