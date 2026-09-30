@@ -963,15 +963,13 @@ async function renderMilestoneTrackerPage() {
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, activeMonth.isFinalPay)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
-        <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-700 whitespace-nowrap" title="Six-month allocation in the Milestones_DataEntry master registry">${fmtMoney(row.allocation)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestonePaymentChip(status)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneVerifiedChip(row.verified)}</td>
       </tr>`;
     })
     .join("");
 
-  const emptyRowsHtml = `<tr><td colspan="12" class="px-3 py-8 text-center text-[13px] text-slate-400">
+  const emptyRowsHtml = `<tr><td colspan="10" class="px-3 py-8 text-center text-[13px] text-slate-400">
     No milestones match the selected filters for ${escapeHtml(activeMonth.label || activeMonth.key || "")}.
   </td></tr>`;
 
@@ -1057,7 +1055,7 @@ async function renderMilestoneTrackerPage() {
       <!-- Table -->
       <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[1240px] border-collapse">
+          <table class="w-full min-w-[1080px] border-collapse">
             <thead>
               <tr class="bg-slate-50">
                 <th class="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">ID</th>
@@ -1068,9 +1066,7 @@ async function renderMilestoneTrackerPage() {
                 <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Earned</th>
                 <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Payments - Paid</th>
                 <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Monthly Balance</th>
-                <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">6-Month Allocation</th>
                 <th class="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">Payment Status</th>
-                <th class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Overall Balance</th>
                 <th class="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-400">Verified</th>
               </tr>
             </thead>
@@ -1081,8 +1077,10 @@ async function renderMilestoneTrackerPage() {
         </div>
         <div class="mt-2 text-[10px] text-slate-400">
           Source: ${escapeHtml(activeMonth.sheet || "")} · Milestone Summary columns follow the
-          "Milestones Summary2" tracker layout, with the monthly allocation added ahead of the
-          6-month allocation so the two can be read side by side. Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}
+          "Milestones Summary2" tracker layout. The 6-Month Allocation and Overall Balance
+          columns live on the 🏠 Home tab (they are plan-level figures, identical on every
+          month), so this per-month table stays focused on the month being read.
+          Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}
         </div>
       </div>
       `
