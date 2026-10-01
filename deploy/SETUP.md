@@ -1,14 +1,15 @@
 # CI/CD setup — deploying to chakvista.co.ke
 
-Every push to `main` will deploy itself to the Ubuntu box and restart the app.
-Roughly ten minutes of one-time setup, then you never touch the server again.
+Every push to `main` deploys itself to the Ubuntu box and restarts the app.
+Written against this specific server, not a generic one — the paths, user and
+service name are the ones measured on 2026-10-01.
 
 ```
    git push origin main
           │
           ▼
    GitHub Actions  .github/workflows/deploy.yml
-          │  ssh deploy@chakvista.co.ke
+          │  ssh test@<box>
           ▼
    deploy/deploy.sh
           │
@@ -21,202 +22,263 @@ Roughly ten minutes of one-time setup, then you never touch the server again.
 
 ---
 
-## Step 0 — discover what is actually on the box
+## About this box
 
-Run this **on the Ubuntu machine**. It changes nothing; it only reports. Paste
-the output back and the values below stop being guesses.
+|               |                                                                    |
+| ------------- | ------------------------------------------------------------------ |
+| Repo deployed | `john25898/dhis2-superpower` (**private**)                         |
+| Clone         | `/opt/chakvista`                                                   |
+| App dir       | `/opt/chakvista/train`                                             |
+| venv          | `/opt/chakvista/venv`                                              |
+| Deploy user   | `test`                                                             |
+| Service       | `chakvista.service`                                                |
+| Bound to      | `127.0.0.1:5100` (nginx terminates TLS)                            |
+| Python        | 3.10.12                                                            |
+| Web server    | nginx active; ports 80/443 are held by **`lxd`**, which proxies in |
 
-```bash
-echo "=============== 1. WHERE IS THE CLONE ==============="
-for d in /opt /srv /var/www "$HOME" /home/*; do
-  find "$d" -maxdepth 3 -name .git -type d 2>/dev/null | while read -r g; do
-    r="$(dirname "$g")"
-    case "$(basename "$r")" in train) r="$(dirname "$r")";; esac
-    echo "REPO_DIR=$r"
-    git -C "$r" remote -v 2>/dev/null | head -2
-    echo "  branch: $(git -C "$r" rev-parse --abbrev-ref HEAD 2>/dev/null)"
-    echo "  commit: $(git -C "$r" rev-parse --short HEAD 2>/dev/null)"
-    echo "  owner:  $(stat -c '%U:%G' "$r" 2>/dev/null)"
-    echo "  dirty:  $(git -C "$r" status --porcelain 2>/dev/null | wc -l) modified tracked file(s)"
-  done
-done
-
-echo
-echo "=============== 2. HOW IS IT RUNNING ==============="
-systemctl list-units --type=service --all 2>/dev/null | grep -iE 'chak|vista|flask|gunicorn|dhis' || echo "(no matching systemd unit)"
-ps -eo user,pid,args | grep -iE 'gunicorn|run_flask|flask' | grep -v grep || echo "(no gunicorn/flask process)"
-
-echo
-echo "=============== 3. WHAT IS IN FRONT ==============="
-systemctl is-active nginx 2>/dev/null && echo "nginx: active" || echo "nginx: not active"
-systemctl is-active caddy 2>/dev/null && echo "caddy: active" || echo "caddy: not active"
-sudo nginx -T 2>/dev/null | grep -A6 -iE 'server_name.*chakvista' | head -40 || echo "(nginx config not readable)"
-
-echo
-echo "=============== 4. PYTHON ==============="
-python3 --version
-echo "venv dirs: $(find /opt /srv /var/www -maxdepth 3 -name pyvenv.cfg 2>/dev/null | tr '\n' ' ')"
-
-echo
-echo "=============== 5. PORTS ==============="
-sudo ss -tlnp | grep -E ':(5100|80|443)\b' || echo "(nothing on 5100/80/443)"
-```
-
-The three answers that matter:
-
-| Question                                          | Where it goes                                                     |
-| ------------------------------------------------- | ----------------------------------------------------------------- |
-| The folder holding the clone                      | secret `REPO_DIR` (default `/opt/chakvista`)                      |
-| The user that owns it                             | secret `SSH_USER`                                                 |
-| Whether a `chakvista` systemd unit already exists | if **yes**, Step 3 is mostly copying; if **no**, install the unit |
-
-> **If the box was never a git clone** (files copied by hand or a zip), you get
-> one extra step first: move the real data aside and clone fresh. `train/.env`
-> holds the KHIS/CHAK/Gemini credentials and is gitignored, so keep that file —
-> see "Starting from a non-git copy" at the bottom.
+> **There are two SSH keys in this setup, and they point in opposite
+> directions.** Confusing them is the most common way to lose an afternoon:
+>
+> | Key                       | Direction                                   | Where it lives                                       |
+> | ------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+> | `~/.ssh/chakvista_deploy` | **box → GitHub** (read the repo)            | on the server, public half in the repo's Deploy keys |
+> | the pipeline key          | **GitHub runner → box** (log in and deploy) | private half in the `SSH_PRIVATE_KEY` secret         |
 
 ---
 
-## Step 1 — a deploy user with passwordless sudo for one command
+## What is already done
 
-The pipeline runs as a normal user (`deploy`) rather than root, and that user
-needs to be able to restart **exactly one** service without a password prompt.
+Checked off on 2026-10-01. Do not redo these.
+
+- [x] **Clone at `/opt/chakvista`** on `main`, from `git@github.com:john25898/dhis2-superpower.git`.
+- [x] **Read-only deploy key** generated at `~/.ssh/chakvista_deploy`, public half
+      added to _Settings → Deploy keys_. Verified: `ssh -T git@github.com` replies
+      `Hi john25898/dhis2-superpower!`
+- [x] **`~/.ssh/config`** pins that key for `github.com`. This is what lets
+      `deploy.sh` run `git fetch` unattended — without it, fetch fails with no
+      terminal to prompt on.
+- [x] **sudoers rule** at `/etc/sudoers.d/chakvista-deploy`; `visudo -c` says
+      _parsed OK_. Grants exactly two commands, no blanket root.
 
 ```bash
-# Create the user if it does not exist yet.
-sudo adduser --disabled-password --gecos "" deploy
-
-# Give it the one sudo right the deploy needs.  Note the NOPASSWD and the
-# narrow command list — this is not blanket root.
-sudo tee /etc/sudoers.d/deploy-chakvista >/dev/null <<'EOF'
-deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart chakvista, \
-                           /usr/bin/systemctl status chakvista, \
+# what that rule contains
+test ALL=(root) NOPASSWD: /usr/bin/systemctl restart chakvista, \
                            /usr/bin/systemctl is-active chakvista
-EOF
-sudo chmod 0440 /etc/sudoers.d/deploy-chakvista
-sudo visudo -c          # must print "parsed OK"
-
-# If the clone is owned by someone else, hand it over (adjust the path).
-sudo chown -R deploy:deploy /opt/chakvista
 ```
 
-> The `systemctl` path must match what `which systemctl` prints on the box. If
-> it is `/bin/systemctl`, use that instead — a mismatch shows up as
-> _"sudo: a password is required"_ during the deploy.
+> The paths must match `which systemctl`. On this box that is
+> `/usr/bin/systemctl`. A mismatch surfaces later as
+> \_"sudo: a password is required"\* during a deploy.
+
+## What remains
+
+- [ ] `train/.env` — **credentials. Status unknown; see Step 1.**
+- [ ] venv at `/opt/chakvista/venv` + `pip install`
+- [ ] install and start the unit (Step 2)
+- [ ] the pipeline SSH key + `authorized_keys` (Step 3)
+- [ ] GitHub secrets (Step 4)
+- [ ] first deploy (Step 5)
 
 ---
 
-## Step 2 — an SSH key for the pipeline
+## Step 1 — credentials and the venv
 
-Generate the keypair **on the box** so the private key never travels over a
-channel you have not chosen.
+`train/.env` holds the KHIS / CHAK / Gemini credentials. It is **gitignored**, so
+it is never in the clone — it has to exist on disk.
 
-```bash
-sudo -u deploy ssh-keygen -t ed25519 -f /home/deploy/.ssh/deploy_key -N "" -C "github-actions-deploy"
-
-# Authorise it for the deploy user.
-sudo -u deploy bash -c 'cat /home/deploy/.ssh/deploy_key.pub >> /home/deploy/.ssh/authorized_keys'
-sudo chmod 600 /home/deploy/.ssh/authorized_keys
-
-# Print the private half — you paste this into GitHub in Step 4, then remove it.
-sudo cat /home/deploy/.ssh/deploy_key
-```
-
-Copy that whole block, **including** the `-----BEGIN` and `-----END` lines.
-
-Also grab the host key so the workflow can pin it instead of trusting whatever
-answers first:
+Before copying anything, find out where the currently-running app gets its
+credentials. The old unit may inject them as `Environment=` lines instead of
+using a file:
 
 ```bash
-ssh-keyscan -H chakvista.co.ke
+echo "=== where do credentials come from today? ==="
+systemctl cat chakvista | grep -iE 'Environment|EnvironmentFile|WorkingDirectory|ExecStart'
+
+echo
+echo "=== is there a .env on the old clone? ==="
+ls -la /home/test/dhistest/train/.env 2>/dev/null && echo "FOUND" || echo "MISSING"
+
+echo
+echo "=== where does the app actually read them from? ==="
+grep -nE "load_dotenv|getenv|environ" /opt/chakvista/train/app.py | head -20
 ```
 
-Then delete the on-box copy of the private key — the pipeline is the only thing
-that should hold it:
+Three possible outcomes:
+
+| What you see                                       | What to do                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| A `.env` exists on the old clone                   | `cp` it across (below)                                                                                       |
+| No `.env`, but `Environment=DHIS_USERNAME=…` lines | **Do not copy an env file** — move those lines into the new unit (Step 2), and treat the file as nonexistent |
+| Neither                                            | The credentials are already in `app.py`/config as defaults. Confirm with the `grep`, then continue           |
 
 ```bash
-sudo shred -u /home/deploy/.ssh/deploy_key
+# only if a .env actually exists
+cp /home/test/dhistest/train/.env /opt/chakvista/train/.env
+chmod 600 /opt/chakvista/train/.env
+wc -l /opt/chakvista/train/.env      # sanity: should be non-empty
 ```
+
+Then the venv. Note the app is run with `WorkingDirectory=/opt/chakvista/train`,
+which is why `python-dotenv` picks up `train/.env` with no `EnvironmentFile` line
+in the unit.
+
+```bash
+python3 -m venv /opt/chakvista/venv
+/opt/chakvista/venv/bin/pip install --upgrade pip
+/opt/chakvista/venv/bin/pip install -r /opt/chakvista/train/requirements.txt
+/opt/chakvista/venv/bin/python -c "import flask, pandas, openpyxl; print('deps OK')"
+```
+
+If `requirements.txt` fails on the `google-generativeai` pin under Python 3.10,
+say so — the pins were resolved on 3.13 and one may need loosening.
 
 ---
 
-## Step 3 — install the systemd unit
+## Step 2 — install the systemd unit
 
-`deploy/chakvista.service` in this repo is the unit. It runs gunicorn instead of
-the Flask dev server, with the same flags `render.yaml` uses and for the same
-reasons (one worker, `gthread`, no `--preload`).
+`deploy/chakvista.service` in this repo is the unit. It runs **gunicorn**, not the
+Flask dev server.
 
 ```bash
-# From the clone on the box:
+# Keep the old unit if you want to compare — the credentials may be in it.
+sudo cp /etc/systemd/system/chakvista.service ~/chakvista.service.bak 2>/dev/null
+
 sudo cp /opt/chakvista/deploy/chakvista.service /etc/systemd/system/chakvista.service
-
-# If the app is NOT at /opt/chakvista, or runs as a different user, edit those
-# two lines before enabling it:
-sudo nano /etc/systemd/system/chakvista.service
-
-# Stop whatever is running the app today, so it does not hold port 5100.
-sudo systemctl stop chakvista 2>/dev/null || true
-#   ...and if it is a hand-started process instead:
-#   pkill -f 'run_flask.py' ; pkill -f gunicorn
-
 sudo systemctl daemon-reload
-sudo systemctl enable --now chakvista
-sleep 5
+sudo systemctl restart chakvista
+sleep 6
 systemctl status chakvista --no-pager
 curl -I http://127.0.0.1:5100/
 ```
 
-Expect `HTTP/1.1 200 OK`. If you get connection-refused, read
-`journalctl -u chakvista -n 50 --no-pager` — the usual causes are a wrong
-`WorkingDirectory`, a missing venv, or a port already in use.
+Expect `HTTP/1.1 200 OK`.
 
-Point nginx at it if it is not already (only if you changed the port):
+### Two deliberate differences from the old unit
 
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:5100;
-    proxy_set_header Host              $host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 300s;   # the cold CHAK build can take ~47 s
-}
+The old unit ran `--workers 2 … run_flask:app`. The new one runs
+`--workers 1 --threads 4 … app:app`. Both changes are intentional:
+
+- **Target `app:app`, not `run_flask:app`.** `run_flask.py` calls `app.run()` at
+  module level with no `__main__` guard, so gunicorn importing it would start the
+  dev server _inside_ the worker and deadlock. `app.py` exposes a plain module-level
+  `app` object instead.
+- **One worker with threads.** The app holds a large in-process payload cache, two
+  parsed Excel workbooks and a boot-time pre-warm thread. A second worker duplicates
+  all of it — and each worker would pull its own copy from CHAK and its own 300 s
+  cache, so the two would disagree. `--worker-class gthread` is required for
+  `--threads` to do anything; the default `sync` class ignores it.
+
+No `--preload`: the app starts a background thread at import time, and preloading
+forks a worker while the build lock is held.
+
+> **Rolling back.** If the new unit misbehaves:
+> `sudo cp ~/chakvista.service.bak /etc/systemd/system/chakvista.service &&
+sudo systemctl daemon-reload && sudo systemctl restart chakvista`
+> — or just point `WorkingDirectory`/`ExecStart` back at `/home/test/dhistest`,
+> which is untouched and still works.
+
+### nginx
+
+No change needed if the vhost already proxies to `127.0.0.1:5100`. Confirm:
+
+```bash
+sudo nginx -T 2>/dev/null | grep -B4 -A8 'proxy_pass' | head -40
 ```
+
+If you do edit it, use `proxy_read_timeout 300s` — the cold CHAK build takes ~47 s
+and the default 60 s will cut it off.
 
 ---
 
-## Step 4 — add the GitHub secrets
+## Step 3 — a key so GitHub can log into the box
+
+This is the **second** key, the opposite direction from the deploy key. Generate
+it on the box, authorise the public half locally, then move the private half into
+GitHub and delete the on-box copy.
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/gha_deploy -N "" -C "github-actions -> box"
+cat ~/.ssh/gha_deploy.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+echo   "=== paste this whole block into the SSH_PRIVATE_KEY secret ==="
+cat ~/.ssh/gha_deploy
+echo   "=== and this into SSH_KNOWN_HOSTS ==="
+ssh-keyscan -H chakvista.co.ke
+```
+
+Copy both, then remove the on-box copy — GitHub is the only thing that should hold it:
+
+```bash
+shred -u ~/.ssh/gha_deploy
+```
+
+> `~/.ssh/authorized_keys` must end with a newline before the `>>` append, or the
+> new key merges onto the last line and is silently ignored. If the login fails
+> with `Permission denied (publickey)`, check `tail -c 80 ~/.ssh/authorized_keys`.
+
+### One thing to verify before going further
+
+The workflow connects to `chakvista.co.ke` on **port 22**. That is not necessarily
+the same machine as the web host — nginx sits behind an LXD proxy here, and the
+domain may resolve to an LXD host rather than to this box.
+
+```bash
+curl -s ifconfig.me                                   # this box's public IP
+getent hosts chakvista.co.ke                           # what the domain resolves to
+```
+
+- **They match** → use `SSH_HOST=chakvista.co.ke`.
+- **They differ** → use the box's public IP directly, or a port-forward, or
+  [Tailscale](https://tailscale.com) (which also avoids opening 22 to the
+  internet). Set `SSH_HOST` and `SSH_PORT` to match whichever you pick.
+
+If these differ, the domain is only the _web_ entry point and pointing the
+pipeline at it will time out.
+
+---
+
+## Step 4 — GitHub secrets
 
 Repo → **Settings → Secrets and variables → Actions → New repository secret**.
 
-| Secret            | Required    | Value                                      |
-| ----------------- | ----------- | ------------------------------------------ |
-| `SSH_HOST`        | ✅          | `chakvista.co.ke`                          |
-| `SSH_USER`        | ✅          | `deploy`                                   |
-| `SSH_PRIVATE_KEY` | ✅          | the private key printed in Step 2          |
-| `SSH_KNOWN_HOSTS` | recommended | output of `ssh-keyscan -H chakvista.co.ke` |
-| `SSH_PORT`        | no          | defaults to `22`                           |
-| `REPO_DIR`        | no          | defaults to `/opt/chakvista`               |
-| `SERVICE_NAME`    | no          | defaults to `chakvista`                    |
+| Secret            | Required    | Value                                                                  |
+| ----------------- | ----------- | ---------------------------------------------------------------------- |
+| `SSH_HOST`        | ✅          | box IP or `chakvista.co.ke` — whichever resolved to this box in Step 3 |
+| `SSH_USER`        | ✅          | `test`                                                                 |
+| `SSH_PRIVATE_KEY` | ✅          | the private key printed in Step 3                                      |
+| `SSH_KNOWN_HOSTS` | recommended | `ssh-keyscan -H <host>` output                                         |
+| `SSH_PORT`        | if not 22   | only if you used a forward or Tailscale                                |
+| `REPO_DIR`        | no          | already defaults to `/opt/chakvista`                                   |
+| `SERVICE_NAME`    | no          | already defaults to `chakvista`                                        |
 
-Until `SSH_HOST` exists the workflow skips itself with a notice rather than
-failing, so merging `deploy.yml` early is harmless.
+Until `SSH_HOST` is set the workflow skips itself with a notice instead of failing,
+so a green-but-skipped run before you finish this step is expected.
 
 ---
 
-## Step 5 — first deploy (this is the catch-up)
+## Step 5 — first deploy
 
-The box is on an older commit; running the deploy once brings it to `main`.
-Trigger it from **Actions → Deploy to chakvista.co.ke → Run workflow**, or just
-run it by hand on the box to watch it work:
+Run it by hand first, so you can watch it rather than read about it:
 
 ```bash
-sudo -u deploy REPO_DIR=/opt/chakvista SERVICE_NAME=chakvista \
-  bash /opt/chakvista/deploy/deploy.sh
+bash /opt/chakvista/deploy/deploy.sh
 ```
 
-Then confirm the newer payload — the tell is that the Baseline tab exists as
-its own month and the pin is honoured:
+Expected shape:
+
+```
+==> Fetching origin/main
+==> Already at 434d1b8 — no new commits, redeploying anyway
+==> Creating virtualenv at /opt/chakvista/venv        (or: skipping install)
+==> Restarting chakvista
+==> Waiting for http://127.0.0.1:5100/ (up to 120s)
+==> Healthy after 9s
+==> SUCCESS — 434d1b8 is live
+```
+
+Then confirm the newer payload. The tell is that `baseline` exists as its own
+month — the whole point of this migration:
 
 ```bash
 curl -s localhost:5100/api/milestone/data | python3 -c \
@@ -226,13 +288,14 @@ curl -s localhost:5100/api/milestone/data | python3 -c \
    print('pinned :', d['khis'].get('pinnedFor'))"
 ```
 
-Expected once this lands:
-
 ```
 months : ['baseline', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6']
 asOf   : August 2026
 pinned : August 2026
 ```
+
+Only then wire up the automatic path — push to `main`, watch **Actions**, confirm
+the summary table names the commit that went live.
 
 ---
 
@@ -244,57 +307,82 @@ git commit -m "…"
 git push origin main     # ← everything after this is automatic, ~1-2 min
 ```
 
-Watch it under **Actions**. Each run posts a summary with the commit that went
-live. If the health check fails, the run goes red **and the box rolls itself
-back** — the site keeps serving the previous commit rather than breaking.
+Each run posts a summary with the commit that went live. If the health check fails,
+the run goes red **and the box rolls itself back** — the site keeps serving the
+previous commit rather than going down.
 
-To deploy without pushing (re-run the current commit), use **Run workflow**.
+To redeploy the current commit without pushing, use **Run workflow** in the Actions tab.
+
+---
+
+## The old clone is your fallback
+
+`/home/test/dhistest` is **not deleted and not touched** by any of this. It is
+pinned at `102d363` and has **32 modified tracked files** whose history is unclear.
+
+Leave it alone until the new deployment has been serving happily for a while. If
+anything is ever wrong, that clone plus its venv still runs the site — point the
+unit back at it and restart.
+
+It is only safe to delete once you are confident the new stack is stable. Note that
+`deploy.sh` does `git reset --hard`, so **never point it at that clone** until you
+have reviewed the 32 files:
+
+```bash
+cd /home/test/dhistest && git status --porcelain && git diff --stat | tail -5
+```
+
+There is also a leftover second copy at `~/Downloads/dhistest` — same commit, same
+32 dirty files. It is not wired to anything and can be removed whenever convenient.
+
+---
+
+## Appendix — re-running discovery
+
+If the box is ever rebuilt, this reports the layout again. It only reads.
+
+```bash
+echo "=== CLONES ==="
+for d in /opt /srv /var/www "$HOME" /home/*; do
+  find "$d" -maxdepth 3 -name .git -type d 2>/dev/null | while read -r g; do
+    r="$(dirname "$g")"; case "$(basename "$r")" in train) r="$(dirname "$r")";; esac
+    echo "REPO_DIR=$r"
+    git -C "$r" remote get-url origin 2>/dev/null
+    echo "  commit: $(git -C "$r" rev-parse --short HEAD 2>/dev/null)"
+    echo "  owner:  $(stat -c '%U:%G' "$r" 2>/dev/null)"
+    echo "  dirty:  $(git -C "$r" status --porcelain 2>/dev/null | wc -l)"
+  done
+done
+
+echo
+echo "=== SERVICE ==="
+systemctl cat chakvista 2>/dev/null | grep -E 'User|WorkingDirectory|ExecStart'
+systemctl is-active chakvista
+
+echo
+echo "=== FRONT DOOR ==="
+systemctl is-active nginx
+sudo ss -tlnp | grep -E ':(80|443|5100)\b'
+
+echo
+echo "=== SUDO ==="
+sudo -n true 2>/dev/null && echo "sudo -n OK" || echo "sudo -n NEEDS A PASSWORD"
+```
 
 ---
 
 ## Troubleshooting
 
-| Symptom                                               | Cause                                                                              | Fix                                                                   |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `Permission denied (publickey)`                       | public key not in `authorized_keys`, or wrong user                                 | Re-run Step 2's `cat … >> authorized_keys`                            |
-| `sudo: a password is required`                        | sudoers path for `systemctl` is wrong                                              | `which systemctl`, update `/etc/sudoers.d/deploy-chakvista`           |
-| `detected dubious ownership`                          | clone owned by another user                                                        | Already handled by the script; else `chown -R deploy:deploy`          |
-| Health check times out, rollback succeeds             | the new commit genuinely fails to boot                                             | `journalctl -u chakvista -n 200 --no-pager`; fix forward              |
-| Deploy says OK but the site shows old code            | nginx caching, or `SERVICE_NAME` points at a stale unit                            | `systemctl status chakvista`; check `proxy_pass` port                 |
-| Site slow / `Failed to load milestone data`           | CHAK cold build (~47 s) on a cold cache                                            | Expected on first load; the app pre-warms at boot                     |
-| Want to force a real CHAK re-pull after a code change | the analytics cache lives 300 s in-process and `?refresh=1` does **not** bypass it | A restart (which the deploy does) clears it — a reload alone does not |
-
----
-
-## Starting from a non-git copy
-
-If Step 0 shows no `.git` anywhere, the box has a hand-copied tree. Migrate it
-once:
-
-```bash
-cd /opt
-sudo mv chakvista chakvista.old                      # keep everything
-sudo -u deploy git clone https://github.com/john25898/dhis2-superpower.git chakvista
-sudo cp /opt/chakvista.old/train/.env /opt/chakvista/train/.env   # 🔑 the credentials
-sudo chown -R deploy:deploy /opt/chakvista
-bash /opt/chakvista/deploy/deploy.sh
-```
-
-`.env` is the only file worth carrying over — it is gitignored and holds the
-CHAK / KHIS / Gemini credentials. Everything else is reproducible from the repo.
-
-Once the site is confirmed up, `rm -rf /opt/chakvista.old`.
-
----
-
-## Why this is safe
-
-- **The pipeline holds one key, scoped to one user**, which can restart exactly
-  one service. It cannot `rm -rf` the box or read other tenants' files.
-- **`git reset --hard`, not `git pull`.** The remote is the truth on a deploy
-  target; a merge conflict on the server can never block a release. Untracked
-  files — `train/.env`, the disk caches — are never touched.
-- **Dependencies install only when `requirements.txt` changed**, so a normal
-  deploy is a reset plus a restart, a few seconds.
-- **Every deploy is self-verifying and self-reverting.** A commit that breaks
-  the boot sequence is rolled back automatically and the site stays up.
+| Symptom                                                      | Cause                                                                 | Fix                                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `Permission denied (publickey)` on clone                     | deploy key not added, or `~/.ssh/config` missing                      | `ssh -T git@github.com` should name **dhis2-superpower**                 |
+| `Permission denied (publickey)` on deploy                    | pipeline key not in `authorized_keys`, or missing trailing newline    | `tail -c 80 ~/.ssh/authorized_keys`                                      |
+| `Permission denied (publickey)` from Actions only            | `SSH_HOST` resolves to a different machine                            | compare `curl ifconfig.me` with `getent hosts`                           |
+| `sudo: a password is required`                               | sudoers path for `systemctl` is wrong                                 | `which systemctl`, fix `/etc/sudoers.d/chakvista-deploy`                 |
+| Worker starts then hangs, nothing on 5100                    | `run_flask:app` used as the target                                    | use `app:app`                                                            |
+| Connection refused right after a restart                     | still booting; the app pre-warms                                      | wait ~60 s; `journalctl -u chakvista -f`                                 |
+| Health check times out, rollback succeeds                    | the commit genuinely fails to boot                                    | `journalctl -u chakvista -n 200 --no-pager`; fix forward                 |
+| Deploy says OK but the site shows old code                   | stale `ExecStart` path, or nginx cached                               | `systemctl cat chakvista`; check `proxy_pass` port                       |
+| Site slow / `Failed to load milestone data`, first load only | CHAK cold build ~47 s                                                 | expected; the app pre-warms at boot                                      |
+| Need a real CHAK re-pull after a code change                 | 300 s in-process analytics cache; `?refresh=1` does **not** bypass it | restart (which a deploy does) — a page reload does not                   |
+| `detected dubious ownership in repository`                   | `.git` owned by a different user than the deploy user                 | already handled by `deploy.sh`; else `chown -R test:test /opt/chakvista` |
