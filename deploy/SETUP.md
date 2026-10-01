@@ -447,7 +447,34 @@ of failing, so a green-but-skipped run before you finish this step is expected.
 
 ## Step 5 — first deploy
 
-Run it by hand first, so you can watch it rather than read about it:
+### Prove which code is live before deploying anything
+
+Two seconds, no JSON, no cold build. This is the definitive check and it is the
+one to reach for whenever the payload looks wrong:
+
+```bash
+pid=$(systemctl show chakvista -p MainPID --value); echo "MainPID=$pid"
+readlink /proc/$pid/cwd
+tr '\0' ' ' < /proc/$pid/cmdline; echo
+```
+
+```
+MainPID=2240
+/opt/chakvista/train
+/opt/chakvista/venv/bin/python3 /opt/chakvista/venv/bin/gunicorn app:app \
+    --bind 127.0.0.1:5100 --worker-class gthread --workers 1 --threads 4 \
+    --timeout 300 --graceful-timeout 30 --access-logfile - --error-logfile -
+```
+
+Read it as three independent facts:
+
+| Line | Must say | If it does not |
+|---|---|---|
+| `cwd` | `/opt/chakvista/train` | the **old** unit is still live — it pointed at `/home/test/dhistest/train` |
+| target | `app:app` | `run_flask:app` starts the dev server inside the worker and deadlocks |
+| workers | `--workers 1 --threads 4` | `--workers 2` is the old unit; it doubles a large in-process cache |
+
+Then run it by hand, so you can watch it rather than read about it:
 
 ```bash
 bash /opt/chakvista/deploy/deploy.sh
@@ -469,18 +496,23 @@ Then confirm the newer payload. The tell is that `baseline` exists as its own
 month — the whole point of this migration:
 
 ```bash
-curl -s --max-time 180 localhost:5100/api/milestone/data | python3 -c '
+cat > /tmp/chk.py <<'PY'
 import json, sys
+
 d = json.load(sys.stdin)
 if not d.get("ok"):
     # A cold CHAK build answers 202 with ok=False, warming=True. Retry.
     print("not ready:", d.get("warming"), d.get("error") or d.get("message"))
     raise SystemExit(0)
+
 print("months :", [m["key"] for m in d["months"]])
+
 k = d.get("khis") or {}
-print("asOf   :", k.get("asOfHuman"), f"({k.get('asOf')})")
+print("asOf   :", k.get("asOfHuman"), "(" + str(k.get("asOf")) + ")")
 print("khis   :", k.get("status"), "| pinned:", k.get("pinnedFor"))
-'
+PY
+
+curl -s --max-time 180 localhost:5100/api/milestone/data | python3 /tmp/chk.py
 ```
 
 ```
@@ -489,8 +521,16 @@ asOf   : August 2026 (202608)
 khis   : ok | pinned: August 2026
 ```
 
-> The single-quoted outer shell means no `\` continuations and no escaping of
-> the inner quotes — write the Python exactly as shown.
+> **Why a file and not `python3 -c '...'`.** The shell's single quotes and
+> Python's single quotes collide. `python3 -c '...f"({k.get('asOf')})"...'`
+> looks fine but the shell closes its string at the first `'`, glues the pieces
+> back together, and Python then sees `asOf` as a bare name — it prints the
+> earlier lines and dies with `NameError: name 'asOf' is not defined`. The
+> heredoc is quoted (`<<'PY'`) so nothing is expanded, and the script is read
+> from a file rather than stdin, so the pipe stays free for the JSON.
+>
+> If you must use `-c`, put the Python in **double** quotes and use only
+> **single** quotes inside it — never mix the same quote character in both.
 >
 > `asOf` is the period key (`202608`) and `asOfHuman` is its label. `pinnedFor`
 > is present only when CHAK actually has returns for the pinned month; if it is
