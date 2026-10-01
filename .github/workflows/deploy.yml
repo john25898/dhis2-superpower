@@ -14,7 +14,8 @@ name: Deploy to chakvista.co.ke
 # for the duration of the job and then SSHes to the tailnet address.  Traffic
 # is WireGuard-encrypted end to end; nothing is exposed publicly.
 #
-#   TAILSCALE_AUTHKEY  auth key from the Tailscale admin console, tagged tag:ci
+#   TAILSCALE_AUTHKEY  auth key from the Tailscale admin console
+#                      (reusable + ephemeral; no tags needed - see Step 3c)
 #   SSH_HOST           the box's TAILNET address (100.120.117.89)
 #   SSH_USER           test      (the user that owns the clone)
 #   SSH_PRIVATE_KEY    contents of the deploy private key (ed25519)
@@ -75,7 +76,12 @@ jobs:
         uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          tags: tag:ci
+          # Deliberately NO `tags:`.  A tag is only mandatory with an OAuth
+          # client; with a plain auth key it is optional, and requesting one
+          # makes Tailscale reject the login unless `tagOwners` is declared in
+          # the ACL.  Leaving it out means a default-ACL tailnet needs no ACL
+          # edit at all.  See deploy/SETUP.md Step 3c for the optional
+          # tagged/narrowed setup.
           hostname: gh-deploy-${{ github.run_id }}
           ping: ${{ secrets.SSH_HOST || '100.120.117.89' }}
           log-mode: normal

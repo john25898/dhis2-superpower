@@ -399,14 +399,24 @@ Tailscale admin console → **Settings → Keys → Generate auth key**:
 | --------- | ------------------------------------------ |
 | Reusable  | **on** (every run creates a new node)      |
 | Ephemeral | **on** (the node disappears after the run) |
-| Tags      | **`tag:ci`**                               |
+| Tags      | **leave empty**                            |
 | Expiry    | whatever your policy allows                |
 
-The tag matters: the workflow asks for `tag:ci`, and Tailscale rejects the
-request unless the key is tagged with it.
+**Leave the tag box empty.** A tag is only obligatory with an OAuth client.
+With a plain auth key it is optional, and asking for one makes Tailscale refuse
+the login unless `tagOwners` happens to be declared in your ACL — which a
+default tailnet has no reason to have. Leaving it empty means **no ACL edit is
+needed at all** on a default (allow-all) tailnet.
 
-Declare the tag in your ACL policy (admin console → **Access controls**) if it
-is not already there:
+Copy the `tskey-auth-…` value straight into the `TAILSCALE_AUTHKEY` secret.
+
+<details>
+<summary>Optional hardening — a tagged CI node (skip unless you want it)</summary>
+
+If you would rather the runner be a scoped node than a plain user device, add
+`tags: tag:ci` back to the _Join the tailnet_ step in
+`.github/workflows/deploy.yml`, tag the auth key `tag:ci`, and declare the tag
+in **Access controls**:
 
 ```jsonc
 {
@@ -421,7 +431,10 @@ is not already there:
 
 That grant is as narrow as it looks: a CI node may open exactly one port on
 exactly one machine. If you already have an `acls` block, add the `accept` rule
-to it rather than replacing the block.
+to it rather than replacing the block. Symptom of getting this wrong:
+`requested tags [tag:ci] are invalid or not permitted`.
+
+</details>
 
 ---
 
@@ -468,11 +481,11 @@ MainPID=2240
 
 Read it as three independent facts:
 
-| Line | Must say | If it does not |
-|---|---|---|
-| `cwd` | `/opt/chakvista/train` | the **old** unit is still live — it pointed at `/home/test/dhistest/train` |
-| target | `app:app` | `run_flask:app` starts the dev server inside the worker and deadlocks |
-| workers | `--workers 1 --threads 4` | `--workers 2` is the old unit; it doubles a large in-process cache |
+| Line    | Must say                  | If it does not                                                             |
+| ------- | ------------------------- | -------------------------------------------------------------------------- |
+| `cwd`   | `/opt/chakvista/train`    | the **old** unit is still live — it pointed at `/home/test/dhistest/train` |
+| target  | `app:app`                 | `run_flask:app` starts the dev server inside the worker and deadlocks      |
+| workers | `--workers 1 --threads 4` | `--workers 2` is the old unit; it doubles a large in-process cache         |
 
 Then run it by hand, so you can watch it rather than read about it:
 
