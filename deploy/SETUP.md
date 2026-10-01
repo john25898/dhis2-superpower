@@ -177,19 +177,59 @@ python3 -m venv /opt/chakvista/venv
 `deploy/chakvista.service` in this repo is the unit. It runs **gunicorn**, not the
 Flask dev server.
 
+### First: make sure the clone is actually current
+
+**Do not skip this.** It is the step whose absence took the site down on
+2026-10-01. The clone at `/opt/chakvista` had been made *before* the commit that
+fixed `User=deploy` → `User=test`, so the unit copied out of it pointed at an
+account that does not exist. systemd failed with `status=217/USER`, gunicorn never
+started, and nginx served **502** until the line was corrected.
+
 ```bash
-# Keep the old unit if you want to compare — the credentials may be in it.
+git -C /opt/chakvista fetch origin --prune
+git -C /opt/chakvista reset --hard origin/main
+git -C /opt/chakvista log --oneline -1
+
+# the poison check — this must print test, never deploy
+grep -nE '^User=|^Group=' /opt/chakvista/deploy/chakvista.service
+```
+
+> Installed units are **not** deployed by `deploy.sh` — it only restarts the
+> service, and its sudoers rule permits nothing more. So a unit change in the repo
+> never reaches a live box on its own. Whenever you touch this file, the
+> `git reset` + `cp` + `daemon-reload` below is a manual operation.
+
+### Then install it
+
+```bash
+# Keep the old unit — it is the rollback path.
 sudo cp /etc/systemd/system/chakvista.service ~/chakvista.service.bak 2>/dev/null
 
 sudo cp /opt/chakvista/deploy/chakvista.service /etc/systemd/system/chakvista.service
 sudo systemctl daemon-reload
 sudo systemctl restart chakvista
-sleep 6
-systemctl status chakvista --no-pager
-curl -I http://127.0.0.1:5100/
+sleep 8
+systemctl status chakvista --no-pager | head -15
+
+# The cold CHAK build takes ~47 s, so poll rather than checking once.
+# Do NOT write `$(curl -w '%{http_code}' ... || echo 000)` — curl already prints
+# 000 on failure, so the fallback appends a second one and you see "000000".
+for i in $(seq 1 20); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://127.0.0.1:5100/)
+  echo "attempt $i: HTTP $code"
+  [ "$code" = "200" ] && break
+  sleep 10
+done
 ```
 
-Expect `HTTP/1.1 200 OK`.
+Expect `Active: active (running)` and eventually `HTTP 200`.
+
+> **If it will not start, roll back before investigating:**
+> `sudo cp ~/chakvista.service.bak /etc/systemd/system/chakvista.service &&
+sudo systemctl daemon-reload && sudo systemctl restart chakvista`
+>
+> `status=217/USER` means the `User=` account cannot be resolved. `status=203/EXEC`
+> means the `ExecStart` path is wrong. Neither is worth debugging live.
 
 ### Two deliberate differences from the old unit
 
@@ -540,6 +580,9 @@ sudo -n true 2>/dev/null && echo "sudo -n OK" || echo "sudo -n NEEDS A PASSWORD"
 | Actions hangs, then `tailscale ping` times out               | runner's `tag:ci` node has no ACL route to the box                    | Step 3c — check `tagOwners` and the `accept` rule                        |
 | `requested tags [tag:ci] are invalid or not permitted`       | auth key is not tagged `tag:ci`, or the tag is not in the ACL         | regenerate the key with the tag; declare it in `tagOwners`               |
 | `sudo: a password is required`                               | sudoers path for `systemctl` is wrong                                 | `which systemctl`, fix `/etc/sudoers.d/chakvista-deploy`                 |
+| Unit fails instantly, `status=217/USER`                      | the `User=` account does not exist on this box                        | Step 2 — stale clone shipped `User=deploy`; must be `test`               |
+| Unit fails instantly, `status=203/EXEC`                      | `ExecStart` path does not exist                                       | `ls -l /opt/chakvista/venv/bin/gunicorn`; rebuild the venv if missing     |
+| Site returns **502**                                         | nginx is up but the app is not listening on 5100                      | `systemctl status chakvista`; `sudo ss -tlnp \| grep 5100`               |
 | Worker starts then hangs, nothing on 5100                    | `run_flask:app` used as the target                                    | use `app:app`                                                            |
 | Connection refused right after a restart                     | still booting; the app pre-warms                                      | wait ~60 s; `journalctl -u chakvista -f`                                 |
 | Health check times out, rollback succeeds                    | the commit genuinely fails to boot                                    | `journalctl -u chakvista -n 200 --no-pager`; fix forward                 |
