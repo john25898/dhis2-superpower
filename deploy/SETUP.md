@@ -469,18 +469,33 @@ Then confirm the newer payload. The tell is that `baseline` exists as its own
 month — the whole point of this migration:
 
 ```bash
-curl -s localhost:5100/api/milestone/data | python3 -c \
-  "import json,sys; d=json.load(sys.stdin); \
-   print('months :', [m['key'] for m in d['month']]); \
-   print('asOf   :', d['khis'].get('asOf')); \
-   print('pinned :', d['khis'].get('pinnedFor'))"
+curl -s --max-time 180 localhost:5100/api/milestone/data | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+if not d.get("ok"):
+    # A cold CHAK build answers 202 with ok=False, warming=True. Retry.
+    print("not ready:", d.get("warming"), d.get("error") or d.get("message"))
+    raise SystemExit(0)
+print("months :", [m["key"] for m in d["months"]])
+k = d.get("khis") or {}
+print("asOf   :", k.get("asOfHuman"), f"({k.get('asOf')})")
+print("khis   :", k.get("status"), "| pinned:", k.get("pinnedFor"))
+'
 ```
 
 ```
 months : ['baseline', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6']
-asOf   : August 2026
-pinned : August 2026
+asOf   : August 2026 (202608)
+khis   : ok | pinned: August 2026
 ```
+
+> The single-quoted outer shell means no `\` continuations and no escaping of
+> the inner quotes — write the Python exactly as shown.
+>
+> `asOf` is the period key (`202608`) and `asOfHuman` is its label. `pinnedFor`
+> is present only when CHAK actually has returns for the pinned month; if it is
+> `None`, read `khis.note` — the payload says plainly that it fell back to the
+> latest reporting month.
 
 Only then wire up the automatic path — push to `main`, watch **Actions**, confirm
 the summary table names the commit that went live.
