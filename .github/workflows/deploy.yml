@@ -67,9 +67,15 @@ jobs:
 
       # The runner becomes an ephemeral node on the tailnet.  It is removed
       # automatically when the job ends, so no stale device accumulates in the
-      # admin console.  `ping` makes the step wait until the box actually
-      # answers - tailnet peer propagation is eventually consistent, and
-      # without it the very next step can race and get connection refused.
+      # admin console.
+      #
+      # Deliberately NO `ping:`.  The action's ping runs `tailscale ping`, a
+      # DISCO ping over the WireGuard tunnel - a different path from the one
+      # the deploy actually uses, and one that fails for reasons that do not
+      # affect SSH at all (an unapproved node, a key from another tailnet, a
+      # DERP-only path).  It also waits the full 2m before giving up and
+      # reports nothing useful.  The `Reach the box` step below replaces it
+      # with a TCP connect to the SSH port, which is exactly what has to work.
       - name: Join the tailnet
         id: tailscale
         if: steps.guard.outputs.ready == 'true'
@@ -83,8 +89,42 @@ jobs:
           # edit at all.  See deploy/SETUP.md Step 3c for the optional
           # tagged/narrowed setup.
           hostname: gh-deploy-${{ github.run_id }}
-          ping: ${{ secrets.SSH_HOST || '100.120.117.89' }}
           log-mode: normal
+
+      # Peer propagation is eventually consistent, so retry rather than
+      # connecting once and blaming SSH.  /dev/tcp is a bash builtin - no nc
+      # or curl to install, and it exercises the same TCP path as ssh itself.
+      - name: Reach the box
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -uo pipefail
+
+          SSH_HOST="${SSH_HOST:-100.120.117.89}"
+          SSH_PORT="${SSH_PORT:-22}"
+          TARGET="$SSH_HOST:$SSH_PORT"
+
+          echo "this runner: $(tailscale ip -4 2>/dev/null || echo '<no tailscale CLI>')" || true
+          tailscale status 2>&1 | head -20 || echo '(tailscale CLI not on PATH here; harmless)'
+          echo
+
+          for attempt in 1 2 3 4 5 6; do
+            if timeout 10 bash -c "exec 3<>/dev/tcp/$SSH_HOST/$SSH_PORT" 2>/dev/null; then
+              echo "TCP $TARGET answered on attempt $attempt."
+              exit 0
+            fi
+            echo "attempt $attempt: TCP $TARGET not answering yet"
+            sleep 5
+          done
+
+          echo "::error title=Box not reachable over the tailnet::TCP $TARGET never answered (6 attempts). "
+          echo "::error::The runner joined the tailnet but has no route to the box. Check, in this order:"
+          echo "::error::  1. Tailscale admin > Machines - is a 'gh-deploy-<run id>' node listed? If it shows as needing approval, approve it, or re-create the auth key with 'Pre-approved' ticked."
+          echo "::error::  2. Does the auth key belong to the tailnet that owns the box (MagicDNS suffix tail944d6a.ts.net)? A key from another tailnet logs in fine and then can reach nothing."
+          echo "::error::  3. Is the box actually online? Run 'tailscale status' on it."
+          exit 1
 
       - name: Deploy
         if: steps.guard.outputs.ready == 'true'
