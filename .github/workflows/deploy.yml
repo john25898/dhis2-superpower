@@ -2,17 +2,30 @@ name: Deploy to chakvista.co.ke
 
 # Runs on every push to main, plus a manual "Run workflow" button.
 #
-# Nothing happens until the secrets below exist, so this file is safe to merge
-# as-is: the first step detects a missing SSH_HOST and skips with a notice
-# instead of failing the build.
+# ── Why Tailscale and not a plain IP ────────────────────────────────────────
+# The box sits behind carrier-grade NAT (CGNAT).  Measured 2026-10-01: ping to
+# its egress address answers, but *every* TCP port - 22, 80, 443 - is closed
+# from the public internet, and no port-forward is possible.  chakvista.co.ke
+# resolves to Cloudflare, which reaches the box over a `cloudflared` tunnel.
 #
-#   SSH_HOST          chakvista.co.ke            (or the box's IP)
-#   SSH_USER          deploy                     (the user that owns the clone)
-#   SSH_PRIVATE_KEY   contents of the deploy private key (ed25519)
-#   SSH_PORT          optional, defaults to 22
-#   SSH_KNOWN_HOSTS   optional; run `ssh-keyscan <host>` and paste the output
-#   REPO_DIR          optional, defaults to /opt/chakvista
-#   SERVICE_NAME      optional, defaults to chakvista
+# So a GitHub-hosted runner cannot dial the box directly.  The box is already
+# joined to a Tailscale tailnet (tailscaled.service, 100.120.117.89), and
+# Tailscale punches out through NAT, so this workflow joins the same tailnet
+# for the duration of the job and then SSHes to the tailnet address.  Traffic
+# is WireGuard-encrypted end to end; nothing is exposed publicly.
+#
+#   TAILSCALE_AUTHKEY  auth key from the Tailscale admin console, tagged tag:ci
+#   SSH_HOST           the box's TAILNET address (100.120.117.89)
+#   SSH_USER           test      (the user that owns the clone)
+#   SSH_PRIVATE_KEY    contents of the deploy private key (ed25519)
+#   SSH_PORT           optional, defaults to 22
+#   SSH_KNOWN_HOSTS    optional; run `ssh-keyscan 100.120.117.89` and paste it
+#   REPO_DIR           optional, defaults to /opt/chakvista
+#   SERVICE_NAME       optional, defaults to chakvista
+#
+# Nothing happens until TAILSCALE_AUTHKEY exists, so this file is safe to merge
+# as-is: the first step detects the missing secret and skips with a notice
+# instead of failing the build.
 #
 # See deploy/SETUP.md for the one-time setup on the Ubuntu box.
 
@@ -33,22 +46,39 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy over SSH
+    name: Deploy over Tailscale
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 5 min to join the tailnet (the action retries), 15 for the deploy itself.
+    timeout-minutes: 20
 
     steps:
       - name: Check that the deploy secrets are configured
         id: guard
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
+          TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
-          if [ -z "$SSH_HOST" ]; then
+          if [ -z "$TS_AUTHKEY" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Deploy skipped::SSH_HOST is not set. Add the deploy secrets listed at the top of .github/workflows/deploy.yml (see deploy/SETUP.md)."
+            echo "::notice title=Deploy skipped::TAILSCALE_AUTHKEY is not set. Add the deploy secrets listed at the top of .github/workflows/deploy.yml (see deploy/SETUP.md)."
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # The runner becomes an ephemeral node on the tailnet.  It is removed
+      # automatically when the job ends, so no stale device accumulates in the
+      # admin console.  `ping` makes the step wait until the box actually
+      # answers - tailnet peer propagation is eventually consistent, and
+      # without it the very next step can race and get connection refused.
+      - name: Join the tailnet
+        id: tailscale
+        if: steps.guard.outputs.ready == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          tags: tag:ci
+          hostname: gh-deploy-${{ github.run_id }}
+          ping: ${{ secrets.SSH_HOST || '100.120.117.89' }}
+          log-mode: normal
 
       - name: Deploy
         if: steps.guard.outputs.ready == 'true'
@@ -63,9 +93,26 @@ jobs:
         run: |
           set -euo pipefail
 
+          # The tailnet address is the default; SSH_HOST only exists so the
+          # address can be changed without editing this file.
+          SSH_HOST="${SSH_HOST:-100.120.117.89}"
+          SSH_USER="${SSH_USER:-test}"
           SSH_PORT="${SSH_PORT:-22}"
           REPO_DIR="${REPO_DIR:-/opt/chakvista}"
           SERVICE_NAME="${SERVICE_NAME:-chakvista}"
+          SSH_PRIVATE_KEY="${SSH_PRIVATE_KEY:-}"
+          SSH_KNOWN_HOSTS="${SSH_KNOWN_HOSTS:-}"
+
+          # Fail with a readable message rather than an "unbound variable"
+          # under `set -u`, which is what a missing secret looks like
+          # otherwise.  TAILSCALE_AUTHKEY is checked by the guard step above.
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error title=Missing secret::SSH_PRIVATE_KEY is not set. See deploy/SETUP.md."
+            exit 1
+          fi
+
+          echo "target:  ${SSH_USER}@${SSH_HOST}:${SSH_PORT}"
+          echo "repo:    ${REPO_DIR}"
 
           # ── private key ────────────────────────────────────────────────
           mkdir -p ~/.ssh
@@ -74,7 +121,10 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
 
           # ── host key ───────────────────────────────────────────────────
-          # Prefer a pinned key (SSH_KNOWN_HOSTS) — that is a real check.
+          # The box's host key is pinned in SSH_KNOWN_HOSTS.  Over Tailscale
+          # this matters less than on the public internet (WireGuard already
+          # authenticates the peer), but pinning costs nothing and catches a
+          # reinstalled box before it silently changes identity.
           # Falling back to ssh-keyscan is trust-on-first-use: it protects
           # against nothing, so pin it once you have run the box once.
           if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
@@ -85,6 +135,9 @@ jobs:
             echo "::warning title=Host key not pinned::Falling back to ssh-keyscan. Set SSH_KNOWN_HOSTS to pin it."
           fi
           chmod 600 ~/.ssh/known_hosts
+
+          # BatchMode=yes means a missing key or a host-key mismatch fails
+          # fast instead of hanging on a prompt nobody can answer.
 
           SSH_OPTS=(-i ~/.ssh/deploy_key -p "$SSH_PORT"
                     -o IdentitiesOnly=yes -o BatchMode=yes

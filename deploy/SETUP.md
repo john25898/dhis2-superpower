@@ -9,7 +9,8 @@ service name are the ones measured on 2026-10-01.
           │
           ▼
    GitHub Actions  .github/workflows/deploy.yml
-          │  ssh test@<box>
+          │  joins the tailnet, then:
+          │  ssh test@100.120.117.89        (over WireGuard, not the open internet)
           ▼
    deploy/deploy.sh
           │
@@ -20,21 +21,40 @@ service name are the ones measured on 2026-10-01.
           └─ 5. health check failed? → roll back to the previous commit
 ```
 
+### Why the runner does not just dial the box
+
+The box is behind **carrier-grade NAT (CGNAT)**. Ping to its egress address
+(`102.203.66.11`) answers, but every TCP port — 22, 80, 443 — is closed from the
+public internet, and **no port-forward is possible**: the address is shared with
+other subscribers, so it is an egress address rather than the box's own.
+
+`chakvista.co.ke` therefore does **not** resolve to this box. It resolves to
+Cloudflare, and a `cloudflared` tunnel running on the box connects **outward** to
+Cloudflare and carries the public traffic in. That tunnel is inbound to nobody.
+
+For deploys we use the other outbound path the box already has: **Tailscale**.
+The box is already a node on the tailnet at **`100.120.117.89`**. The workflow
+joins the same tailnet, which lets it reach that address even though neither end
+is publicly reachable. Nothing is exposed to the internet.
+
 ---
 
 ## About this box
 
-|               |                                                                    |
-| ------------- | ------------------------------------------------------------------ |
-| Repo deployed | `john25898/dhis2-superpower` (**private**)                         |
-| Clone         | `/opt/chakvista`                                                   |
-| App dir       | `/opt/chakvista/train`                                             |
-| venv          | `/opt/chakvista/venv`                                              |
-| Deploy user   | `test`                                                             |
-| Service       | `chakvista.service`                                                |
-| Bound to      | `127.0.0.1:5100` (nginx terminates TLS)                            |
-| Python        | 3.10.12                                                            |
-| Web server    | nginx active; ports 80/443 are held by **`lxd`**, which proxies in |
+|                |                                                                   |
+| -------------- | ----------------------------------------------------------------- |
+| Repo deployed  | `john25898/dhis2-superpower` (**private**)                        |
+| Clone          | `/opt/chakvista`                                                  |
+| App dir        | `/opt/chakvista/train`                                            |
+| venv           | `/opt/chakvista/venv`                                             |
+| Deploy user    | `test`                                                            |
+| Service        | `chakvista.service`                                               |
+| Bound to       | `127.0.0.1:5100` (nginx terminates TLS)                           |
+| Python         | 3.10.12                                                           |
+| **Tailnet IP** | **`100.120.117.89`** — how the pipeline reaches the box           |
+| Public entry   | Cloudflare edge → `cloudflared` tunnel → `127.0.0.1:8080` (nginx) |
+| Inbound ports  | **none** — CGNAT, no port-forward is possible                     |
+| nginx          | listens `0.0.0.0:8080`; ports 80/443 are held by **`lxd`**        |
 
 > **There are two SSH keys in this setup, and they point in opposite
 > directions.** Confusing them is the most common way to lose an afternoon:
@@ -59,6 +79,15 @@ Checked off on 2026-10-01. Do not redo these.
       terminal to prompt on.
 - [x] **sudoers rule** at `/etc/sudoers.d/chakvista-deploy`; `visudo -c` says
       _parsed OK_. Grants exactly two commands, no blanket root.
+- [x] **venv at `/opt/chakvista/venv`** built on Python 3.10.12; full
+      `pip install -r train/requirements.txt` succeeded and `import flask, pandas,
+      openpyxl` prints `deps OK`.
+- [x] **Credentials located**: `/home/test/dhistest/train/.env` exists (676 bytes).
+      The running unit carries **no** credential `Environment=` lines, and
+      `train/app.py` calls `load_dotenv()`, so a plain `.env` file is the whole
+      mechanism — copying the file is enough. Nothing to move into the unit.
+- [x] **Tailscale and Cloudflare Tunnel confirmed running** on the box
+      (`tailscaled.service`, `cloudflared.service`). See the top of this file.
 
 ```bash
 # what that rule contains
@@ -72,11 +101,11 @@ test ALL=(root) NOPASSWD: /usr/bin/systemctl restart chakvista, \
 
 ## What remains
 
-- [ ] `train/.env` — **credentials. Status unknown; see Step 1.**
-- [ ] venv at `/opt/chakvista/venv` + `pip install`
+- [ ] `train/.env` — copy it over and lock it to mode `600`
+- [ ] **`openssh-server`** — the box has **no sshd running at all**; see Step 3
 - [ ] install and start the unit (Step 2)
 - [ ] the pipeline SSH key + `authorized_keys` (Step 3)
-- [ ] GitHub secrets (Step 4)
+- [ ] a Tailscale auth key + the GitHub secrets (Step 4)
 - [ ] first deploy (Step 5)
 
 ---
@@ -85,6 +114,9 @@ test ALL=(root) NOPASSWD: /usr/bin/systemctl restart chakvista, \
 
 `train/.env` holds the KHIS / CHAK / Gemini credentials. It is **gitignored**, so
 it is never in the clone — it has to exist on disk.
+
+The app is run with `WorkingDirectory=/opt/chakvista/train`, which is why
+`python-dotenv` picks up `train/.env` with no `EnvironmentFile` line in the unit.
 
 Before copying anything, find out where the currently-running app gets its
 credentials. The old unit may inject them as `Environment=` lines instead of
@@ -118,9 +150,13 @@ chmod 600 /opt/chakvista/train/.env
 wc -l /opt/chakvista/train/.env      # sanity: should be non-empty
 ```
 
-Then the venv. Note the app is run with `WorkingDirectory=/opt/chakvista/train`,
-which is why `python-dotenv` picks up `train/.env` with no `EnvironmentFile` line
-in the unit.
+> **Already resolved.** A `.env` does exist on the old clone (676 bytes), and the
+> running unit injects no credentials of its own — so the row above is the one
+> that applies and the copy is all that is needed. The three-row table is kept
+> because it is the thing to re-check if credentials ever go missing.
+
+The venv is **already built** (`/opt/chakvista/venv`, Python 3.10.12, `deps OK`) —
+skip the block below unless it is ever lost:
 
 ```bash
 python3 -m venv /opt/chakvista/venv
@@ -129,8 +165,10 @@ python3 -m venv /opt/chakvista/venv
 /opt/chakvista/venv/bin/python -c "import flask, pandas, openpyxl; print('deps OK')"
 ```
 
-If `requirements.txt` fails on the `google-generativeai` pin under Python 3.10,
-say so — the pins were resolved on 3.13 and one may need loosening.
+> The install resolved on 3.10 without loosening any pin — it backtracks fairly
+> hard on `google-api-core` / `grpcio-status` before settling, which is normal and
+> not an error. It is idempotent: a second run reports
+> `Requirement already satisfied` throughout.
 
 ---
 
@@ -179,18 +217,56 @@ sudo systemctl daemon-reload && sudo systemctl restart chakvista`
 
 ### nginx
 
-No change needed if the vhost already proxies to `127.0.0.1:5100`. Confirm:
+No change needed if the vhost already proxies to `127.0.0.1:5100`. Confirm — and
+note the whole chain while you are here:
 
 ```bash
-sudo nginx -T 2>/dev/null | grep -B4 -A8 'proxy_pass' | head -40
+# -T dumps the *effective* config, includes and all.  Do not use
+# `grep -r /etc/nginx/sites-enabled/`: those entries are symlinks into
+# sites-available/, and grep -r does not follow symlinks, so it finds nothing
+# and looks like nginx has no vhost at all.
+sudo nginx -T 2>/dev/null | grep -nE 'listen |server_name|proxy_pass' | head -30
+
+# the other half of the path, so the two can be compared side by side
+sudo grep -nE 'hostname|service:' /etc/cloudflared/config.yml
 ```
 
-If you do edit it, use `proxy_read_timeout 300s` — the cold CHAK build takes ~47 s
-and the default 60 s will cut it off.
+Expected shape: `cloudflared` sends `chakvista.co.ke` to `http://127.0.0.1:8080`
+(nginx), and nginx proxies on to `http://127.0.0.1:5100` (gunicorn). **If the final
+hop is not `5100`, the new unit will start cleanly and the site will still serve
+the old app** — so confirm this before Step 5, not after.
+
+If you do edit nginx, use `proxy_read_timeout 300s` — the cold CHAK build takes
+~47 s and the default 60 s will cut it off.
 
 ---
 
-## Step 3 — a key so GitHub can log into the box
+## Step 3 — let the runner log in: an SSH key _and_ a way to reach the box
+
+Two separate problems, and both must be solved:
+
+1. There is **no route** to the box from the internet (CGNAT). → Tailscale.
+2. There is **nothing listening** to log into. → install `openssh-server`.
+
+### 3a — install sshd (it is not running on this box)
+
+Measured on 2026-10-01: `systemctl is-active ssh` says **inactive**, and nothing
+is bound to port 22. So the box currently has no SSH server at all.
+
+```bash
+sudo apt update && sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+systemctl is-active ssh          # expect: active
+sudo ss -tlnp | grep -w ':22'    # expect: LISTEN ... 0.0.0.0:22
+```
+
+> It is safe to leave sshd on `0.0.0.0:22`. CGNAT means it cannot be reached
+> from the public internet — the port scan from outside found 22 closed _before_
+> sshd existed and will still find it closed after, because nothing forwards to
+> it. Only the tailnet can reach it. If you want belt and braces, restrict who
+> may connect in the Tailscale ACL rather than in `sshd_config`.
+
+### 3b — the pipeline key
 
 This is the **second** key, the opposite direction from the deploy key. Generate
 it on the box, authorise the public half locally, then move the private half into
@@ -198,16 +274,35 @@ GitHub and delete the on-box copy.
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/gha_deploy -N "" -C "github-actions -> box"
+touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
 cat ~/.ssh/gha_deploy.pub >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
 
-echo   "=== paste this whole block into the SSH_PRIVATE_KEY secret ==="
-cat ~/.ssh/gha_deploy
-echo   "=== and this into SSH_KNOWN_HOSTS ==="
-ssh-keyscan -H chakvista.co.ke
+# restricted entry: this key may only ever run the deploy script.
+# (-N "" for ssh-keygen is "no passphrase".)
 ```
 
-Copy both, then remove the on-box copy — GitHub is the only thing that should hold it:
+> Prefer to lock the key down? Replace the `authorized_keys` line with the same
+> key prefixed by an `command=` forced command. Simple version — append exactly
+> this instead, on one line, followed by the key text:
+>
+> ```
+> command="/opt/chakvista/deploy/deploy.sh",no-port-forwarding,no-agent-forwarding,no-pty
+> ```
+>
+> Optional. It means a leaked key cannot be used for anything except deploying.
+
+Print the two values the workflow needs:
+
+```bash
+echo   "=== paste this whole block into the SSH_PRIVATE_KEY secret ==="
+cat ~/.ssh/gha_deploy
+echo
+echo "=== and this into SSH_KNOWN_HOSTS ==="
+ssh-keyscan -H 100.120.117.89
+```
+
+Note `100.120.117.89` — the **tailnet** address, not the domain. Then remove the
+on-box copy: GitHub is the only thing that should hold it.
 
 ```bash
 shred -u ~/.ssh/gha_deploy
@@ -217,24 +312,37 @@ shred -u ~/.ssh/gha_deploy
 > new key merges onto the last line and is silently ignored. If the login fails
 > with `Permission denied (publickey)`, check `tail -c 80 ~/.ssh/authorized_keys`.
 
-### One thing to verify before going further
+### 3c — the Tailscale auth key
 
-The workflow connects to `chakvista.co.ke` on **port 22**. That is not necessarily
-the same machine as the web host — nginx sits behind an LXD proxy here, and the
-domain may resolve to an LXD host rather than to this box.
+Tailscale admin console → **Settings → Keys → Generate auth key**:
 
-```bash
-curl -s ifconfig.me                                   # this box's public IP
-getent hosts chakvista.co.ke                           # what the domain resolves to
+| Setting   | Value                                      |
+| --------- | ------------------------------------------ |
+| Reusable  | **on** (every run creates a new node)      |
+| Ephemeral | **on** (the node disappears after the run) |
+| Tags      | **`tag:ci`**                               |
+| Expiry    | whatever your policy allows                |
+
+The tag matters: the workflow asks for `tag:ci`, and Tailscale rejects the
+request unless the key is tagged with it.
+
+Declare the tag in your ACL policy (admin console → **Access controls**) if it
+is not already there:
+
+```jsonc
+{
+  "tagOwners": {
+    "tag:ci": ["munyelelelevin@"],
+  },
+  "acls": [
+    { "action": "accept", "src": ["tag:ci"], "dst": ["100.120.117.89:22"] },
+  ],
+}
 ```
 
-- **They match** → use `SSH_HOST=chakvista.co.ke`.
-- **They differ** → use the box's public IP directly, or a port-forward, or
-  [Tailscale](https://tailscale.com) (which also avoids opening 22 to the
-  internet). Set `SSH_HOST` and `SSH_PORT` to match whichever you pick.
-
-If these differ, the domain is only the _web_ entry point and pointing the
-pipeline at it will time out.
+That grant is as narrow as it looks: a CI node may open exactly one port on
+exactly one machine. If you already have an `acls` block, add the `accept` rule
+to it rather than replacing the block.
 
 ---
 
@@ -242,18 +350,19 @@ pipeline at it will time out.
 
 Repo → **Settings → Secrets and variables → Actions → New repository secret**.
 
-| Secret            | Required    | Value                                                                  |
-| ----------------- | ----------- | ---------------------------------------------------------------------- |
-| `SSH_HOST`        | ✅          | box IP or `chakvista.co.ke` — whichever resolved to this box in Step 3 |
-| `SSH_USER`        | ✅          | `test`                                                                 |
-| `SSH_PRIVATE_KEY` | ✅          | the private key printed in Step 3                                      |
-| `SSH_KNOWN_HOSTS` | recommended | `ssh-keyscan -H <host>` output                                         |
-| `SSH_PORT`        | if not 22   | only if you used a forward or Tailscale                                |
-| `REPO_DIR`        | no          | already defaults to `/opt/chakvista`                                   |
-| `SERVICE_NAME`    | no          | already defaults to `chakvista`                                        |
+| Secret              | Required    | Value                                               |
+| ------------------- | ----------- | --------------------------------------------------- |
+| `TAILSCALE_AUTHKEY` | ✅          | the `tskey-auth-…` key from Step 3c                 |
+| `SSH_PRIVATE_KEY`   | ✅          | the private key printed in Step 3b                  |
+| `SSH_HOST`          | no          | defaults to `100.120.117.89`                        |
+| `SSH_USER`          | no          | defaults to `test`                                  |
+| `SSH_KNOWN_HOSTS`   | recommended | `ssh-keyscan -H 100.120.117.89` output from Step 3b |
+| `SSH_PORT`          | no          | defaults to 22                                      |
+| `REPO_DIR`          | no          | already defaults to `/opt/chakvista`                |
+| `SERVICE_NAME`      | no          | already defaults to `chakvista`                     |
 
-Until `SSH_HOST` is set the workflow skips itself with a notice instead of failing,
-so a green-but-skipped run before you finish this step is expected.
+Until `TAILSCALE_AUTHKEY` is set the workflow skips itself with a notice instead
+of failing, so a green-but-skipped run before you finish this step is expected.
 
 ---
 
@@ -362,7 +471,17 @@ systemctl is-active chakvista
 echo
 echo "=== FRONT DOOR ==="
 systemctl is-active nginx
-sudo ss -tlnp | grep -E ':(80|443|5100)\b'
+echo "--- what is listening, and who owns it ---"
+sudo ss -tlnp | grep -E ':(22|80|443|8080|5100|5101)\b'
+echo "--- the chain from the edge to the app ---"
+sudo grep -nE 'hostname|service:' /etc/cloudflared/config.yml
+sudo nginx -T 2>/dev/null | grep -nE 'listen |server_name|proxy_pass'
+
+echo
+echo "=== REMOTE ACCESS ==="
+systemctl is-active ssh cloudflared tailscaled
+tailscale ip -4
+tailscale status | head -5
 
 echo
 echo "=== SUDO ==="
@@ -377,12 +496,14 @@ sudo -n true 2>/dev/null && echo "sudo -n OK" || echo "sudo -n NEEDS A PASSWORD"
 | ------------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `Permission denied (publickey)` on clone                     | deploy key not added, or `~/.ssh/config` missing                      | `ssh -T git@github.com` should name **dhis2-superpower**                 |
 | `Permission denied (publickey)` on deploy                    | pipeline key not in `authorized_keys`, or missing trailing newline    | `tail -c 80 ~/.ssh/authorized_keys`                                      |
-| `Permission denied (publickey)` from Actions only            | `SSH_HOST` resolves to a different machine                            | compare `curl ifconfig.me` with `getent hosts`                           |
+| Actions cannot connect at all, `Connection refused`          | **`openssh-server` not installed** — nothing on port 22               | Step 3a                                                                  |
+| Actions hangs, then `tailscale ping` times out               | runner's `tag:ci` node has no ACL route to the box                    | Step 3c — check `tagOwners` and the `accept` rule                        |
+| `requested tags [tag:ci] are invalid or not permitted`       | auth key is not tagged `tag:ci`, or the tag is not in the ACL         | regenerate the key with the tag; declare it in `tagOwners`               |
 | `sudo: a password is required`                               | sudoers path for `systemctl` is wrong                                 | `which systemctl`, fix `/etc/sudoers.d/chakvista-deploy`                 |
 | Worker starts then hangs, nothing on 5100                    | `run_flask:app` used as the target                                    | use `app:app`                                                            |
 | Connection refused right after a restart                     | still booting; the app pre-warms                                      | wait ~60 s; `journalctl -u chakvista -f`                                 |
 | Health check times out, rollback succeeds                    | the commit genuinely fails to boot                                    | `journalctl -u chakvista -n 200 --no-pager`; fix forward                 |
-| Deploy says OK but the site shows old code                   | stale `ExecStart` path, or nginx cached                               | `systemctl cat chakvista`; check `proxy_pass` port                       |
+| Deploy says OK but the site shows old code                   | stale `ExecStart` path, or nginx proxying to a different port         | `systemctl cat chakvista`; compare with the `proxy_pass` port            |
 | Site slow / `Failed to load milestone data`, first load only | CHAK cold build ~47 s                                                 | expected; the app pre-warms at boot                                      |
 | Need a real CHAK re-pull after a code change                 | 300 s in-process analytics cache; `?refresh=1` does **not** bypass it | restart (which a deploy does) — a page reload does not                   |
 | `detected dubious ownership in repository`                   | `.git` owned by a different user than the deploy user                 | already handled by `deploy.sh`; else `chown -R test:test /opt/chakvista` |
