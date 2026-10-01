@@ -180,16 +180,22 @@ function milestoneAlertChip(alerts, source) {
   };
   const a = String(alerts || "").trim();
   if (!map[a]) return '<span class="text-slate-300">—</span>';
-  // A baseline alert is banded off the live CHAK DHIS2 figure, not read
-  // from the Milestone Summary2 tracker seed, so say so in the tooltip
-  // rather than passing it off as a GOR-verified status.
-  const fromBaseline = String(source || "") === "baseline";
-  const title = fromBaseline
-    ? "Estimated from the live CHAK DHIS2 baseline — a full unlock is On Track, a partial unlock is Watch, no unlock is Off Track. GOR verification of this project month replaces it with a confirmed status."
-    : "Status from the Milestone Summary2 tracker.";
-  const dot = fromBaseline
-    ? '<span class="ml-1 text-[8px] opacity-60">•</span>'
-    : "";
+  // A banded alert is derived from a live measurement (the CHAK DHIS2
+  // baseline, or the NDWH upload log for #22), not read from the Milestone
+  // Summary2 tracker seed, so say so in the tooltip rather than passing it
+  // off as a GOR-verified status.
+  const src = String(source || "");
+  const fromBaseline = src === "baseline";
+  const fromDwapi = src === "dwapi";
+  const title = fromDwapi
+    ? "Estimated from the NDWH UJTP DWAPI reporting-coverage reading — ≥95% reporting is On Track, 80–94% is Watch, below 80% is Off Track. GOR verification of this project month replaces it with a confirmed status."
+    : fromBaseline
+      ? "Estimated from the live CHAK DHIS2 baseline — a full unlock is On Track, a partial unlock is Watch, no unlock is Off Track. GOR verification of this project month replaces it with a confirmed status."
+      : "Status from the Milestone Summary2 tracker.";
+  const dot =
+    fromBaseline || fromDwapi
+      ? '<span class="ml-1 text-[8px] opacity-60">•</span>'
+      : "";
   return `<span class="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[a]}" title="${escapeHtml(title)}">${escapeHtml(a)}${dot}</span>`;
 }
 
@@ -268,9 +274,12 @@ function msEarnedCell(row, isFinalPay) {
   const basis = isFinalPay
     ? "Final-pay max"
     : "Schedule max " + fmtMoney(amt) + " × unlock " + unlock + "%";
+  const fromDwapi = String(row.alertsSource || "") === "dwapi";
   const title =
     basis +
-    " — unlocked by the CHAK DHIS2 baseline; GOR verification of the month is required before payment.";
+    (fromDwapi
+      ? " — unlocked by the NDWH UJTP DWAPI reporting-coverage reading; GOR verification of the month is required before payment."
+      : " — unlocked by the CHAK DHIS2 baseline; GOR verification of the month is required before payment.");
   if (unlock <= 0) {
     return `<span class="whitespace-nowrap text-[12px] font-semibold text-rose-500" title="${escapeHtml(title)}">$0</span>`;
   }
@@ -296,6 +305,64 @@ function msKhisChipHtml(khis) {
   return "";
 }
 
+// ---------------------------------------------------------------------
+// Milestone 22 — Digital Health Systems & Electronic Reporting Coverage.
+// Sourced from the NDWH's own UJTP DWAPI upload workbook (a per-facility
+// submission log), NOT CHAK DHIS2, and scored on the Baseline tab only:
+// the workbook is the snapshot for the month the baseline is pinned to.
+// ---------------------------------------------------------------------
+function msDwapiChipHtml(dwapi) {
+  if (!dwapi) return "";
+  if (dwapi.status === "ok") {
+    const pct = Number(dwapi.pct);
+    const cls =
+      pct >= 95
+        ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+        : pct >= 80
+          ? "border-amber-100 bg-amber-50 text-amber-700"
+          : "border-rose-100 bg-rose-50 text-rose-700";
+    const pctTxt = Number.isFinite(pct)
+      ? Number(pct).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "%"
+      : "—";
+    return `<span class="rounded-full border ${cls} px-2.5 py-1 text-[11px] font-semibold"
+      title="${escapeHtml(dwapi.note || "")}">🗄️ NDWH reporting coverage · ${escapeHtml(String(Number(dwapi.reporting) || 0))} of ${escapeHtml(String(Number(dwapi.expected) || 0))} facilities · ${escapeHtml(pctTxt)}</span>`;
+  }
+  if (dwapi.status === "empty" || dwapi.status === "error") {
+    return `<span class="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700"
+      title="${escapeHtml(dwapi.error || dwapi.note || "")}">🗄️ NDWH coverage unavailable</span>`;
+  }
+  return "";
+}
+
+function msDwapiNoteHtml(dwapi) {
+  if (!dwapi || dwapi.status !== "ok") return "";
+  const dockets = (dwapi.dockets || [])
+    .map((d) => `${d.docket} ${d.pct}%`)
+    .join(" · ");
+  return (
+    " #22 Digital Health Systems &amp; Electronic Reporting Coverage is measured from the National Data Warehouse's own " +
+    "UJTP DWAPI upload log rather than CHAK DHIS2: " +
+    escapeHtml(String(Number(dwapi.reporting) || 0)) +
+    " of " +
+    escapeHtml(String(Number(dwapi.expected) || 0)) +
+    " expected HIV facilities have submitted an upload (" +
+    escapeHtml(String(Number(dwapi.pct) || 0)) +
+    "%" +
+    (dockets ? " — " + escapeHtml(dockets) : "") +
+    "), so it bands at " +
+    escapeHtml(String(Number(dwapi.unlock) || 0)) +
+    "% unlock. " +
+    escapeHtml(
+      Number(dwapi.neverCount) > 0
+        ? "The " +
+            Number(dwapi.neverCount) +
+            " facilities that have never submitted are listed in the panel."
+        : "Every expected facility has submitted.",
+    ) +
+    " It is shown on the Baseline tab only, because the workbook is the snapshot for the month the baseline is pinned to."
+  );
+}
+
 function msKhisNoteHtml(khis) {
   if (!khis) return "";
   if (khis.status === "pending") {
@@ -313,7 +380,7 @@ function msKhisNoteHtml(khis) {
     (Number(khis.matched) || 0) +
     " of " +
     (Number(khis.total) || 0) +
-    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification."
+    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification — #22 Electronic Reporting is the exception, scored on the Baseline tab from the NDWH upload log instead."
   );
 }
 
@@ -1006,6 +1073,7 @@ async function renderMilestoneTrackerPage() {
           <span class="text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Tiers: ${escapeHtml((data.tiers || []).join(" · "))}</span>
           <span class="text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">Read-only · tracking update coming with sign-in</span>
           ${msKhisChipHtml(activeKhis)}
+          ${msDwapiChipHtml(activeMonth && activeMonth.dwapi)}
         </div>
       </div>
 
@@ -1082,7 +1150,7 @@ async function renderMilestoneTrackerPage() {
           "Milestones Summary2" tracker layout. The 6-Month Allocation and Overall Balance
           columns live on the 🏠 Home tab (they are plan-level figures, identical on every
           month), so this per-month table stays focused on the month being read.
-          Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}
+          Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}${msDwapiNoteHtml(activeMonth && activeMonth.dwapi)}
         </div>
       </div>
       `

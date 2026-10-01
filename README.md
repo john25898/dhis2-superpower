@@ -56,11 +56,11 @@ restarts `chakvista.service`, health-checks it and rolls back if it fails.
 The workflow is a no-op until these repository secrets exist
 (Settings → Secrets and variables → Actions):
 
-| Secret             | Value                                                                       |
-| ------------------ | --------------------------------------------------------------------------- |
-| `TAILSCALE_AUTHKEY` | Tailscale auth key — reusable + ephemeral, **tags empty**                  |
-| `SSH_PRIVATE_KEY`   | private key whose public half is in the box's `~/.ssh/authorized_keys`     |
-| `SSH_KNOWN_HOSTS`   | `ssh-keyscan -H <tailnet-ip> 2>/dev/null \| grep -v '^#'`                  |
+| Secret              | Value                                                                  |
+| ------------------- | ---------------------------------------------------------------------- |
+| `TAILSCALE_AUTHKEY` | Tailscale auth key — reusable + ephemeral, **tags empty**              |
+| `SSH_PRIVATE_KEY`   | private key whose public half is in the box's `~/.ssh/authorized_keys` |
+| `SSH_KNOWN_HOSTS`   | `ssh-keyscan -H <tailnet-ip> 2>/dev/null \| grep -v '^#'`              |
 
 `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `REPO_DIR` and `SERVICE_NAME` are optional —
 they default to the live box's values. One-time host setup (service unit,
@@ -68,7 +68,7 @@ sudoers, key placement) is documented in `deploy/SETUP.md`.
 
 ## DHIS2 / KHIS access
 
-Credentials live in `train/.env` (DHIS*\*, KHIS*_, GEMINI\__, GROQ\_\*). The app falls
+Credentials live in `train/.env` (DHIS*\*, KHIS*\_, GEMINI\_\_, GROQ\_\*). The app falls
 back to built-in defaults if `.env` is missing.
 
 ## Superpower (AI query engine)

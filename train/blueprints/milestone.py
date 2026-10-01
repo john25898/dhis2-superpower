@@ -1,11 +1,17 @@
 """Milestone Tracker: CHAK Daraka FAA monthly milestone plan + payment schedule.
 
-Parses two local Excel workbooks (in train/):
+Parses local workbooks (in train/):
   1. FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx
      - Milestones_DataEntry  (master registry, unique Milestone IDs 1-26)
      - Payment Schedule_M1 .. M5  (per-month payment schedules)
      - V2 Payment Schedule_Final Pay  (Month-6 / final-pay schedule)
   2. Milestones Summary2.xlsx  (Summary2-style tracker layout + M1 seeds)
+  3. UJTP DWAPI UPLOADS*.xlsx  (NDWH per-facility electronic-upload log;
+     supplies the #22 reporting-coverage reading on the Baseline tab)
+
+Milestones 6-9, 11, 14, 15, 16 and 21 are measured from CHAK DHIS2 MOH 731
+returns (and KHIS national commodity returns for #21).  #22 is measured
+from the NDWH upload workbook above instead — see _dwapi_coverage().
 
 Serves a single read-only API:  GET /api/milestone/data
 """
@@ -74,6 +80,19 @@ _BASELINE_PERIOD = os.getenv("MILESTONE_BASELINE_PERIOD", "202608").strip()
 
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
+
+# ── Milestone 22 — electronic-reporting coverage (NDWH / DWAPI) ─────────
+# The NDWH produces this upload workbook as a dated snapshot, and the
+# filename carries a version suffix ("UJTP DWAPI UPLOADS-August 2026 (3)
+# .xlsx").  It is therefore GLOBBED and the newest match wins, so dropping
+# next month's file into train/ is enough — no code change, no redeploy.
+DWAPI_GLOB = "UJTP DWAPI UPLOADS*.xlsx"
+# Sheet carrying the expected-facility roster the milestone is scored against.
+_DWAPI_ROSTER_SHEET = "ndwh_"
+# Sheet carrying the per-facility upload log.  A workbook that renames it
+# still parses: any sheet whose header row holds both 'code' and 'updated' is
+# accepted as the log.
+_DWAPI_DATA_SHEET = "Data"
 
 # Payment-status values a milestone row can take (Summary2 seeds only).
 _STATUS_SET = {"Fully Paid", "Partially Paid", "Not Paid"}
@@ -1228,6 +1247,19 @@ def _unlock_bands(band, pct):
         if pct >= 70:
             return 50, "70\u201379% of facilities reporting"
         return 0, "<70% of facilities reporting \u2014 no payment"
+    if band == "reporting":  # id 22 — FAA: >=95 / 90-94 / 80-89 / below
+        # Milestone 22's own scale, verbatim from the milestone registry:
+        #   100% payment: ≥95% reporting
+        #    80% payment: 90–94% reporting
+        #    50% payment: 80–89% reporting
+        #    No payment:  <80% reporting
+        if pct >= 95:
+            return 100, "\u226595% of HIV facilities reporting electronically"
+        if pct >= 90:
+            return 80, "90\u201394% reporting electronically"
+        if pct >= 80:
+            return 50, "80\u201389% reporting electronically"
+        return 0, "<80% reporting electronically \u2014 no payment"
     # band == 'count' (ids 6 & 8) — achievement vs monthly count target
     if pct > 95:
         return 100, ">95% of monthly target"
@@ -1281,6 +1313,280 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
         "band": band,
         "formula": formula,
     }
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Milestone 22 — Digital Health Systems & Electronic Reporting Coverage
+#
+# Source: the NDWH's own UJTP DWAPI upload workbook (a per-facility
+# submission log), NOT CHAK DHIS2.  See _dwapi_coverage().
+# ══════════════════════════════════════════════════════════════════════
+
+def _dwapi_latest_workbook():
+    """Newest UJTP DWAPI upload workbook in train/, or None.
+
+    Globbed rather than hard-coded because the file is re-issued monthly
+    with a version suffix; newest mtime wins so the freshest snapshot is
+    always the one scored.
+    """
+    try:
+        found = sorted(
+            BASE_DIR.glob(DWAPI_GLOB),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return None
+    return found[0] if found else None
+
+
+def _dwapi_key(value):
+    """Facility code as a bare string ('12234'); '' when blank.
+
+    The roster and the upload log disagree on dtype — one side is text,
+    the other arrives from Excel as a float ('12234.0') — so both are
+    normalised through here before any set arithmetic.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        if value != value:  # NaN
+            return ""
+        if value.is_integer():
+            return str(int(value))
+    text = str(value).strip()
+    return "" if text in {"", "nan", "None", "NaT"} else text
+
+
+def _dwapi_read(ws, required):
+    """{header: [values]} for the first row whose header holds `required`.
+
+    Locating the header by content (rather than assuming row 1) is what
+    makes a re-exported sheet with a title banner above the table parse
+    correctly.  Returns ({}, {}) when the sheet holds no such row.
+    """
+    rows = ws.iter_rows(values_only=True)
+    for row in rows:
+        header = [("" if c is None else str(c)).strip() for c in row]
+        index = {}
+        for i, name in enumerate(header):
+            key = name.lower()
+            if key and key not in index:
+                index[key] = i
+        if not set(required).issubset(index):
+            continue
+        table = {name: [] for name in index}
+        for data in rows:
+            for name, i in index.items():
+                table[name].append(data[i] if i < len(data) else None)
+        return index, table
+    return {}, {}
+
+
+def _dwapi_coverage():
+    """Milestone 22's electronic-reporting coverage reading.
+
+    The measure is deliberately the one the milestone text asks for — "of
+    the HIV facilities, how many are reporting electronically":
+
+        expected  = distinct MFLs on the `ndwh_` roster sheet (the care &
+                    treatment and testing sites the programme answers for).
+        reporting = those roster MFLs carrying a timestamp in the upload
+                    log's `Updated` column.
+        pct       = reporting / expected × 100.
+
+    A facility is counted once it has an `Updated` stamp, because a row
+    only exists in the log when an upload happened — the sheet is a
+    submission log, not a roster with blanks.
+
+    NOTHING is filtered by month.  The workbook's `Date` / `logDate` /
+    `Updated` columns cannot be trusted as a calendar anchor: the file is
+    named "August 2026" while every row stamps September, so a month filter
+    would silently report 4% coverage for one interpretation and 97% for
+    another.  Counting every facility that has EVER uploaded is stable
+    across refreshes, and the sites that have never uploaded are returned
+    explicitly so the panel can name them.
+
+    `status` is 'ok' only when the roster was readable, so a missing or
+    renamed workbook degrades to no metric rather than a misleading zero.
+    """
+    out = {
+        "status": "empty",
+        "source": "National Data Warehouse (NDWH) — UJTP DWAPI upload log",
+        "expected": 0,
+        "reporting": 0,
+        "pct": None,
+        "note": "",
+    }
+    path = _dwapi_latest_workbook()
+    if path is None:
+        out["note"] = (
+            "No UJTP DWAPI upload workbook was found in the app folder, so "
+            "the electronic-reporting coverage reading is unavailable."
+        )
+        return out
+    out["workbook"] = path.name
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+        try:
+            names = list(wb.sheetnames)
+            roster_sheet = _DWAPI_ROSTER_SHEET if _DWAPI_ROSTER_SHEET in names \
+                else next(
+                    (n for n in names
+                     if _dwapi_read(wb[n], ("mfl",))[0]),
+                    None,
+                )
+            if roster_sheet is None:
+                out["note"] = (
+                    f"No roster sheet with an 'mfl' column was found in "
+                    f"{path.name}, so the expected-facility list could not "
+                    "be read."
+                )
+                return out
+            _ridx, roster_tbl = _dwapi_read(wb[roster_sheet], ("mfl",))
+
+            log_sheet = _DWAPI_DATA_SHEET if _DWAPI_DATA_SHEET in names and \
+                _dwapi_read(wb[_DWAPI_DATA_SHEET], ("code", "updated"))[0] \
+                else next(
+                    (n for n in names
+                     if n != roster_sheet
+                     and _dwapi_read(wb[n], ("code", "updated"))[0]),
+                    None,
+                )
+            if log_sheet is None:
+                out["note"] = (
+                    f"No upload log with 'Code' and 'Updated' columns was "
+                    f"found in {path.name}, so nothing could be scored."
+                )
+                return out
+            _lidx, log_tbl = _dwapi_read(wb[log_sheet], ("code", "updated"))
+        finally:
+            wb.close()
+
+        # ── the expected roster ──
+        names_by_key, county_by_key = {}, {}
+        for mfl, name, county in zip(
+            roster_tbl.get("mfl", []),
+            roster_tbl.get("name", [None] * len(roster_tbl.get("mfl", []))),
+            roster_tbl.get("county", [None] * len(roster_tbl.get("mfl", []))),
+        ):
+            key = _dwapi_key(mfl)
+            if not key or key in names_by_key:
+                continue
+            names_by_key[key] = str(name or "").strip()
+            county_by_key[key] = str(county or "").strip()
+        roster = set(names_by_key)
+
+        # ── the upload log ──
+        # 'Updated' / 'logDate' arrive as ISO-8601 strings
+        # ('2026-09-14T21:18:17.000Z') and 'Date' as a bare 'YYYY-MM', so the
+        # month is read off the text rather than through _iso(), which only
+        # understands real date/datetime objects.
+        submitted, by_docket, months = set(), {}, set()
+        codes = log_tbl.get("code", [])
+        stamps = log_tbl.get("updated", [])
+        dockets = log_tbl.get("docket", [None] * len(codes))
+        dates = log_tbl.get("date", [None] * len(codes))
+        for code, stamp, docket, stamp_date in zip(codes, stamps, dockets,
+                                                   dates):
+            key = _dwapi_key(code)
+            if not key:
+                continue
+            if stamp is None or str(stamp).strip() == "":
+                continue
+            submitted.add(key)
+            for candidate in (_iso(stamp), stamp, _iso(stamp_date), stamp_date):
+                text = str(candidate or "").strip()
+                if len(text) >= 7 and text[4] == "-" and text[:4].isdigit() \
+                        and text[5:7].isdigit():
+                    months.add(text[:7])
+                    break
+            label = str(docket or "").strip().upper()
+            if label in {"C&T", "CT"}:
+                label = "C&T"
+            if label:
+                by_docket.setdefault(label, set()).add(key)
+
+        if not roster:
+            out["note"] = (
+                f"The roster sheet in {path.name} listed no facility codes."
+            )
+            return out
+
+        reporting = sorted(roster & submitted)
+        never = sorted(roster - submitted)
+        pct = len(reporting) / len(roster) * 100.0
+        unlock, band = _unlock_bands("reporting", pct)
+
+        # Per-docket coverage (distinct roster facilities, not rows) — the
+        # supporting detail behind the headline facility count.
+        per_docket = []
+        for label in sorted(by_docket,
+                            key=lambda d: -len(by_docket[d] & roster)):
+            hit = len(by_docket[label] & roster)
+            if not hit:
+                continue
+            per_docket.append({
+                "docket": label,
+                "reporting": hit,
+                "expected": len(roster),
+                "pct": round(hit / len(roster) * 100.0, 1),
+            })
+
+        latest = max(months) if months else ""
+        # 'YYYY-MM' -> 'YYYYMM' so the shared period helpers can read it.
+        latest_ym = _pe_key(latest.replace("-", "")) if latest else (0, 0)
+        out.update({
+            "status": "ok",
+            "expected": len(roster),
+            "reporting": len(reporting),
+            "pct": round(pct, 1),
+            "unlock": unlock,
+            "band": band,
+            "actual": f"{len(reporting)} of {len(roster)} facilities",
+            "neverCount": len(never),
+            "never": [
+                {
+                    "mfl": k,
+                    "name": names_by_key.get(k, ""),
+                    "county": county_by_key.get(k, ""),
+                }
+                for k in never[:25]
+            ],
+            "dockets": per_docket,
+            "logRows": len(codes),
+            "latestMonth": latest,
+            "latestMonthHuman": _month_human(latest_ym),
+            "formula": (
+                "Facilities carrying an upload timestamp in the NDWH UJTP "
+                "DWAPI upload log ÷ facilities on the NDWH expected-facility "
+                f"roster × 100 ({len(reporting)} of {len(roster)}). Source: "
+                f"{path.name}, sheet '{roster_sheet}' for the roster and "
+                f"'{log_sheet}' for the upload log. No month filter is "
+                "applied — the workbook's own date columns are not a "
+                "reliable calendar anchor."
+            ),
+            "note": (
+                f"{len(reporting)} of {len(roster)} expected HIV facilities "
+                f"have submitted to the National Data Warehouse "
+                f"({pct:.1f}%). "
+                + (f"{len(never)} have never submitted any docket."
+                   if never else "Every expected facility has submitted.")
+                + (
+                    f" The newest upload stamp in the workbook reads "
+                    f"{_month_human(latest_ym)}, but the file is the "
+                    "snapshot NDWH issued for the month this baseline is "
+                    "pinned to, so it is scored against the Baseline tab "
+                    "rather than M1."
+                    if latest else ""
+                )
+            ),
+        })
+        return out
+    except Exception as exc:  # noqa: BLE001
+        out["status"] = "error"
+        out["note"] = f"Could not read {path.name}: {exc}"
+        return out
 
 
 def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
@@ -1844,6 +2150,67 @@ def _build_payload():
             m1["perfAsOf"] = khis_m1.get("asOfHuman") or None
             _attach_perf(m1["rows"], khis_m1.get("metrics"))
 
+    # ── #22 Digital Health Systems & Electronic Reporting Coverage ───────
+    # Sourced from the NDWH's UJTP DWAPI upload workbook, NOT CHAK DHIS2,
+    # so it is attached here rather than inside _compute_daraja_metrics.
+    #
+    # It lands on the BASELINE tab ONLY.  The workbook is the August
+    # snapshot the Baseline is pinned to (MILESTONE_BASELINE_PERIOD); M1's
+    # own month is October and its coverage figure does not exist yet, so
+    # scoring M1 from this file would publish August's number under an
+    # October heading.  Attaching after the M1 re-score above also keeps it
+    # off M2–M6, which share the baseline's metrics list.
+    #
+    # Note this assigns row['perf'] directly instead of going through
+    # _attach_perf(): that helper POPs 'perf' off every row whose id is
+    # absent from the metrics list it is handed, so passing a single-metric
+    # list would strip the nine CHAK baseline metrics off the tab.
+    coverage = _dwapi_coverage()
+    if coverage.get("status") == "ok" and coverage.get("pct") is not None:
+        _cov_ym = _baseline_period_ym()
+        if not _cov_ym:
+            _cov_ym = _pe_key(
+                str(coverage.get("latestMonth") or "").replace("-", ""))
+        coverage["asOf"] = _month_human(_cov_ym) or coverage.get(
+            "latestMonthHuman") or None
+        _cov_metric = _metric_doc(
+            22,
+            "Digital Health Systems & Electronic Reporting Coverage",
+            coverage["asOf"] or "latest upload",
+            "≥95% of HIV facilities reporting electronically",
+            coverage.get("actual") or "",
+            coverage["pct"],
+            coverage.get("unlock"),
+            coverage.get("band"),
+            coverage.get("formula") or "",
+        )
+        # The front-end's perf cell renders pct/actual/tooltip; the full
+        # breakdown rides alongside so the panel can expand on it.
+        _cov_metric["coverage"] = coverage
+        for _month in months:
+            if not _month.get("isBaseline"):
+                continue
+            for _row in _month.get("rows") or []:
+                if _row.get("id") != 22:
+                    continue
+                _row["perf"] = _cov_metric
+                # Same precedence as _attach_perf: a GOR-verified Summary2
+                # seed always wins, otherwise band the coverage reading.
+                if not _row.get("alerts"):
+                    _alert = _alert_for_unlock(_cov_metric.get("unlock"))
+                    if _alert:
+                        _row["alerts"] = _alert
+                        _row["alertsSource"] = "dwapi"
+            _month["dwapi"] = coverage
+            break
+    else:
+        # Disclose the gap on the Baseline tab rather than leaving #22
+        # silently unscored with no explanation.
+        for _month in months:
+            if _month.get("isBaseline"):
+                _month["dwapi"] = coverage
+                break
+
     return {
         "ok": True,
         "title": "CHAK Daraka Project — Milestone Tracker & Payment Schedule",
@@ -1853,6 +2220,7 @@ def _build_payload():
         "months": months,
         "tiers": tiers,
         "khis": khis,
+        "dwapi": coverage,
     }
 
 
