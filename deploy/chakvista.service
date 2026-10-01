@@ -1,0 +1,54 @@
+[Unit]
+Description=CHAK VISTA (dhis2-superpower) — Flask app served by gunicorn
+Documentation=https://github.com/john25898/dhis2-superpower
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+
+# render.yaml sets rootDir: train, so the app runs from the train/ subfolder.
+# That also matters for config: the app calls python-dotenv, which looks for
+# .env in the working directory — so train/.env is picked up automatically and
+# does not need an EnvironmentFile line here.
+WorkingDirectory=/opt/chakvista/train
+
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONIOENCODING=utf-8
+
+# ── why these exact flags ───────────────────────────────────────────────────
+#  ONE worker + threads.  The app holds a large in-process payload cache, two
+#  parsed Excel workbooks and a boot-time pre-warm thread; a second worker
+#  duplicates all of that and is the fastest way to exhaust memory.
+#  --worker-class gthread is REQUIRED for --threads to mean anything — the
+#  default `sync` worker ignores --threads entirely and would run effectively
+#  single-threaded, so one slow CHAK query would block every other request.
+#  --timeout 300 is a safety net only; the blueprint pre-warms and then serves
+#  stale-while-revalidate.
+#  Deliberately NO --preload: the app starts a background thread at import
+#  time, so preloading would fork a worker while the build lock is held and
+#  leave a permanently locked mutex in the child.
+#  Bound to 127.0.0.1 because nginx terminates TLS for chakvista.co.ke and
+#  proxies to this port.  Change to 0.0.0.0:5100 only if nothing is in front.
+ExecStart=/opt/chakvista/venv/bin/gunicorn app:app \
+    --bind 127.0.0.1:5100 \
+    --worker-class gthread --workers 1 --threads 4 \
+    --timeout 300 --graceful-timeout 30 \
+    --access-logfile - --error-logfile -
+
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# ── hardening ───────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/chakvista/train
+
+[Install]
+WantedBy=multi-user.target

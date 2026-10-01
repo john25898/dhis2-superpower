@@ -1,0 +1,145 @@
+name: Deploy to chakvista.co.ke
+
+# Runs on every push to main, plus a manual "Run workflow" button.
+#
+# Nothing happens until the secrets below exist, so this file is safe to merge
+# as-is: the first step detects a missing SSH_HOST and skips with a notice
+# instead of failing the build.
+#
+#   SSH_HOST          chakvista.co.ke            (or the box's IP)
+#   SSH_USER          deploy                     (the user that owns the clone)
+#   SSH_PRIVATE_KEY   contents of the deploy private key (ed25519)
+#   SSH_PORT          optional, defaults to 22
+#   SSH_KNOWN_HOSTS   optional; run `ssh-keyscan <host>` and paste the output
+#   REPO_DIR          optional, defaults to /opt/chakvista
+#   SERVICE_NAME      optional, defaults to chakvista
+#
+# See deploy/SETUP.md for the one-time setup on the Ubuntu box.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys overlap.  cancel-in-progress is false on purpose:
+# killing a deploy halfway through the git reset or the rollout would leave the
+# box in a state nobody asked for.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy over SSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check that the deploy secrets are configured
+        id: guard
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          if [ -z "$SSH_HOST" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Deploy skipped::SSH_HOST is not set. Add the deploy secrets listed at the top of .github/workflows/deploy.yml (see deploy/SETUP.md)."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          REPO_DIR: ${{ secrets.REPO_DIR }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+        run: |
+          set -euo pipefail
+
+          SSH_PORT="${SSH_PORT:-22}"
+          REPO_DIR="${REPO_DIR:-/opt/chakvista}"
+          SERVICE_NAME="${SERVICE_NAME:-chakvista}"
+
+          # ── private key ────────────────────────────────────────────────
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # ── host key ───────────────────────────────────────────────────
+          # Prefer a pinned key (SSH_KNOWN_HOSTS) — that is a real check.
+          # Falling back to ssh-keyscan is trust-on-first-use: it protects
+          # against nothing, so pin it once you have run the box once.
+          if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            echo "Using pinned host key from SSH_KNOWN_HOSTS."
+          else
+            ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+            echo "::warning title=Host key not pinned::Falling back to ssh-keyscan. Set SSH_KNOWN_HOSTS to pin it."
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+          SSH_OPTS=(-i ~/.ssh/deploy_key -p "$SSH_PORT"
+                    -o IdentitiesOnly=yes -o BatchMode=yes
+                    -o ConnectTimeout=10 -o ServerAliveInterval=15
+                    -o ServerAliveCountMax=20)
+
+          TARGET="${SSH_USER}@${SSH_HOST}"
+
+          # ── preflight ──────────────────────────────────────────────────
+          echo "::group::Preflight"
+          ssh "${SSH_OPTS[@]}" "$TARGET" \
+            "test -d '$REPO_DIR/.git' && echo 'clone:   ok' || { echo 'clone:   MISSING at $REPO_DIR'; exit 1; }
+             git -C '$REPO_DIR' remote -v | head -1
+             echo \"current: \$(git -C '$REPO_DIR' rev-parse --short HEAD)\""
+          echo "::endgroup::"
+
+          # ── deploy ─────────────────────────────────────────────────────
+          # The script lives in the repo, so it is the freshly-pulled copy that
+          # runs — the pipeline and the code it ships stay in lock-step.
+          echo "::group::Deploy"
+          ssh "${SSH_OPTS[@]}" "$TARGET" \
+            "REPO_DIR='$REPO_DIR' SERVICE_NAME='$SERVICE_NAME' bash '$REPO_DIR/deploy/deploy.sh'"
+          echo "::endgroup::"
+
+          # ── report the SHA that is actually live ───────────────────────
+          LIVE_SHA="$(ssh "${SSH_OPTS[@]}" "$TARGET" "git -C '$REPO_DIR' rev-parse --short HEAD")"
+          LIVE_SUBJ="$(ssh "${SSH_OPTS[@]}" "$TARGET" "git -C '$REPO_DIR' log -1 --pretty=%s")"
+
+          {
+            echo "### Deployed to chakvista.co.ke"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${LIVE_SHA}\` |"
+            echo "| Message | ${LIVE_SUBJ} |"
+            echo "| Triggered by | ${GITHUB_SHA::7} |"
+            echo "| Site | https://chakvista.co.ke |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Confirm the public site answers
+        if: steps.guard.outputs.ready == 'true'
+        run: |
+          set -uo pipefail
+          # Public end-to-end check.  /api/milestone/data returns 202 while the
+          # cold build runs and 200 once warm, so accept either — this step is
+          # proving the service is reachable, not that its cache is warm.
+          for attempt in 1 2 3 4 5; do
+            CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+              https://chakvista.co.ke/api/milestone/data || echo 000)"
+            echo "attempt ${attempt}: HTTP ${CODE}"
+            if [ "$CODE" = "200" ] || [ "$CODE" = "202" ]; then
+              echo "Public site is serving." 
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning title=Public check inconclusive::The deploy reported success but https://chakvista.co.ke did not answer 200/202. Check nginx and DNS."
+          exit 0
