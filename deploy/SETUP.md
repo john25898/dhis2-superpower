@@ -79,9 +79,9 @@ Checked off on 2026-10-01. Do not redo these.
       terminal to prompt on.
 - [x] **sudoers rule** at `/etc/sudoers.d/chakvista-deploy`; `visudo -c` says
       _parsed OK_. Grants exactly two commands, no blanket root.
-- [x] **venv at `/opt/chakvista/venv`** built on Python 3.10.12; full
-      `pip install -r train/requirements.txt` succeeded and `import flask, pandas,
-  openpyxl` prints `deps OK`.
+- [x] **venv at `/opt/chakvista/venv`** built on Python 3.10.12; the full
+      `pip install -r train/requirements.txt` succeeded, and importing `flask`,
+      `pandas` and `openpyxl` all work.
 - [x] **Credentials located**: `/home/test/dhistest/train/.env` exists (676 bytes).
       The running unit carries **no** credential `Environment=` lines, and
       `train/app.py` calls `load_dotenv()`, so a plain `.env` file is the whole
@@ -180,7 +180,7 @@ Flask dev server.
 ### First: make sure the clone is actually current
 
 **Do not skip this.** It is the step whose absence took the site down on
-2026-10-01. The clone at `/opt/chakvista` had been made *before* the commit that
+2026-10-01. The clone at `/opt/chakvista` had been made _before_ the commit that
 fixed `User=deploy` → `User=test`, so the unit copied out of it pointed at an
 account that does not exist. systemd failed with `status=217/USER`, gunicorn never
 started, and nginx served **502** until the line was corrected.
@@ -581,7 +581,7 @@ sudo -n true 2>/dev/null && echo "sudo -n OK" || echo "sudo -n NEEDS A PASSWORD"
 | `requested tags [tag:ci] are invalid or not permitted`       | auth key is not tagged `tag:ci`, or the tag is not in the ACL         | regenerate the key with the tag; declare it in `tagOwners`               |
 | `sudo: a password is required`                               | sudoers path for `systemctl` is wrong                                 | `which systemctl`, fix `/etc/sudoers.d/chakvista-deploy`                 |
 | Unit fails instantly, `status=217/USER`                      | the `User=` account does not exist on this box                        | Step 2 — stale clone shipped `User=deploy`; must be `test`               |
-| Unit fails instantly, `status=203/EXEC`                      | `ExecStart` path does not exist                                       | `ls -l /opt/chakvista/venv/bin/gunicorn`; rebuild the venv if missing     |
+| Unit fails instantly, `status=203/EXEC`                      | `ExecStart` path does not exist                                       | `ls -l /opt/chakvista/venv/bin/gunicorn`; rebuild the venv if missing    |
 | Site returns **502**                                         | nginx is up but the app is not listening on 5100                      | `systemctl status chakvista`; `sudo ss -tlnp \| grep 5100`               |
 | Worker starts then hangs, nothing on 5100                    | `run_flask:app` used as the target                                    | use `app:app`                                                            |
 | Connection refused right after a restart                     | still booting; the app pre-warms                                      | wait ~60 s; `journalctl -u chakvista -f`                                 |
