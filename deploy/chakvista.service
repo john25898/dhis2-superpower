@@ -6,8 +6,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=deploy
-Group=deploy
+User=test
+Group=test
 
 # render.yaml sets rootDir: train, so the app runs from the train/ subfolder.
 # That also matters for config: the app calls python-dotenv, which looks for
@@ -32,6 +32,13 @@ Environment=PYTHONIOENCODING=utf-8
 #  leave a permanently locked mutex in the child.
 #  Bound to 127.0.0.1 because nginx terminates TLS for chakvista.co.ke and
 #  proxies to this port.  Change to 0.0.0.0:5100 only if nothing is in front.
+#
+#  TARGET IS app:app, NOT run_flask:app.  app.py builds the app once at import
+#  time and exposes a module-level `app` (app.py:363), so gunicorn gets a plain
+#  WSGI object.  run_flask.py imports that same object correctly, but it then
+#  calls app.run() at module level with no __main__ guard — so `gunicorn
+#  run_flask:app` would execute the dev server *inside* the worker, which binds
+#  the port and deadlocks the process before gunicorn ever serves a request.
 ExecStart=/opt/chakvista/venv/bin/gunicorn app:app \
     --bind 127.0.0.1:5100 \
     --worker-class gthread --workers 1 --threads 4 \
