@@ -81,7 +81,7 @@ Checked off on 2026-10-01. Do not redo these.
       _parsed OK_. Grants exactly two commands, no blanket root.
 - [x] **venv at `/opt/chakvista/venv`** built on Python 3.10.12; full
       `pip install -r train/requirements.txt` succeeded and `import flask, pandas,
-      openpyxl` prints `deps OK`.
+  openpyxl` prints `deps OK`.
 - [x] **Credentials located**: `/home/test/dhistest/train/.env` exists (676 bytes).
       The running unit carries **no** credential `Environment=` lines, and
       `train/app.py` calls `load_dotenv()`, so a plain `.env` file is the whole
@@ -234,7 +234,19 @@ sudo grep -nE 'hostname|service:' /etc/cloudflared/config.yml
 Expected shape: `cloudflared` sends `chakvista.co.ke` to `http://127.0.0.1:8080`
 (nginx), and nginx proxies on to `http://127.0.0.1:5100` (gunicorn). **If the final
 hop is not `5100`, the new unit will start cleanly and the site will still serve
-the old app** — so confirm this before Step 5, not after.
+the old app.**
+
+> **Confirmed on 2026-10-01** — the chain is exactly as expected, so the new unit's
+> `--bind 127.0.0.1:5100` is correct as written:
+>
+> ```
+> listen 8080;                          # nginx
+> server_name _;
+> proxy_pass http://127.0.0.1:5100;     # -> gunicorn
+> ```
+>
+> No nginx change is needed. The `sudo nginx -T` line above is kept for the
+> rebuild-the-box case.
 
 If you do edit nginx, use `proxy_read_timeout 300s` — the cold CHAK build takes
 ~47 s and the default 60 s will cut it off.
@@ -265,6 +277,33 @@ sudo ss -tlnp | grep -w ':22'    # expect: LISTEN ... 0.0.0.0:22
 > sshd existed and will still find it closed after, because nothing forwards to
 > it. Only the tailnet can reach it. If you want belt and braces, restrict who
 > may connect in the Tailscale ACL rather than in `sshd_config`.
+
+> **Check the firewall — this box has `ufw` installed.** `apt` runs a `ufw`
+> trigger, and with `ufw` active on a default-deny policy, sshd will be listening
+> and still refuse the tailnet connection. A connection that times out with sshd
+> demonstrably up usually means exactly this:
+>
+> ```bash
+> sudo ufw status verbose
+> # if active and it does not already allow tailscale0:
+> sudo ufw allow in on tailscale0
+> sudo ufw reload
+> ```
+>
+> `allow in on tailscale0` is narrower than `allow 22/tcp` — it only accepts
+> traffic arriving over the encrypted tailnet interface, so your WAN-facing
+> exposure is unchanged.
+
+Also note the listener. Ubuntu's sshd came up on the **v6 wildcard**:
+
+```
+LISTEN 0 128 [::]:22 [::]:*  users:(("sshd",pid=39253,fd=4))
+```
+
+There is no separate `0.0.0.0:22` line, which looks wrong for an IPv4 connection
+to `100.120.117.89`. It is not: with `net.ipv6.bindv6only=0` (the Ubuntu default)
+that one socket also accepts IPv4 connections as v4-mapped addresses. Confirm with
+`sysctl net.ipv6.bindv6only` — if it is `0`, nothing to do.
 
 ### 3b — the pipeline key
 
@@ -497,6 +536,7 @@ sudo -n true 2>/dev/null && echo "sudo -n OK" || echo "sudo -n NEEDS A PASSWORD"
 | `Permission denied (publickey)` on clone                     | deploy key not added, or `~/.ssh/config` missing                      | `ssh -T git@github.com` should name **dhis2-superpower**                 |
 | `Permission denied (publickey)` on deploy                    | pipeline key not in `authorized_keys`, or missing trailing newline    | `tail -c 80 ~/.ssh/authorized_keys`                                      |
 | Actions cannot connect at all, `Connection refused`          | **`openssh-server` not installed** — nothing on port 22               | Step 3a                                                                  |
+| Actions cannot connect, **connection times out**             | `ufw` active and not allowing `tailscale0`                            | `sudo ufw status verbose`, then Step 3a                                  |
 | Actions hangs, then `tailscale ping` times out               | runner's `tag:ci` node has no ACL route to the box                    | Step 3c — check `tagOwners` and the `accept` rule                        |
 | `requested tags [tag:ci] are invalid or not permitted`       | auth key is not tagged `tag:ci`, or the tag is not in the ACL         | regenerate the key with the tag; declare it in `tagOwners`               |
 | `sudo: a password is required`                               | sudoers path for `systemctl` is wrong                                 | `which systemctl`, fix `/etc/sudoers.d/chakvista-deploy`                 |
