@@ -106,8 +106,27 @@ jobs:
           SSH_PORT="${SSH_PORT:-22}"
           TARGET="$SSH_HOST:$SSH_PORT"
 
-          echo "this runner: $(tailscale ip -4 2>/dev/null || echo '<no tailscale CLI>')" || true
-          tailscale status 2>&1 | head -20 || echo '(tailscale CLI not on PATH here; harmless)'
+          # ── which tailnet did we actually land in? ─────────────────────
+          # `tailscale up` succeeds even when the auth key belongs to a
+          # different Tailscale account than the one that owns the box.  The
+          # runner then sits in a tailnet the box is not a member of, every
+          # packet to it is dropped, and the only symptom is a TCP timeout.
+          # MagicDNSSuffix is the tailnet's identity and the peer list says
+          # whether the box is even visible, so print both before guessing.
+          if command -v tailscale >/dev/null 2>&1; then
+            tailscale status --json > /tmp/ts.json 2>/dev/null || true
+          fi
+
+          if command -v jq >/dev/null 2>&1 && [ -s /tmp/ts.json ]; then
+            {
+              jq -r '"self    : \(.Self.DNSName) \(.Self.TailscaleIPs)",
+                     "tailnet : \(.MagicDNSSuffix // "?")",
+                     "peers   : \(.Peer | length)"' /tmp/ts.json
+              jq -r '.Peer[]? | "   - \(.DNSName) \(.TailscaleIPs) online=\(.Online)"' /tmp/ts.json | head -20
+            } | tee /tmp/ts.txt
+          else
+            echo "(tailscale status unavailable - CLI or jq missing)" | tee /tmp/ts.txt
+          fi
           echo
 
           for attempt in 1 2 3 4 5 6; do
@@ -119,11 +138,14 @@ jobs:
             sleep 5
           done
 
-          echo "::error title=Box not reachable over the tailnet::TCP $TARGET never answered (6 attempts). "
+          echo "::error title=Box not reachable over the tailnet::TCP $TARGET never answered (6 attempts)."
           echo "::error::The runner joined the tailnet but has no route to the box. Check, in this order:"
           echo "::error::  1. Tailscale admin > Machines - is a 'gh-deploy-<run id>' node listed? If it shows as needing approval, approve it, or re-create the auth key with 'Pre-approved' ticked."
           echo "::error::  2. Does the auth key belong to the tailnet that owns the box (MagicDNS suffix tail944d6a.ts.net)? A key from another tailnet logs in fine and then can reach nothing."
           echo "::error::  3. Is the box actually online? Run 'tailscale status' on it."
+          # Also surface the tailnet identity as annotations, so it can be read
+          # straight off the run page without opening the raw log.
+          while IFS= read -r line; do echo "::error::ts $line"; done < /tmp/ts.txt
           exit 1
 
       - name: Deploy
