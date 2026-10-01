@@ -35,6 +35,37 @@ train/
   index.html             — SPA shell (loads project configs before core.js)
 ```
 
+## Deployment
+
+Production is https://chakvista.co.ke, served from an Ubuntu box that sits
+behind CGNAT — no inbound ports are reachable, so the box is reached over
+Tailscale instead:
+
+```
+Cloudflare edge
+  → cloudflared   (on the box)
+  → nginx         127.0.0.1:8080
+  → gunicorn      127.0.0.1:5100  (chakvista.service)
+```
+
+Pushing to `main` deploys automatically via `.github/workflows/deploy.yml`: the
+runner joins the tailnet as an ephemeral node, SSHes to the box, and runs
+`deploy/deploy.sh` — which fetches, `git reset --hard`s to the pushed commit,
+restarts `chakvista.service`, health-checks it and rolls back if it fails.
+
+The workflow is a no-op until these repository secrets exist
+(Settings → Secrets and variables → Actions):
+
+| Secret             | Value                                                                       |
+| ------------------ | --------------------------------------------------------------------------- |
+| `TAILSCALE_AUTHKEY` | Tailscale auth key — reusable + ephemeral, **tags empty**                  |
+| `SSH_PRIVATE_KEY`   | private key whose public half is in the box's `~/.ssh/authorized_keys`     |
+| `SSH_KNOWN_HOSTS`   | `ssh-keyscan -H <tailnet-ip> 2>/dev/null \| grep -v '^#'`                  |
+
+`SSH_HOST`, `SSH_USER`, `SSH_PORT`, `REPO_DIR` and `SERVICE_NAME` are optional —
+they default to the live box's values. One-time host setup (service unit,
+sudoers, key placement) is documented in `deploy/SETUP.md`.
+
 ## DHIS2 / KHIS access
 
 Credentials live in `train/.env` (DHIS*\*, KHIS*_, GEMINI\__, GROQ\_\*). The app falls
