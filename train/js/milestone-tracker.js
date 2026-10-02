@@ -339,16 +339,21 @@ function msDwapiNoteHtml(dwapi) {
   const dockets = (dwapi.dockets || [])
     .map((d) => `${d.docket} ${d.pct}%`)
     .join(" · ");
+  const month = dwapi.latestMonthHuman
+    ? escapeHtml(String(dwapi.latestMonthHuman))
+    : "the workbook's newest submission month";
   return (
     " #22 Digital Health Systems &amp; Electronic Reporting Coverage is measured from the National Data Warehouse's own " +
     "UJTP DWAPI upload log rather than CHAK DHIS2: " +
     escapeHtml(String(Number(dwapi.reporting) || 0)) +
     " of " +
     escapeHtml(String(Number(dwapi.expected) || 0)) +
-    " expected HIV facilities have submitted an upload (" +
+    " expected HIV facilities submitted an upload in " +
+    month +
+    " (" +
     escapeHtml(String(Number(dwapi.pct) || 0)) +
     "%" +
-    (dockets ? " — " + escapeHtml(dockets) : "") +
+    (dockets ? " — docket coverage that month: " + escapeHtml(dockets) : "") +
     "), so it bands at " +
     escapeHtml(String(Number(dwapi.unlock) || 0)) +
     "% unlock. " +
@@ -357,9 +362,18 @@ function msDwapiNoteHtml(dwapi) {
         ? "The " +
             Number(dwapi.neverCount) +
             " facilities that have never submitted are listed in the panel."
-        : "Every expected facility has submitted.",
+        : "Every expected facility has submitted at some point.",
     ) +
-    " It is shown on the Baseline tab only, because the workbook is the snapshot for the month the baseline is pinned to."
+    (Number(dwapi.lapsedCount) > 0
+      ? " A further " +
+        escapeHtml(String(Number(dwapi.lapsedCount))) +
+        " submitted in an earlier month but not in " +
+        month +
+        "."
+      : "") +
+    " It is scored on the Baseline tab, because the workbook whose stamps read " +
+    month +
+    " is the reporting snapshot NDWH issued for the month the baseline is pinned to."
   );
 }
 

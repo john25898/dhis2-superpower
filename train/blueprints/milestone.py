@@ -1391,21 +1391,35 @@ def _dwapi_coverage():
 
         expected  = distinct MFLs on the `ndwh_` roster sheet (the care &
                     treatment and testing sites the programme answers for).
-        reporting = those roster MFLs carrying a timestamp in the upload
-                    log's `Updated` column.
+        reporting = those roster MFLs carrying an upload timestamp in the
+                    workbook's newest submission month.
         pct       = reporting / expected × 100.
 
-    A facility is counted once it has an `Updated` stamp, because a row
-    only exists in the log when an upload happened — the sheet is a
-    submission log, not a roster with blanks.
+    A facility is counted once it has an `Updated` stamp *in that month*,
+    because a row only exists in the log when an upload happened — the
+    sheet is a submission log, not a roster with blanks.
 
-    NOTHING is filtered by month.  The workbook's `Date` / `logDate` /
-    `Updated` columns cannot be trusted as a calendar anchor: the file is
-    named "August 2026" while every row stamps September, so a month filter
-    would silently report 4% coverage for one interpretation and 97% for
-    another.  Counting every facility that has EVER uploaded is stable
-    across refreshes, and the sites that have never uploaded are returned
-    explicitly so the panel can name them.
+    The month is the newest stamp present in the workbook, and milestone 22
+    is MONTHLY, so the reading is scoped to it.  Two facts were verified
+    against the live workbook before that filter was introduced
+    (2026-10-02):
+
+      * `Date`, `logDate` and `Updated` agree on the month for all 1116
+        rows, so "the row's month" is unambiguous.
+      * the stamps are a cumulative history (2021-07 … 2026-09) in which the
+        newest month carries the bulk of the rows (741, against 27 in the
+        month before it) — the newest stamp is the live submission window.
+
+    The file is *named* "August 2026" while its stamps read September: it is
+    the August reporting snapshot NDWH issued in September.  That is why the
+    reading sits on the Baseline tab (pinned to August) while being filtered
+    on the September stamp.
+
+    Counted this way the headline is 204 of 211 (96.7%), which is identical
+    to "facilities with a C&T or an HTS upload that month" — no facility
+    submits only MNCH or PREP.  Sites that have never submitted at all, and
+    sites that submitted in an earlier month but not this one, are both
+    returned explicitly so the panel can name them.
 
     `status` is 'ok' only when the roster was readable, so a missing or
     renamed workbook degrades to no metric rather than a misleading zero.
@@ -1482,7 +1496,7 @@ def _dwapi_coverage():
         # ('2026-09-14T21:18:17.000Z') and 'Date' as a bare 'YYYY-MM', so the
         # month is read off the text rather than through _iso(), which only
         # understands real date/datetime objects.
-        submitted, by_docket, months = set(), {}, set()
+        submitted, by_docket, months, ever, rows = set(), {}, set(), set(), []
         codes = log_tbl.get("code", [])
         stamps = log_tbl.get("updated", [])
         dockets = log_tbl.get("docket", [None] * len(codes))
@@ -1494,16 +1508,29 @@ def _dwapi_coverage():
                 continue
             if stamp is None or str(stamp).strip() == "":
                 continue
-            submitted.add(key)
+            ever.add(key)
+            month = ""
             for candidate in (_iso(stamp), stamp, _iso(stamp_date), stamp_date):
                 text = str(candidate or "").strip()
                 if len(text) >= 7 and text[4] == "-" and text[:4].isdigit() \
                         and text[5:7].isdigit():
-                    months.add(text[:7])
+                    month = text[:7]
                     break
             label = str(docket or "").strip().upper()
             if label in {"C&T", "CT"}:
                 label = "C&T"
+            if month:
+                months.add(month)
+            rows.append((key, month, label))
+
+        # The milestone is MONTHLY, so the reading is scoped to the newest
+        # submission month in the workbook (the docstring records why that
+        # stamp is a sound calendar anchor when the file name is not).
+        latest = max(months) if months else ""
+        for key, month, label in rows:
+            if month != latest:
+                continue
+            submitted.add(key)
             if label:
                 by_docket.setdefault(label, set()).add(key)
 
@@ -1514,7 +1541,8 @@ def _dwapi_coverage():
             return out
 
         reporting = sorted(roster & submitted)
-        never = sorted(roster - submitted)
+        never = sorted(roster - ever)                  # never submitted
+        lapsed = sorted((roster & ever) - submitted)   # earlier months only
         pct = len(reporting) / len(roster) * 100.0
         unlock, band = _unlock_bands("reporting", pct)
 
@@ -1533,7 +1561,6 @@ def _dwapi_coverage():
                 "pct": round(hit / len(roster) * 100.0, 1),
             })
 
-        latest = max(months) if months else ""
         # 'YYYY-MM' -> 'YYYYMM' so the shared period helpers can read it.
         latest_ym = _pe_key(latest.replace("-", "")) if latest else (0, 0)
         out.update({
@@ -1553,31 +1580,45 @@ def _dwapi_coverage():
                 }
                 for k in never[:25]
             ],
+            "lapsedCount": len(lapsed),
+            "lapsed": [
+                {
+                    "mfl": k,
+                    "name": names_by_key.get(k, ""),
+                    "county": county_by_key.get(k, ""),
+                }
+                for k in lapsed[:25]
+            ],
             "dockets": per_docket,
             "logRows": len(codes),
+            "monthRows": sum(1 for _k, _m, _d in rows if _m == latest),
+            "everReporting": len(roster & ever),
             "latestMonth": latest,
             "latestMonthHuman": _month_human(latest_ym),
             "formula": (
-                "Facilities carrying an upload timestamp in the NDWH UJTP "
-                "DWAPI upload log ÷ facilities on the NDWH expected-facility "
-                f"roster × 100 ({len(reporting)} of {len(roster)}). Source: "
+                "Facilities carrying an upload timestamp in the workbook's "
+                "newest submission month ÷ facilities on the NDWH "
+                "expected-facility roster × 100 "
+                f"({len(reporting)} of {len(roster)}). Source: "
                 f"{path.name}, sheet '{roster_sheet}' for the roster and "
-                f"'{log_sheet}' for the upload log. No month filter is "
-                "applied — the workbook's own date columns are not a "
-                "reliable calendar anchor."
+                f"'{log_sheet}' for the upload log. The month is "
+                f"{_month_human(latest_ym)}, the newest stamp in the log."
             ),
             "note": (
                 f"{len(reporting)} of {len(roster)} expected HIV facilities "
-                f"have submitted to the National Data Warehouse "
+                f"submitted an upload in {_month_human(latest_ym)} "
                 f"({pct:.1f}%). "
-                + (f"{len(never)} have never submitted any docket."
-                   if never else "Every expected facility has submitted.")
+                + (f"{len(never)} have never submitted any docket. "
+                   if never else "")
+                + (f"A further {len(lapsed)} submitted in an earlier month "
+                   "but not this one. "
+                   if lapsed else "")
                 + (
-                    f" The newest upload stamp in the workbook reads "
-                    f"{_month_human(latest_ym)}, but the file is the "
-                    "snapshot NDWH issued for the month this baseline is "
-                    "pinned to, so it is scored against the Baseline tab "
-                    "rather than M1."
+                    f"The workbook's stamps read "
+                    f"{_month_human(latest_ym)} because it is the "
+                    "August reporting snapshot NDWH issued in September, "
+                    "so it is scored against the Baseline tab rather than "
+                    "M1."
                     if latest else ""
                 )
             ),
