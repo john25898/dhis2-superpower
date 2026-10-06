@@ -225,8 +225,11 @@ function milestoneEmptyCell() {
 
 // =====================================================================
 // Live KHIS performance helpers (milestone rows carry row.perf when the
-// milestone is measured from CHAK DHIS2 MOH 731 data - ids 6,7,8,9,11,14,15,16
+// milestone is measured from CHAK DHIS2 - ids 6,7,8,9,10,11,14,15,16
 // - or, for #21 Commodity Security, from KHIS national commodity-return rates).
+// A metric that cannot be measured yet simply has no row.perf and renders the
+// empty cell; #10 (DSD enrolment) is one of these until CHAK starts reporting
+// the DSD-model disaggregation.
 // The same baseline is attached to every project month M1–M6; the
 // "Monthly Payments - Earned" cell derives the schedule max × unlock %.
 // =====================================================================
