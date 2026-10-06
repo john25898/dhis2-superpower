@@ -2620,7 +2620,13 @@ def milestone_data():
     """
     try:
         force = request.args.get("refresh") in ("1", "true", "yes")
-        return jsonify(dict(_ensure_payload(force=force)))
+        resp = jsonify(dict(_ensure_payload(force=force)))
+        # This is a live snapshot with its own server-side TTL, so it must
+        # never be stored by the browser or an intermediary: a cached copy
+        # would outlive the cache it came from and pin a stale month of
+        # numbers on the tracker.  (The warming branch below sets the same.)
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        return resp
     except _PayloadWarming:
         resp = jsonify({
             "ok": False,

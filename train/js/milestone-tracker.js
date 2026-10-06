@@ -4,7 +4,16 @@
 // Backing API: GET /api/milestone/data  (blueprints/milestone.py)
 // ============================================================
 
-let _milestoneDataPromise = null;
+// The payload is a live snapshot of CHAK DHIS2, so it must NOT be cached for
+// the lifetime of the page.  The tracker used to hold whatever it fetched on
+// first load, so a month-tab switch (or navigating away and back) kept
+// rendering stale numbers and a fresh deploy never appeared until the user
+// hard-reloaded.  Mirror the server's 300 s payload cache instead, then
+// transparently revalidate on the next entry into the tracker.
+const _MILESTONE_CLIENT_TTL_MS = 5 * 60 * 1000;
+let _milestonePayload = null;
+let _milestonePayloadAt = 0;
+let _milestoneInFlight = null;
 
 // dashboard.js reuses the same #chart shell for every view, and on the Home
 // view it nests `#homepageRoot` *inside* it.  So the cold-build placeholder
@@ -67,13 +76,30 @@ async function _fetchMilestoneData() {
 }
 
 async function loadMilestoneData() {
-  if (!_milestoneDataPromise) {
-    _milestoneDataPromise = _fetchMilestoneData().catch(function (err) {
-      _milestoneDataPromise = null;
-      throw err;
-    });
+  const isFresh =
+    _milestonePayload &&
+    Date.now() - _milestonePayloadAt < _MILESTONE_CLIENT_TTL_MS;
+  if (isFresh) return _milestonePayload;
+
+  // Coalesce every caller that arrives mid-refresh onto a single request.
+  if (!_milestoneInFlight) {
+    _milestoneInFlight = _fetchMilestoneData()
+      .then(function (data) {
+        _milestonePayload = data;
+        _milestonePayloadAt = Date.now();
+        return data;
+      })
+      .catch(function (err) {
+        // Never blank a page that already has a payload: a failed refresh
+        // keeps the last good snapshot and retries on the next entry.
+        if (_milestonePayload) return _milestonePayload;
+        throw err;
+      })
+      .finally(function () {
+        _milestoneInFlight = null;
+      });
   }
-  return _milestoneDataPromise;
+  return _milestoneInFlight;
 }
 
 // "Month 1: (September 1 - September 30, 2026)" -> "Sep 2026"
