@@ -437,8 +437,8 @@ def _parse_summary2(ws):
 # LIVE PERFORMANCE — CHAK DHIS2 (ereporting · MOH 731) for DARAJA
 #
 # Only milestones whose target is measurable from DHIS2 get real numbers
-# (ids 6, 7, 8, 9, 11, 14, 15, 16, 21).  Every other milestone keeps "—" until its
-# record-based / EMR-based verification happens.
+# (ids 6, 7, 8, 9, 10, 11, 14, 15, 16, 21).  Every other milestone keeps "—" until
+# its record-based / EMR-based verification happens.
 # ════════════════════════════════════════════════════════════════════
 
 # -- CHAK DHIS2 sources, manager-confirmed 2026-09-10 ------------------
@@ -451,6 +451,19 @@ def _parse_summary2(ws):
 #                                 thats the formula".
 #  #8  PrEP_New / 486          -> ONLY "PrEP_New: PrEP, New Clients".
 #  #9  IIT / [TX_CURR(previous quarter close) + sum TX_NEW(this quarter)]
+#  #10 DSD -> the seven *appropriate* DSD-model rows of the new
+#                                 "TX_CURR Differentiated Care Model"
+#                                 element (Standard Care, Fast Track,
+#                                 Facility ART Group, Community ART Group,
+#                                 Community ART Distribution Points,
+#                                 Community Pharmacy, Individual ART
+#                                 Distribution) ÷ TX_CURR.  The eighth row,
+#                                 "No DSD", is the not-yet-enrolled
+#                                 remainder and is EXCLUDED — including it
+#                                 would pin the ratio at 100%.  Registry:
+#                                 "Target: ≥90% of PLHIV enrolled in an
+#                                 appropriate DSD model", scale
+#                                 ≥90 / 70–89 / 50–69 / <50.
 #  #11 AHD -> manager ruling ("AHD is calculated by (TX_NEW CD4 < 200 +
 #                                 TX_NEW CD4 >=200) / TX_NEW").  The two
 #                                 CD4 buckets are the MOH 731 CD4
@@ -494,6 +507,62 @@ _DE_VL_SUPPRESSED = "FloZph8hN9z"   # TX_PVLS (N) Routine — VL suppressed
 _DE_TPT = "dysZutXWPTz"             # TPT TX_Curr Total (indicator, unused)
 _IND_TB_PREV_NUM = "D73JcPGIIIA"    # TB_PREV Numerator Total   (#15)
 _IND_TB_PREV_DEN = "cJoXKb6p94M"    # TB_PREV Denominator Total (#15)
+
+# -- TX_CURR disaggregation elements added to CHAK DHIS2 (Oct 2026) -----
+# Three new AGGREGATE elements the CHAK instance grew for the PEPFAR MER
+# return.  Each is a SINGLE element whose rows live in its category option
+# combos (4 age×sex COCs per row), so they cannot be read with the flat
+# `dx:` request the rest of this module uses — they come back from
+# `_chak_analytics_coc_cells` instead (see `_fetch_coc_breakdowns`).
+#
+# Every id and COC below was read off the saved "PEPFAR: MER" data-entry
+# form (train/ver2026.html: entry fields are
+# `id="<dataElement>-<categoryOptionCombo>-val"` and the `title=` attribute
+# carries the full element+COC name), then verified live against CHAK
+# DHIS2 — the elements resolve by id (HTTP 200) with exactly the names and
+# category combos noted below, and all 48 COCs resolve with the expected
+# display names.
+#
+# ⏳ As of 2026-10-06 none of the three carries any returns yet (they
+# were created 2026-10-05/06 and the site reports have not moved onto
+# them), so #10/#11/#15 all fall back to their previous rules until CHAK
+# starts populating them.  See the ⏳ FALLBACK notes at each metric.
+_DE_TX_CURR_DSD = "n2O2iO3h4wl"         # TX_CURR Differentiated Care Model
+_DE_TX_CURR_TPT_INIT = "Hvxl2zy6Ahi"    # TX_CURR TPT Initiation
+_DE_TX_CURR_AHD_SCREEN = "AhdScreen01"  # TX_CURR AHD Screening (CD4/WHO)
+
+# #10 DSD — category combo "DSD Model, Coarse Age ,sex": 8 model rows × 4
+# age×sex COCs.  Only the seven *appropriate* models are counted; the
+# eighth row, "No DSD", is the not-yet-enrolled remainder and is
+# deliberately EXCLUDED.
+_DSD_MODEL_COCS = [
+    "BLW5dOBx1Lw", "F3p966XrGD4", "Z6SY5I59Gmf", "ohRoIsCs4DP",   # Standard Care
+    "ssPAztCDDAy", "LuEuDGAtabW", "U7S9ySNgjRO", "hKeOVnYYXZc",   # Fast Track
+    "g35O91AIELa", "YN1smch1maB", "uemoiOSOCLe", "tMtySWBwYeI",   # Facility ART Group
+    "jzhzJduu7Ia", "WmqX75z2JVr", "hhgiEtJE1XO", "Xh8KNfQbWga",   # Community ART Group
+    "vxkaCDTmJJD", "MC3hwmW1UKQ", "eKxL11RMhmR", "DLThbiLL7q6",   # Comm. ART Distr Points
+    "mzcCaJ6szBr", "a1yKqfT1CHb", "obtJt7zaJXk", "fHbmFYhXCcf",   # Community Pharmacy
+    "yzzVkh36avi", "cuzFvkzfBdB", "Mn7NpaVcgJZ", "xU765yRa1N7",   # Individual ART Distr
+]
+# "No DSD, <15F / 15+F / <15M / 15+M" — the EXCLUDED row, kept for the record
+_NO_DSD_COCS = ["ablfhK3qO66", "JxKajLb6WIe", "CmlhtDJL9Pc", "Xx4xyFvPTP3"]
+
+# #15 TPT — category combo "TPT Status, Coarse Age , Sex": 3 status rows × 4
+# COCs.  The three rows are a TX_CURR disaggregation, so
+# Started TPT + On TB Treatment + Not on TPT should equal TX_CURR.
+_TPT_STARTED_COCS = ["ES323Pi0UJz", "WkJkHvKkgjZ", "EKXfCgMyu3N",
+                     "RmRvJy5giTK"]                      # Started TPT
+_TPT_ON_TB_RX_COCS = ["t38X02PeBJC", "rPbK3vxOmyf", "EVvXOgggQrw",
+                      "Q3KA4eHjYxo"]                      # On TB Treatment
+_TPT_NOT_ON_TPT_COCS = ["zeu0nIAO4aO", "DRjR6REBnlo", "qFCvRERXnPS",
+                        "r57bPGgeBMr"]                    # Not on TPT
+
+# #11 AHD — category combo "Coarse Age Bands, Gender": 1 row × 4 COCs.
+# Deliberately the SAME category combo (and therefore the same four COC
+# uids) as "TX_CURR SHA Registration" (zo2kCCIXoKv) — only the data
+# element differs.
+_AHD_SCREEN_COCS = ["OevHfyGgInv", "DWqTykR3F4M", "ZdCFqMGcaS0",
+                    "BzePtc1mBUE"]
 
 # #14 TB/HIV Case Identification — "% of PLHIV screened for TB".
 # Numerator = the TX_TB *denominator* (every ART client screened for TB:
@@ -900,6 +969,31 @@ def _fetch_iit_numerator(ou_ids):
         return {}
 
 
+def _fetch_coc_breakdowns(ou_ids):
+    """COC-level cells for the three new TX_CURR disaggregation elements.
+
+    #10 DSD, #15 TPT and #11 AHD are all ROW totals live *inside* one data
+    element, so they need the category-option breakdown rather than the
+    flat `dx:` pull `_fetch_daraja_metrics_data` does.  All three elements
+    are requested together: their category combos are distinct, so the 48
+    COC uids cannot collide.
+
+    Returns {period_name: {coc_uid: value}} across the last 12 months, so
+    the tracker can read the anchor month straight out of it — {} on any
+    failure (including "the instance has no values for these elements").
+    """
+    try:
+        from services.dhis2 import _chak_analytics_coc_cells
+
+        return _chak_analytics_coc_cells(
+            [_DE_TX_CURR_DSD, _DE_TX_CURR_TPT_INIT, _DE_TX_CURR_AHD_SCREEN],
+            list(ou_ids), "LAST_12_MONTHS",
+        ) or {}
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK COC breakdown fetch failed: {exc}")
+        return {}
+
+
 def _khis_commodity_reporting(period):
     """#21 — Daraja reporting rates for the three national MOH commodity forms.
 
@@ -1186,9 +1280,18 @@ def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
     band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
-          'tpt' (15), 'vl' (16), 'commodity' (21).  pct is the 0–100 achievement measure.
+          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21).  pct is the 0–100
+          achievement measure.
     Returns (unlock_pct, band_label).
     """
+    if band == "dsd":  # id 10 — registry: ≥90 / 70–89 / 50–69 / <50
+        if pct >= 90:
+            return 100, "\u226590% enrolled in a DSD model"
+        if pct >= 70:
+            return 80, "70\u201389% enrolled"
+        if pct >= 50:
+            return 50, "50\u201369% enrolled"
+        return 0, "<50% enrolled \u2014 no payment"
     if band == "ahd":  # id 11 — FAA: ≥90 / 70–89 / 60–69 / <60
         if pct >= 90:
             return 100, "≥90% of at-risk PLHIV evaluated"
@@ -1630,13 +1733,21 @@ def _dwapi_coverage():
         return out
 
 
-def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
-    """Compute the nine DHIS2-measurable milestones for the anchor month.
+def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
+                            coc_by_period=None):
+    """Compute the DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
     the "Interruption in Treatment" outcomes) supplied by
     `_fetch_iit_numerator`; it is a separate call because it needs the
     category-option breakdown.
+
+    `coc_by_period` is the same shape but keyed by category option COMBO
+    ({period_label: {coc_uid: value}}) for the three new TX_CURR
+    disaggregation elements, supplied by `_fetch_coc_breakdowns`.  #10 DSD,
+    #11 AHD and #15 TPT are row totals INSIDE a single element, so they
+    cannot be read from `data` (a flat `dx:` pull) — they need this second,
+    category-option-broken read.
 
     `commodity` is the #21 KHIS commodity-reporting payload supplied by
     `_khis_commodity_reporting` — the one metric here that is NOT sourced
@@ -1683,6 +1794,20 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
     # CHAP Stawisha "TX_IIT STA" element.
     iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0) \
         + val(_DE_TX_IIT_62, year, month)
+
+    # New TX_CURR disaggregation elements (#10 DSD, #11 AHD, #15 TPT).
+    # `_chak_analytics_coc_cells` already sums across the whole OU roster,
+    # so each `csum` below is the Daraja-wide ROW TOTAL for the anchor
+    # month.  Empty when CHAK has no returns for the element yet.
+    coc_cells = (coc_by_period or {}).get(anchor, {}) or {}
+
+    def csum(coc_ids):
+        return sum(float(coc_cells.get(c, 0) or 0) for c in coc_ids)
+
+    dsd_enrolled = csum(_DSD_MODEL_COCS)
+    ahd_screened = csum(_AHD_SCREEN_COCS)
+    tpt_started = csum(_TPT_STARTED_COCS)
+    tpt_on_tb_rx = csum(_TPT_ON_TB_RX_COCS)
 
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus
     # every TX_NEW recorded so far in the CURRENT quarter.
@@ -1774,39 +1899,104 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
             "date)] × 100 — CHAK DHIS2",
         ))
 
+    # ── #10 Differentiated Service Delivery (DSD) enrolment ──
+    #   Registry: "Target: ≥90% of PLHIV enrolled in an appropriate DSD
+    #   model"; scale ≥90 / 70–89 / 50–69 / <50.
+    #   Numerator = the seven *appropriate* model rows of the new "TX_CURR
+    #   Differentiated Care Model" element — Standard Care, Fast Track,
+    #   Facility ART Group, Community ART Group, Community ART Distribution
+    #   Points, Community Pharmacy, Individual ART Distribution.  The eighth
+    #   row, "No DSD", is the not-yet-enrolled remainder and is EXCLUDED
+    #   (including it would pin the ratio at 100%).  Denominator = TX_CURR.
+    #   ⏳ The element was created 2026-10-05 and carries no returns yet, so
+    #   this metric simply stays absent (rendered as "—") until CHAK starts
+    #   reporting into it — there is no legacy rule to fall back on.
+    if tx_curr and dsd_enrolled:
+        dsd_pct = min(100.0, dsd_enrolled / tx_curr * 100.0)
+        unlock, band = _unlock_bands("dsd", dsd_pct)
+        metrics.append(_metric_doc(
+            10, "Differentiated Service Delivery (DSD) Enrollment and "
+                "Referral",
+            anchor,
+            "\u226590% of PLHIV enrolled in an appropriate DSD model",
+            f"{dsd_pct:.1f}% \u00b7 {fmt(dsd_enrolled)} of {fmt(tx_curr)} "
+            "on ART enrolled in a DSD model",
+            dsd_pct, unlock, band,
+            "(\u03a3 Standard Care + Fast Track + Facility ART Group + "
+            "Community ART Group + Community ART Distribution Points + "
+            "Community Pharmacy + Individual ART Distribution) \u00f7 "
+            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 \"TX_CURR Differentiated "
+            "Care Model\" (n2O2iO3h4wl), DSD Model, Coarse Age ,sex, "
+            "\"No DSD\" row excluded",
+        ))
+
     # ── #11 Advanced HIV Disease (AHD) identification & evaluation ──
-    #   Manager ruling:  (TX_NEW CD4 <200 + TX_NEW CD4 >=200) ÷ TX_NEW.
-    #   Numerator = the two MOH 731 CD4 disaggregations of "TX_NEW:
-    #   Starting ART"; denominator = TX_NEW: Starting ART itself.
-    #   Target ≥90% (FAA row 13: "Proportion of adult PLHIV at risk of
-    #   AHD who are screened for AHD using CD4 cell count or WHO staging
-    #   criteria").
-    if tx_new:
+    #   Manager ruling (2026-10): AHD = "total AHD / TX_CURR" — the new
+    #   "TX_CURR Advanced HIV Disease (AHD) Screening (CD4/WHO)" element
+    #   ("AhdScreen01") over TX_CURR.  Target ≥90% (FAA row 13:
+    #   "Proportion of adult PLHIV at risk of AHD who are screened for AHD
+    #   using CD4 cell count or WHO staging criteria").
+    #   ⏳ FALLBACK: that element was created 2026-10-05 and carries no
+    #   returns yet, so until CHAK reports into it the previous rule is
+    #   used — (TX_NEW CD4 <200 + TX_NEW CD4 >=200) ÷ TX_NEW, i.e. of every
+    #   client newly started on ART, the share whose CD4 was established.
+    #   The `formula` string always names the rule actually applied.
+    if tx_curr and ahd_screened:
+        ahd_pct = min(100.0, ahd_screened / tx_curr * 100.0)
+        ahd_detail = (f"{ahd_pct:.1f}% \u00b7 {fmt(ahd_screened)} screened "
+                      f"for AHD of {fmt(tx_curr)} on ART")
+        ahd_formula = (
+            "TX_CURR Advanced HIV Disease (AHD) Screening (CD4/WHO) \u00f7 "
+            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 \"AhdScreen01\" "
+            "(Coarse Age Bands, Gender)"
+        )
+    elif tx_new:
         cd4_lt200 = val(_DE_TX_NEW_CD4_LT200, year, month) \
             + val(_DE_TX_NEW_62_CD4_LT200, year, month)
         cd4_ge200 = val(_DE_TX_NEW_CD4_GE200, year, month) \
             + val(_DE_TX_NEW_62_CD4_GE200, year, month)
         cd4_known = cd4_lt200 + cd4_ge200
         ahd_pct = min(100.0, cd4_known / tx_new * 100.0)
+        ahd_detail = (
+            f"{ahd_pct:.1f}% \u00b7 {fmt(cd4_known)} of {fmt(tx_new)} new "
+            f"ART clients with CD4 established (<200 {fmt(cd4_lt200)} \u00b7 "
+            f"\u2265200 {fmt(cd4_ge200)})"
+        )
+        ahd_formula = (
+            "(TX_NEW CD4 <200 + CD4 >=200) \u00f7 TX_NEW \u00d7 100 \u2014 "
+            "MOH 731 CD4 disaggregation, Jamii Tekelezi + CHAP Stawisha, "
+            "CHAK DHIS2.  (Legacy rule \u2014 the new TX_CURR AHD Screening "
+            "element has no returns yet.)"
+        )
+    else:
+        ahd_pct = None
+
+    if ahd_pct is not None:
         unlock, band = _unlock_bands("ahd", ahd_pct)
         metrics.append(_metric_doc(
             11, "Advanced HIV Disease (AHD) identification and evaluation",
             anchor,
-            "≥90% of adult PLHIV at risk of AHD identified & evaluated",
-            f"{ahd_pct:.1f}% · {fmt(cd4_known)} of {fmt(tx_new)} new ART "
-            f"clients with CD4 established (<200 {fmt(cd4_lt200)} · "
-            f"≥200 {fmt(cd4_ge200)})",
-            ahd_pct, unlock, band,
-            "(TX_NEW CD4 <200 + CD4 >=200) ÷ TX_NEW × 100 — MOH 731 CD4 "
-            "disaggregation, Jamii Tekelezi + CHAP Stawisha, CHAK DHIS2",
+            "\u226590% of adult PLHIV at risk of AHD identified & evaluated",
+            ahd_detail,
+            ahd_pct, unlock, band, ahd_formula,
         ))
 
     # ── #15 TB Preventive Therapy — 90% of eligible initiated ──
-    #   Official CHAK DHIS2 indicator pair "TB_PREV Numerator Total" /
-    #   "TB_PREV Denominator Total" = the WHO/NASCOP TPT coverage measure
-    #   (facilities report it in the TB_PREV section of the MOH 731).
-    #   Fractions, not counts: the denominator is small, so the value is
-    #   BLENDED across every OU in the chunk in _chak_analytics_fetch.
+    #   Manager ruling (2026-10): read it out of the new "TX_CURR TPT
+    #   Initiation" table, whose three status rows are a TX_CURR
+    #   disaggregation (Started TPT / On TB Treatment / Not on TPT):
+    #
+    #       Started TPT ÷ (TX_CURR − On TB Treatment) × 100
+    #
+    #   Only the "Started TPT" row counts as initiated, and clients already
+    #   on TB treatment are not TPT-eligible — so the denominator is TX_CURR
+    #   less the "On TB Treatment" row (equivalently: Started TPT + Not on
+    #   TPT, since the three rows should sum to TX_CURR).
+    #   ⏳ FALLBACK: while the new element has no returns, the previous
+    #   official CHAK DHIS2 indicator pair "TB_PREV Numerator Total" /
+    #   "TB_PREV Denominator Total" (the WHO/NASCOP TPT coverage measure,
+    #   reported by the CHAP Stawisha dataset) is used instead.  The
+    #   `formula` string always names the rule actually applied.
     if tx_curr and tx_tb_den:
         tb_case_pct = tx_tb_den / tx_curr * 100.0
         unlock, band = _unlock_bands("tb", tb_case_pct)
@@ -1824,17 +2014,40 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None):
             "[CHAP Stawisha])",
         ))
 
-    if tb_prev_den:
+    if tpt_started and (tx_curr - tpt_on_tb_rx) > 0:
+        tpt_eligible = tx_curr - tpt_on_tb_rx
+        tpt_pct = min(100.0, tpt_started / tpt_eligible * 100.0)
+        tpt_detail = (
+            f"{tpt_pct:.1f}% \u00b7 {fmt(tpt_started)} started TPT of "
+            f"{fmt(tpt_eligible)} eligible (TX_CURR {fmt(tx_curr)} \u2212 "
+            f"on TB treatment {fmt(tpt_on_tb_rx)})"
+        )
+        tpt_formula = (
+            "Started TPT \u00f7 (TX_CURR \u2212 On TB Treatment) \u00d7 100 "
+            "\u2014 CHAK DHIS2 \"TX_CURR TPT Initiation\" (Hvxl2zy6Ahi), "
+            "TPT Status, Coarse Age , Sex \u2014 \"Started TPT\" and "
+            "\"On TB Treatment\" rows"
+        )
+    elif tb_prev_den:
         tpt_pct = tb_prev_num / tb_prev_den * 100.0
+        tpt_detail = (f"{tpt_pct:.1f}% \u00b7 {fmt(tb_prev_num)} of "
+                      f"{fmt(tb_prev_den)} eligible initiated")
+        tpt_formula = (
+            "TB_PREV Numerator Total \u00f7 TB_PREV Denominator Total "
+            "\u00d7 100 (CHAK DHIS2 indicator \u2014 reported by the CHAP "
+            "Stawisha dataset).  (Legacy rule \u2014 the new TX_CURR TPT "
+            "Initiation element has no returns yet.)"
+        )
+    else:
+        tpt_pct = None
+
+    if tpt_pct is not None:
         unlock, band = _unlock_bands("tpt", tpt_pct)
         metrics.append(_metric_doc(
             15, "TB Preventive Therapy", anchor,
             "90% of eligible PLHIV initiated on TPT",
-            f"{tpt_pct:.1f}% · {fmt(tb_prev_num)} of {fmt(tb_prev_den)} "
-            "eligible initiated",
-            tpt_pct, unlock, band,
-            "TB_PREV Numerator Total ÷ TB_PREV Denominator Total × 100 "
-            "(CHAK DHIS2 indicator — reported by the CHAP Stawisha dataset)",
+            tpt_detail,
+            tpt_pct, unlock, band, tpt_formula,
         ))
 
     # ── #16 Viral Load Suppression — ≥95% with documented VL ──
@@ -1928,16 +2141,19 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         # instance is under load. Do not turn that transient response into a
         # blank five-minute dashboard cache.
         #
-        # The MOH 731 roll-up and the Tx_ML (IIT) reads are INDEPENDENT
-        # queries against the same server and each takes 10-25 s, so they are
-        # issued concurrently.  The retry loop for the roll-up is unchanged
-        # and still runs to completion; the IIT future simply overlaps it.
+        # The MOH 731 roll-up, the Tx_ML (IIT) read and the new TX_CURR
+        # DSD/TPT/AHD breakdown are INDEPENDENT queries against the same
+        # server and each takes 10-25 s, so they are issued concurrently.
+        # The retry loop for the roll-up is unchanged and still runs to
+        # completion; the other futures simply overlap it.
         from concurrent.futures import ThreadPoolExecutor
 
         data = {}
         iit_by_period = {}
-        with ThreadPoolExecutor(max_workers=2) as ex:
+        coc_by_period = {}
+        with ThreadPoolExecutor(max_workers=3) as ex:
             fut_iit = ex.submit(_fetch_iit_numerator, ou_ids)
+            fut_coc = ex.submit(_fetch_coc_breakdowns, ou_ids)
             for attempt in range(3):
                 data = _fetch_daraja_metrics_data(ou_ids)
                 if data:
@@ -1948,6 +2164,10 @@ def _compute_khis_metrics(target_period=None, default_period=None):
                 iit_by_period = fut_iit.result() or {}
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK IIT fetch failed: {exc}")
+            try:
+                coc_by_period = fut_coc.result() or {}
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK COC breakdown fetch failed: {exc}")
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
@@ -1999,7 +2219,7 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         _y, _m = _pe_key(_anchor)
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
-            data, _anchor, iit_by_period, commodity
+            data, _anchor, iit_by_period, commodity, coc_by_period
         )
         if not metrics:
             khis["status"] = "empty"
