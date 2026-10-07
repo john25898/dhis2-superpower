@@ -1120,16 +1120,94 @@ function _msRenderFacilityPanel(data, title) {
   _msPanelShell(
     title,
     sub,
-    `<div class="overflow-auto" style="max-height:70vh">
-       <table class="w-full border-collapse">${head}<tbody>${body}</tbody>${foot}</table>
+    `<div class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
+       <span class="text-[13px] text-slate-400">&#128269;</span>
+       <input id="msFacilitySearch" type="search" autocomplete="off"
+         placeholder="Search facility, MFL, county or sub-county&hellip;"
+         class="w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12px] text-slate-700 outline-none focus:border-sky-400 focus:bg-white" />
+       <button id="msFacilityClear"
+         class="hidden rounded-lg border border-slate-200 px-2 py-1 text-[11px] text-slate-500 transition hover:bg-slate-100 cursor-pointer">Clear</button>
+       <span id="msFacilityCount" class="ml-auto text-[11px] tabular-nums text-slate-400"></span>
+     </div>
+     <div id="msFacilityGrid" class="overflow-auto" style="max-height:70vh">
+       <table class="w-full border-collapse">${head}<tbody id="msFacilityRows">${body}</tbody>${foot}</table>
+     </div>
+     <div id="msFacilityEmpty" class="hidden p-10 text-center text-[13px] text-slate-400">
+       No facility matches that search.
      </div>`,
   );
+
+  _msWireFacilitySearch();
 
   const note = document.getElementById("msFacilityNote");
   if (data.note) {
     note.textContent = data.note;
     note.classList.remove("hidden");
   }
+}
+
+// Filter box for the per-facility grid.  Matching is done against the four
+// descriptor cells only (facility / MFL / county / sub-county) — running it
+// over the whole row would let a typed "0" match every facility that reported
+// a zero anywhere in the milestone's columns.
+function _msWireFacilitySearch() {
+  const input = document.getElementById("msFacilitySearch");
+  const rowsHost = document.getElementById("msFacilityRows");
+  const counter = document.getElementById("msFacilityCount");
+  const clearBtn = document.getElementById("msFacilityClear");
+  const emptyMsg = document.getElementById("msFacilityEmpty");
+  const grid = document.getElementById("msFacilityGrid");
+  if (!input || !rowsHost || !counter) return;
+
+  const rows = Array.prototype.slice.call(rowsHost.querySelectorAll("tr"));
+  rows.forEach(function (tr) {
+    const descriptor = Array.prototype.slice
+      .call(tr.cells, 0, 4)
+      .map(function (td) {
+        return td.textContent;
+      })
+      .join(" ");
+    tr.setAttribute("data-ms-hay", descriptor.toLowerCase());
+  });
+  const total = rows.length;
+
+  const apply = function () {
+    const q = (input.value || "").trim().toLowerCase();
+    let shown = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const hit = !q || rows[i].getAttribute("data-ms-hay").indexOf(q) !== -1;
+      // style.display rather than the `hidden` class: the rows already carry
+      // Tailwind display/hover utilities and an inline style cannot lose a
+      // specificity race with the CDN's generated order.
+      rows[i].style.display = hit ? "" : "none";
+      if (hit) shown++;
+    }
+    counter.textContent = q
+      ? shown + " of " + total + " facilities"
+      : total + " facilities";
+    if (clearBtn) clearBtn.classList.toggle("hidden", !q);
+    if (emptyMsg) emptyMsg.classList.toggle("hidden", shown !== 0);
+    if (grid) grid.classList.toggle("hidden", shown === 0);
+  };
+
+  input.addEventListener("input", apply);
+  input.addEventListener("keydown", function (ev) {
+    // Escape clears the filter first; only a second Escape (empty box) should
+    // reach the modal's document-level handler and close the panel.
+    if (ev.key === "Escape" && input.value) {
+      ev.stopPropagation();
+      input.value = "";
+      apply();
+    }
+  });
+  if (clearBtn)
+    clearBtn.addEventListener("click", function () {
+      input.value = "";
+      apply();
+      input.focus();
+    });
+  apply();
+  input.focus();
 }
 
 // #22's drill-down is the DWAPI upload log, which the payload already
