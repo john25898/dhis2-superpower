@@ -59,6 +59,13 @@ _REFRESH_DECISION_LOCK = threading.Lock()
 # Seconds a client should wait before re-polling while a cold build runs.
 _WARMING_RETRY_SECONDS = int(os.getenv("MILESTONE_WARMING_RETRY", "5"))
 
+# On-demand cache for the ⋮ → "View data" panel, keyed
+# "<milestone>:<month>".  Separate from _MILESTONE_CACHE because the panel
+# is opened lazily and its grid is far too big to ride along on every
+# payload build.
+_FACILITY_CACHE = {}
+_FACILITY_CACHE_LOCK = threading.Lock()
+
 # ── Baseline anchor (the Baseline tab's month) ──────────────────────────
 # The Baseline tab is a DELIBERATE freeze, not a moving target.  It is
 # pinned to one calendar month here and stays on it until this line is
@@ -752,6 +759,10 @@ _MONTH_NAMES = [
 
 _DARJA_OUS_CACHE = None
 _DARJA_OUS_CACHE_AT = 0.0
+# The same census rows, but with the resolved CHAK org-unit uid and the
+# county / sub-county / ward columns kept — the shape the "⋮ → View
+# data" facility panel needs.  Populated by _daraja_scope().
+_DARJA_ROSTER_CACHE = None
 # A scope resolved *without* the live CHAK code lookup is name-matched only
 # and may be missing facilities, so it is cached on a short TTL and retried
 # once CHAK is reachable again — instead of being pinned for the process life.
@@ -775,13 +786,24 @@ def _daraja_scope():
     Returns (daraja_names, matched_ou_ids, matched_count).
     """
     global _DARJA_OUS_CACHE, _DARJA_OUS_CACHE_AT, _DARJA_SCOPE_LIVE_OK
+    global _DARJA_ROSTER_CACHE
     if _DARJA_OUS_CACHE is not None:
         if _DARJA_SCOPE_LIVE_OK or (
             time.time() - _DARJA_OUS_CACHE_AT <= _DARJA_SCOPE_DEGRADED_TTL
         ):
             return _DARJA_OUS_CACHE
 
-    daraja_rows = []  # each: {"mfl": code, "name": census display name}
+    daraja_rows = []  # each: {mfl, name, county, subcounty, ward, uid}
+
+    def _census_cell(raw, i):
+        """One cell of a census row as a clean string ('' when blank)."""
+        if i >= len(raw) or raw[i] is None:
+            return ""
+        value = raw[i]
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+
     census_path = BASE_DIR / "Site_Census - Daraja.xlsx"
     try:
         if census_path.exists():
@@ -794,14 +816,19 @@ def _daraja_scope():
                 for raw in ws.iter_rows(min_row=2, values_only=True):
                     if not raw:
                         continue
-                    mfl = str(raw[0]).strip() if raw[0] is not None else ""
-                    name = (
-                        str(raw[5]).strip() if raw[5] is not None else ""
-                    ).strip()
+                    mfl = _census_cell(raw, 0)
+                    name = _census_cell(raw, 5)
                     if not mfl or mfl in seen_mfl or not name:
                         continue
                     seen_mfl.add(mfl)
-                    daraja_rows.append({"mfl": mfl, "name": name})
+                    daraja_rows.append({
+                        "mfl": mfl,
+                        "name": name,
+                        "county": _census_cell(raw, 1),
+                        "subcounty": _census_cell(raw, 2),
+                        "ward": _census_cell(raw, 3),
+                        "uid": None,
+                    })
             wb.close()
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] Daraja census parse failed: {exc}")
@@ -856,10 +883,12 @@ def _daraja_scope():
                         uid = cand
                         break
         if uid:
+            row["uid"] = uid
             matched_ids.append(uid)
     # unique, order-preserving
     matched_ids = list(dict.fromkeys(matched_ids))
     _DARJA_OUS_CACHE = (daraja_names, matched_ids, len(matched_ids))
+    _DARJA_ROSTER_CACHE = daraja_rows
     _DARJA_OUS_CACHE_AT = time.time()
     _DARJA_SCOPE_LIVE_OK = live_ok
     if not live_ok:
@@ -867,6 +896,21 @@ def _daraja_scope():
               f"lookup ({len(matched_ids)}/{len(daraja_names)} name-matched); "
               f"will retry in {_DARJA_SCOPE_DEGRADED_TTL:g}s")
     return _DARJA_OUS_CACHE
+
+
+def _daraja_roster():
+    """The 259 census facilities as `{uid, mfl, name, county, subcounty, ward}`.
+
+    Thin accessor over the rows `_daraja_scope()` already parsed and matched,
+    so the drill-down panel never re-reads the workbook.  Rows whose CHAK
+    org-unit uid could not be resolved are dropped here (they carry no data
+    to show) but ARE still counted by `_daraja_scope()`'s match report, so
+    the panel's row total can legitimately come in below its 259-facility
+    headline — `coverage` tells the client both numbers.
+    """
+    _daraja_scope()  # populates _DARJA_ROSTER_CACHE
+    rows = _DARJA_ROSTER_CACHE or []
+    return [r for r in rows if r.get("uid")]
 
 
 def _fetch_chak_ou_by_code(codes):
@@ -2097,6 +2141,403 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     return metrics, anchor
 
 
+# ── ⋮ → "View data": the per-facility breakdown behind every milestone ──
+#
+# Every CHAK-measured milestone is a ratio of Daraja-wide totals, so the
+# tracker can only ever show the answer.  Its ⋮ menu opens the working: the
+# 259 census facilities down the side, and one column per raw input the
+# formula actually names across the top — zeroes included, because "this
+# facility contributed nothing this month" is a finding, not a blank.
+#
+# The specs below are deliberately just data.  They reuse the very same
+# constants _compute_daraja_metrics() scores from, so a column can never
+# drift away from the formula it explains; adding a milestone to the panel
+# is a matter of one dict entry.
+#
+# Column kinds:
+#   "de"       — a data element (or a group of twin elements summed).
+#                `expand: True` splits the group into one column per element,
+#                labelled from CHAK metadata.
+#   "coc"      — a *subset* of one element's category-option combos.  Emitted
+#                as one column per group of combos, grouped on the first
+#                comma-segment of the combo's DHIS2 name — which is what
+#                turns DSD's 28 age/sex combos into the seven model columns
+#                the formula names, and TPT's 12 into its three status rows.
+#                `group: None` collapses the subset into a single column.
+#   "coc_name" — a *prefix* match on the combo name (the instance ignores
+#                `co:<uid>` as a filter, so the full breakdown is pulled and
+#                matched client-side), collapsed into one column.
+_MILESTONE_MATRIX_SPECS = {
+    6: {
+        "name": "HIV Case Identification",
+        "note": ("Scored roster-wide as min(tests ÷ 21,584, positives ÷ 306) "
+                 "× 100, so there is no per-facility percentage to show — "
+                 "these are the two counts each facility fed into it."),
+        "columns": [
+            {"kind": "de", "label": "HTS Tested",
+             "ids": [_IND_HTS_TESTED] + _HTS_TESTED_62},
+            {"kind": "de", "label": "HTS Positive (HTS_TST_POS)",
+             "ids": [_IND_HTS_POSITIVE] + _HTS_POSITIVE_62},
+        ],
+    },
+    7: {
+        "name": "Linkage of HIV Positive Clients to ART",
+        "note": "Milestone = TX_NEW ÷ HTS_TST_POS × 100 (roster-wide).",
+        "columns": [
+            {"kind": "de", "label": "HTS Positive (denominator)",
+             "ids": [_IND_HTS_POSITIVE] + _HTS_POSITIVE_62},
+            {"kind": "de", "label": "TX_NEW — started on ART",
+             "ids": [_DE_TX_NEW] + _TX_NEW_62_ALL},
+        ],
+    },
+    8: {
+        "name": "PrEP Initiation",
+        "note": "Milestone = PrEP New ÷ 486 × 100 (roster-wide monthly target).",
+        "columns": [
+            {"kind": "de", "label": "PrEP New Clients",
+             "ids": [_DE_PREP_NEW] + _DE_PREP_NEW_62},
+        ],
+    },
+    9: {
+        "name": "HIV Care, Treatment Continuity and Retention",
+        "note": ("Milestone = interruptions ÷ [TX_CURR at the previous "
+                 "quarter's close + TX_NEW so far this quarter] × 100.  The "
+                 "two denominator terms are the last two columns."),
+        "columns": [
+            {"kind": "coc_name", "label": "Interruption in Treatment",
+             "element": _DE_TX_ML_OUTCOMES, "names": [_IIT_OUTCOME_PREFIX]},
+            {"kind": "de", "label": "TX_IIT STA (CHAP Stawisha)",
+             "ids": [_DE_TX_IIT_62]},
+            {"kind": "de", "label": "TX_CURR (patients on ART)",
+             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+        ],
+    },
+    10: {
+        "name": ("Differentiated Service Delivery (DSD) Enrollment and "
+                 "Referral"),
+        "note": ("Milestone = Σ the seven appropriate DSD models ÷ TX_CURR × "
+                 "100.  One column per model; the \"No DSD\" combos are "
+                 "excluded from the numerator by design."),
+        "columns": [
+            {"kind": "coc", "label": "DSD model",
+             "element": _DE_TX_CURR_DSD, "ids": _DSD_MODEL_COCS},
+            {"kind": "de", "label": "TX_CURR (denominator)",
+             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+        ],
+    },
+    11: {
+        "name": "Advanced HIV Disease (AHD) identification and evaluation",
+        "note": ("Current rule = AHD screened ÷ TX_CURR × 100.  Until the new "
+                 "screening element carries returns the tracker falls back to "
+                 "(TX_NEW CD4 <200 + ≥200) ÷ TX_NEW, so both readings are "
+                 "given here for the month being viewed."),
+        "columns": [
+            {"kind": "coc", "label": "Screened for AHD",
+             "element": _DE_TX_CURR_AHD_SCREEN, "ids": _AHD_SCREEN_COCS,
+             "group": None},
+            {"kind": "de", "label": "TX_CURR (denominator)",
+             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+            {"kind": "de", "label": "TX_NEW CD4 <200 (fallback)",
+             "ids": [_DE_TX_NEW_CD4_LT200, _DE_TX_NEW_62_CD4_LT200]},
+            {"kind": "de", "label": "TX_NEW CD4 ≥200 (fallback)",
+             "ids": [_DE_TX_NEW_CD4_GE200, _DE_TX_NEW_62_CD4_GE200]},
+            {"kind": "de", "label": "TX_NEW — started on ART (fallback)",
+             "ids": [_DE_TX_NEW] + _TX_NEW_62_ALL},
+        ],
+    },
+    14: {
+        "name": "TB/HIV Case Identification",
+        "note": ("Milestone = TX_TB (Denominator) ÷ TX_CURR × 100.  The "
+                 "numerator is the sum of the four screening arms of each "
+                 "funding namespace, expanded below so a facility reporting "
+                 "only some of them is visible."),
+        "columns": [
+            {"kind": "de", "label": "TX_TB (Denominator)",
+             "ids": list(_DE_TX_TB_DEN_JTP) + list(_DE_TX_TB_DEN_62),
+             "expand": True},
+            {"kind": "de", "label": "TX_CURR (denominator)",
+             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+        ],
+    },
+    15: {
+        "name": "TB Preventive Therapy",
+        "note": ("Current rule = Started TPT ÷ (TX_CURR − On TB Treatment) × "
+                 "100.  Until that element carries returns the tracker falls "
+                 "back to TB_PREV Numerator ÷ Denominator, so both readings "
+                 "are given here."),
+        "columns": [
+            {"kind": "coc", "label": "TPT status",
+             "element": _DE_TX_CURR_TPT_INIT,
+             "ids": (_TPT_STARTED_COCS + _TPT_ON_TB_RX_COCS
+                     + _TPT_NOT_ON_TPT_COCS)},
+            {"kind": "de", "label": "TX_CURR (denominator)",
+             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+            {"kind": "de", "label": "TB_PREV Numerator (fallback)",
+             "ids": [_IND_TB_PREV_NUM]},
+            {"kind": "de", "label": "TB_PREV Denominator (fallback)",
+             "ids": [_IND_TB_PREV_DEN]},
+        ],
+    },
+    16: {
+        "name": "Viral Load Suppression",
+        "note": ("Milestone = VL suppressed ÷ VL results returned × 100.  A "
+                 "facility with no documented VL this month shows zero in "
+                 "both columns and is excluded from the ratio."),
+        "columns": [
+            {"kind": "de", "label": "VL results returned (denominator)",
+             "ids": [_DE_VL_DONE] + _DE_VL_62},
+            {"kind": "de", "label": "VL suppressed (<1000 cps/ml)",
+             "ids": [_DE_VL_SUPPRESSED] + _DE_VL_62_SUPPRESSED},
+        ],
+    },
+}
+
+
+def _chak_meta_names(kind, uids):
+    """`{uid: display name}` for data elements or category-option combos.
+
+    Used only to label the drill-down columns, so a failed lookup degrades to
+    the bare uid instead of failing the panel.  Cached for an hour — these
+    names change about as often as the programme is redesigned.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    uid_list = sorted({str(u) for u in uids if u})
+    if not uid_list:
+        return {}
+    cache_key = make_key(kind, uid_list, namespace="chak_meta")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    out = {}
+    try:
+        from requests.auth import HTTPBasicAuth
+
+        from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
+
+        resource = "dataElements" if kind == "de" else "categoryOptionCombos"
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+        for i in range(0, len(uid_list), 100):
+            chunk = uid_list[i:i + 100]
+            resp = chak_get(
+                f"/{resource}.json",
+                {"filter": "id:in:[" + ",".join(chunk) + "]",
+                 "fields": "id,name", "paging": "false"},
+                read_timeout=20, auth=auth)
+            if not resp.ok:
+                continue
+            for item in resp.json().get(resource, []) or []:
+                out[item["id"]] = item.get("name") or item["id"]
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK {kind} name lookup failed: {exc}")
+    cache_set(cache_key, out, 3600)
+    return out
+
+
+def _matrix_columns(spec):
+    """Expand a milestone spec into the concrete columns to render.
+
+    Returns `(columns, de_ids, coc_elements)` where `columns` is a list of
+    `{key, label, kind, ids|element|names}` in display order, `de_ids` is the
+    union of every data element any `de` column needs (fetched in one call),
+    and `coc_elements` the distinct element uids the COC columns need (one
+    disaggregated call each).
+    """
+    columns = []
+    de_ids = []
+    coc_elements = []
+    for ci, col in enumerate(spec["columns"]):
+        kind = col.get("kind", "de")
+        if kind == "de":
+            if col.get("expand") and len(col["ids"]) > 1:
+                names = _chak_meta_names("de", col["ids"])
+                for uid in col["ids"]:
+                    columns.append({
+                        "key": f"c{ci}_{uid}",
+                        "label": names.get(uid, uid),
+                        "group": col["label"],
+                        "kind": "de",
+                        "ids": [uid],
+                    })
+                    de_ids.append(uid)
+            else:
+                columns.append({
+                    "key": f"c{ci}",
+                    "label": col["label"],
+                    "group": None,
+                    "kind": "de",
+                    "ids": list(col["ids"]),
+                })
+                de_ids.extend(col["ids"])
+            continue
+
+        element = col["element"]
+        coc_elements.append(element)
+        if kind == "coc_name":
+            columns.append({
+                "key": f"c{ci}",
+                "label": col["label"],
+                "group": None,
+                "kind": "coc_name",
+                "element": element,
+                "names": list(col.get("names") or ()),
+                "ids": [],
+            })
+            continue
+
+        # kind == "coc": one column per group of the listed combos.
+        group_by = col.get("group", "first")
+        if group_by is None:
+            columns.append({
+                "key": f"c{ci}",
+                "label": col["label"],
+                "group": None,
+                "kind": "coc",
+                "element": element,
+                "ids": list(col["ids"]),
+            })
+            continue
+        names = _chak_meta_names("coc", col["ids"])
+        buckets = {}
+        for uid in col["ids"]:
+            name = names.get(uid, "")
+            label = (name.split(",")[0].strip() if name else "") or uid
+            buckets.setdefault(label, []).append(uid)
+        for gi, label in enumerate(sorted(buckets)):
+            columns.append({
+                "key": f"c{ci}g{gi}",
+                "label": label,
+                "group": col["label"],
+                "kind": "coc",
+                "element": element,
+                "ids": buckets[label],
+            })
+    return columns, list(dict.fromkeys(de_ids)), list(dict.fromkeys(coc_elements))
+
+
+def _facility_matrix(milestone_id, period=None):
+    """The 259-facility × N-input grid behind one milestone's ⋮ menu.
+
+    `period` is a DHIS2 month id ('202608'); it defaults to the pinned
+    baseline month so the panel opens on the same month the tracker's
+    Baseline tab is scored against.
+    """
+    try:
+        mid = int(milestone_id)
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "A numeric milestone id is required."}
+
+    spec = _MILESTONE_MATRIX_SPECS.get(mid)
+    if not spec:
+        return {
+            "ok": False,
+            "milestone": mid,
+            "error": (f"Milestone {mid} is not measured from CHAK DHIS2, so "
+                      "there is no facility-level data to show."),
+        }
+
+    period = str(period or "").strip() or None
+    if period is None or not re.match(r"^\d{6}$", period):
+        ym = _baseline_period_ym()
+        period = f"{ym[0]}{ym[1]:02d}" if ym else None
+    if not period:
+        return {"ok": False, "milestone": mid,
+                "error": "No reporting month could be resolved."}
+
+    roster = _daraja_roster()
+    if not roster:
+        return {"ok": False, "milestone": mid,
+                "error": ("The Daraja site census could not be read, so no "
+                          "facility list is available.")}
+
+    columns, de_ids, coc_elements = _matrix_columns(spec)
+    ou_ids = [r["uid"] for r in roster]
+
+    from services.dhis2 import _chak_analytics_by_ou
+
+    flat = ()
+    if de_ids:
+        flat = _chak_analytics_by_ou(de_ids, ou_ids, period) or {}
+    disagg = {}
+    for element in coc_elements:
+        disagg[element] = _chak_analytics_by_ou(
+            [element], ou_ids, period, disaggregate=True) or {}
+
+    flat_cells = flat.get(period, {})
+    disagg_cells = {el: (d.get(period) or {}) for el, d in disagg.items()}
+
+    # Names for the coc_name columns, resolved once for the element.  Done
+    # BEFORE cell_value is first called because that closure reads it.
+    coc_name_of = {}
+    for col in columns:
+        if col["kind"] != "coc_name":
+            continue
+        cells = disagg_cells.get(col["element"], {})
+        coc_name_of.update(_chak_meta_names(
+            "coc", [k.rsplit(".", 1)[-1] for k in cells]))
+
+    def cell_value(col, ou):
+        if col["kind"] == "de":
+            return sum((flat_cells.get(d, {}) or {}).get(ou, 0.0)
+                       for d in col["ids"])
+        if col["kind"] == "coc":
+            cells = disagg_cells.get(col["element"], {})
+            return sum((cells.get(f"{col['element']}.{c}") or {}).get(ou, 0.0)
+                       for c in col["ids"])
+        # coc_name — the element's combos whose name starts with a prefix
+        cells = disagg_cells.get(col["element"], {})
+        prefixes = tuple(col.get("names") or ())
+        total = 0.0
+        for key, per_ou in cells.items():
+            coc_uid = key.rsplit(".", 1)[-1]
+            if prefixes and not coc_name_of.get(coc_uid, "").startswith(
+                    prefixes):
+                continue
+            total += (per_ou or {}).get(ou, 0.0)
+        return total
+
+    facilities = []
+    totals = [0.0] * len(columns)
+    for row in roster:
+        ou = row["uid"]
+        values = []
+        for i, col in enumerate(columns):
+            value = cell_value(col, ou)
+            values.append(round(value, 2) if value else 0)
+            totals[i] += value
+        facilities.append({
+            "uid": ou,
+            "mfl": row.get("mfl") or "",
+            "name": row.get("name") or "",
+            "county": row.get("county") or "",
+            "subcounty": row.get("subcounty") or "",
+            "ward": row.get("ward") or "",
+            "values": values,
+        })
+    # Busiest facilities first — the eye looks for contribution, not order.
+    facilities.sort(key=lambda f: (-sum(f["values"]), f["name"]))
+
+    ym = _pe_key(period)
+    return {
+        "ok": True,
+        "milestone": mid,
+        "name": spec["name"],
+        "note": spec.get("note") or "",
+        "period": period,
+        "periodHuman": _month_human(ym),
+        "source": "CHAK DHIS2 (ereporting.chak.or.ke)",
+        "columns": [{"key": c["key"], "label": c["label"],
+                     "group": c.get("group")} for c in columns],
+        "facilities": facilities,
+        "totals": [round(t, 2) if t else 0 for t in totals],
+        "facilityCount": len(facilities),
+        "reportingCount": sum(1 for f in facilities if any(f["values"])),
+        "censusCount": len(_DARJA_ROSTER_CACHE or []) or len(facilities),
+        "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    }
+
+
 def _compute_khis_metrics(target_period=None, default_period=None):
     """Resolve Daraja → CHAK DHIS2, fetch MOH 731, score the milestones.
 
@@ -2472,6 +2913,18 @@ def _build_payload():
                 _month["dwapi"] = coverage
                 break
 
+    # ── A concrete CHAK period per tab ───────────────────────────────────
+    # The ⋮ → "View data" panel asks DHIS2 for one month, but the schedule
+    # sheets only carry a human label ("Month 1: (September 1 - September
+    # 30, 2026)").  Deriving the id here keeps the panel and the tab it was
+    # opened from reading the SAME month — a panel that silently fell back
+    # to the baseline month under an M1 heading would show the wrong numbers.
+    _base_ym = _baseline_period_ym()
+    for _month in months:
+        _ym = _base_ym if _month.get("isBaseline") else _period_label_ym(
+            _month.get("period"))
+        _month["periodYm"] = f"{_ym[0]}{_ym[1]:02d}" if _ym else None
+
     return {
         "ok": True,
         "title": "CHAK Daraka Project — Milestone Tracker & Payment Schedule",
@@ -2638,6 +3091,52 @@ def milestone_data():
         resp.status_code = 202
         resp.headers["Retry-After"] = str(_WARMING_RETRY_SECONDS)
         resp.headers["Cache-Control"] = "no-store"
+        return resp
+    except Exception as exc:  # noqa: BLE001 - surface friendly error
+        return jsonify({"ok": False, "error": str(exc)})
+
+
+@milestone_bp.get("/api/milestone/facility-data")
+def milestone_facility_data():
+    """Per-facility breakdown behind one milestone's ⋮ menu.
+
+    `?milestone=<id>` picks the milestone, `?month=<YYYYMM>` the reporting
+    month (defaults to the pinned baseline month).  The response is a
+    facility × input grid with zeroes included, so the panel can answer
+    "what did this facility contribute to this milestone?" — the one thing
+    a roster-wide percentage can never show.
+
+    Cached by (milestone, month) for the same TTL as the main payload: the
+    panel is opened on demand, so without this a curious clicker would
+    re-issue four CHAK analytics queries every time they reopened it.
+    """
+    milestone = request.args.get("milestone")
+    month = (request.args.get("month") or "").strip() or None
+    force = request.args.get("refresh") in ("1", "true", "yes")
+
+    cache_key = f"facility:{milestone}:{month or 'default'}"
+    if not force:
+        with _FACILITY_CACHE_LOCK:
+            hit = _FACILITY_CACHE.get(cache_key)
+            if hit and (time.time() - hit[0]) <= _MILESTONE_TTL:
+                resp = jsonify(dict(hit[1]))
+                resp.headers["Cache-Control"] = "no-store, max-age=0"
+                return resp
+
+    try:
+        data = _facility_matrix(milestone, month)
+        if data.get("ok"):
+            with _FACILITY_CACHE_LOCK:
+                _FACILITY_CACHE[cache_key] = (time.time(), data)
+                # Bound the map: the panel only ever asks for a handful of
+                # (milestone, month) pairs, so anything older than the TTL is
+                # dead weight.
+                cutoff = time.time() - _MILESTONE_TTL
+                for stale in [k for k, (at, _) in _FACILITY_CACHE.items()
+                              if at < cutoff]:
+                    _FACILITY_CACHE.pop(stale, None)
+        resp = jsonify(data)
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
         return resp
     except Exception as exc:  # noqa: BLE001 - surface friendly error
         return jsonify({"ok": False, "error": str(exc)})

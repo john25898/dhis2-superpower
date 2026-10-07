@@ -922,6 +922,172 @@ def _chak_analytics_coc_cells(dx_ids, ou_ids, pe="LAST_12_MONTHS",
     return out
 
 
+def _chak_analytics_by_ou(dx_ids, ou_ids, pe="LAST_12_MONTHS",
+                          coc_ids=None, coc_name_prefixes=None,
+                          disaggregate=False, ou_chunk=0, read_timeout=None):
+    """Fetch CHAK analytics **keeping the organisation-unit dimension**.
+
+    `_khis_parse_per_de` (used by every other CHAK reader here) deliberately
+    folds the `ou` column away — `result[dx][pe] += value` — so the whole
+    roster reads as one national number.  The Milestone Tracker's
+    "⋮ → View data" panel needs the opposite: one row per facility.  This
+    helper issues the same class of query but parses the raw
+    `[dx, (co,) pe, ou, value]` rows, so the caller gets the facility split
+    without a second round of bespoke wiring per milestone.
+
+    Parameters
+    ----------
+    dx_ids, ou_ids : iterable of str
+        Data-element uids and organisation-unit uids.  All OUs ride in a
+        single `ou:` filter by default — CHAK answers ~260 level-5 uids in
+        one 3.7 kB request, so no chunking is needed (`ou_chunk=0`).
+    pe : str
+        Period expression, e.g. `"202608"`, `"202607;202608;202609"` or
+        `"LAST_12_MONTHS"`.  Cross-year sets are split by `plan_pe_chunks`
+        because CHAK returns **zero rows** for them (its cross-year defect).
+    coc_ids / coc_name_prefixes / disaggregate : optional
+        When any of them is given the query adds `co:categoryOptions` and
+        rows are filtered client-side — the instance ignores `co:<uid>` as a
+        *filter* dimension and answers with the element grand total.
+        `coc_ids` matches the category-option uid, `coc_name_prefixes` the
+        leading text of its display name (e.g. `("Interruption",)`), and
+        `disaggregate=True` returns every option unfiltered (needed by the
+        DSD / TPT / AHD columns, whose numerator is a *subset* of the
+        element's options — the element total is not the milestone value).
+
+    Returns
+    -------
+    dict
+        `{period_code: {key: {ou_id: value}}}` where `period_code` is the
+        DHIS2 month id (`"202608"`) and `key` is the data-element uid, or
+        `"{de_uid}.{coc_uid}"` when the query was COC-disaggregated.  Only
+        non-zero cells are present; a missing key means zero.  `{}` on
+        failure — never a partial read, because a dropped OU chunk or period
+        would silently understate a facility rather than fail loudly.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    from requests.auth import HTTPBasicAuth
+
+    if isinstance(dx_ids, (list, set, tuple)):
+        dx_list = [str(d) for d in dx_ids if d]
+    else:
+        dx_list = [str(dx_ids)] if dx_ids else []
+    if not dx_list:
+        return {}
+    if isinstance(ou_ids, (list, set, tuple)):
+        ou_list = [str(o) for o in ou_ids if o]
+    else:
+        ou_list = [str(ou_ids)] if ou_ids else []
+    if not ou_list:
+        return {}
+
+    dx_key = ";".join(sorted(dx_list))
+    ou_key = ";".join(sorted(ou_list))
+    coc_key = ";".join(sorted(str(c) for c in (coc_ids or [])))
+    prefix_key = ";".join(coc_name_prefixes or ())
+    pe = _normalize_pe(pe)
+    # make_key exposes four data slots, so the COC uid list and the name
+    # prefixes share the fourth — they are never both set in practice.  The
+    # `disaggregate` flag rides along in the same slot so a "give me every
+    # option" read cannot be served from a flat read's cache entry.
+    cache_key = make_key(dx_key, ou_key, pe,
+                         coc_key + "|" + prefix_key
+                         + ("|all" if disaggregate else ""),
+                         namespace="chak_ou")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    with_coc = bool(disaggregate) or bool(coc_ids) or bool(prefix_key)
+    wanted_coc = {str(c) for c in (coc_ids or [])}
+    prefixes = tuple(coc_name_prefixes or ())
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    chunks = ([ou_list] if not ou_chunk
+              else [ou_list[i:i + ou_chunk]
+                    for i in range(0, len(ou_list), ou_chunk)])
+    jobs = [(chunk, span) for span in plan_pe_chunks(pe) for chunk in chunks]
+
+    def _one_job(job):
+        chunk, pe_span = job
+        dims = [f"dx:{dx_key}"]
+        if with_coc:
+            dims.append("co:categoryOptions")
+        dims += [f"pe:{pe_span}", "ou:" + ";".join(chunk)]
+        params = {"dimension": dims, "paging": "false"}
+        resp = chak_get("/analytics.json", params,
+                        read_timeout=read_timeout or _CHAK_COC_READ_TIMEOUT,
+                        auth=auth)
+        if not resp.ok:
+            raise RuntimeError(f"CHAK by-OU fetch HTTP {resp.status_code}")
+        data = resp.json()
+        rows = data.get("rows") or []
+        if not rows:
+            return {}
+        meta = data.get("metaData", {}).get("items", {}) or {}
+        hdrs = [h.get("name") for h in (data.get("headers") or [])]
+        try:
+            dx_i, pe_i = hdrs.index("dx"), hdrs.index("pe")
+            ou_i, val_i = hdrs.index("ou"), hdrs.index("value")
+            co_i = hdrs.index("co") if with_coc else -1
+        except ValueError:
+            # Positional fallback for the dimension order issued above:
+            #   dx, pe, ou        -> 0, 1, 2  (value 3)
+            #   dx, co, pe, ou    -> 0, 1, 2, 3 (value 4)
+            if with_coc:
+                dx_i, co_i, pe_i, ou_i, val_i = 0, 1, 2, 3, 4
+            else:
+                dx_i, pe_i, ou_i, val_i, co_i = 0, 1, 2, 3, -1
+        out = {}
+        for row in rows:
+            if len(row) <= max(pe_i, ou_i, val_i):
+                continue
+            if with_coc:
+                coc_uid = str(row[co_i])
+                if wanted_coc and coc_uid not in wanted_coc:
+                    continue
+                if prefixes:
+                    if not (meta.get(coc_uid, {}) or {}).get(
+                            "name", "").startswith(prefixes):
+                        continue
+                key = f"{row[dx_i]}.{coc_uid}"
+            else:
+                key = str(row[dx_i])
+            # meta is keyed by uid for EVERY dimension, so the period must be
+            # read from the pe column of the row, never guessed from meta.
+            pe_code = str(row[pe_i])
+            try:
+                val = float(row[val_i] or 0)
+            except (TypeError, ValueError):
+                continue
+            if not val:
+                continue
+            out.setdefault(pe_code, {}).setdefault(key, {})[
+                str(row[ou_i])] = val
+        return out
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    merged = {}
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, min(4, len(jobs)))) as ex:
+            for part in ex.map(_one_job, jobs):
+                for pe_code, cells in part.items():
+                    bucket = merged.setdefault(pe_code, {})
+                    for key, per_ou in cells.items():
+                        tgt = bucket.setdefault(key, {})
+                        for ou, val in per_ou.items():
+                            tgt[ou] = tgt.get(ou, 0.0) + val
+    except Exception as exc:  # noqa: BLE001
+        # A dropped chunk or period would understate individual facilities,
+        # which is worse than showing nothing at all — so nothing is cached
+        # and the caller is told the read failed.
+        print(f"[DHIS2] CHAK by-OU fetch failed: {exc}")
+        return {}
+    cache_set(cache_key, merged)
+    return merged
+
+
 def _chak_coc_name_totals(dx_ids, ou_ids, pe="LAST_12_MONTHS",
                           include=("preg", "breast"), ou_chunk=100):
     """Sum data element(s) restricted to the PrEP *typology* COCs.

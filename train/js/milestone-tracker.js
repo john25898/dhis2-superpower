@@ -837,6 +837,358 @@ function mountMsTrendChart(months, awardTotalNum) {
   });
 }
 
+// ============================================================
+// ⋮  "View data" — the per-facility breakdown behind a milestone
+// ------------------------------------------------------------
+// A milestone's PERFORMANCE cell says the project scored 18% of target.
+// It can never say WHICH facility supplied the inputs that produced that
+// number.  The ⋮ menu opens a facility × input grid (all 259 Daraja sites,
+// zeroes included) so a milestone can be reconciled site by site.
+//
+// Two deliberate design choices:
+//   * The grid is fetched LAZILY, on first open, and cached per
+//     (milestone, month).  259 rows × up to 9 inputs is far too much to
+//     ride along on every payload build, and most visits never open it.
+//   * The button lives INSIDE the existing "#id" cell rather than in a new
+//     column, so the header, the 10-column layout and colspan="10" empty
+//     state all stay exactly as they are.
+// ============================================================
+const _msFacilityCache = {}; // "mid:period" -> server response
+const _msFacilityInFlight = {}; // "mid:period" -> Promise (de-dupes clicks)
+
+function msRowMenuButton(row) {
+  if (!row) return "";
+  const mid = escapeHtml(String(row.id));
+  return `<button data-ms-rowmenu="${mid}" title="More options"
+    aria-label="More options for milestone ${mid}"
+    class="rounded-md px-1.5 -my-1 text-base font-bold leading-none text-slate-300 transition hover:bg-sky-50 hover:text-sky-600 cursor-pointer">&#8942;</button>`;
+}
+
+// A single floating menu, created once and repositioned per click.  Keeping
+// it outside the table means a re-render (month switch, filter change) can
+// never leave an orphaned dropdown behind.
+function _msCloseRowMenu() {
+  const menu = document.getElementById("msRowMenu");
+  if (menu) menu.remove();
+}
+
+function _msOpenRowMenu(btn, row, month) {
+  _msCloseRowMenu();
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement("div");
+  menu.id = "msRowMenu";
+  menu.className =
+    "fixed z-[9999] min-w-[190px] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl";
+  // Flip above the button when there is no room below it.
+  const below = rect.bottom + 6;
+  const style =
+    below + 120 > window.innerHeight
+      ? `bottom:${window.innerHeight - rect.top + 6}px;left:${Math.min(rect.left, window.innerWidth - 200)}px;`
+      : `top:${below}px;left:${Math.min(rect.left, window.innerWidth - 200)}px;`;
+  menu.setAttribute("style", style);
+  menu.innerHTML = `<button data-ms-rowaction="data"
+      class="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 cursor-pointer">
+      <span class="text-slate-400">&#128202;</span> View data
+    </button>`;
+  document.body.appendChild(menu);
+  menu
+    .querySelector("[data-ms-rowaction]")
+    .addEventListener("click", function () {
+      _msCloseRowMenu();
+      openMsFacilityPanel(row, month);
+    });
+  // The opening click is stopped from bubbling, so this listener only ever
+  // sees the NEXT document click — i.e. "clicked somewhere else: dismiss".
+  document.addEventListener("click", _msCloseRowMenu, { once: true });
+}
+
+function _msFacilityModal() {
+  let host = document.getElementById("msFacilityModal");
+  if (host) return host;
+  host = document.createElement("div");
+  host.id = "msFacilityModal";
+  host.className = "fixed inset-0 z-[9998] hidden";
+  host.innerHTML = `
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]" data-ms-fclose="1"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-2 sm:p-5">
+      <div class="relative flex max-h-full w-full max-w-[1280px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-3">
+          <div class="min-w-0">
+            <div id="msFacilityTitle" class="truncate text-[15px] font-bold text-slate-800"></div>
+            <div id="msFacilitySub" class="mt-0.5 text-[11px] text-slate-500"></div>
+          </div>
+          <button data-ms-fclose="1" title="Close"
+            class="shrink-0 rounded-lg px-2.5 py-0.5 text-2xl leading-none text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 cursor-pointer">&times;</button>
+        </div>
+        <div id="msFacilityNote" class="hidden border-b border-amber-100 bg-amber-50 px-5 py-2 text-[11px] leading-relaxed text-amber-800"></div>
+        <div id="msFacilityBody" class="flex-1 overflow-auto"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(host);
+  host.addEventListener("click", function (ev) {
+    if (ev.target.closest("[data-ms-fclose]")) host.classList.add("hidden");
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      host.classList.add("hidden");
+      _msCloseRowMenu();
+    }
+  });
+  return host;
+}
+
+function _msPanelShell(title, sub, bodyHtml) {
+  const host = _msFacilityModal();
+  document.getElementById("msFacilityTitle").textContent = title;
+  document.getElementById("msFacilitySub").innerHTML = sub || "";
+  const note = document.getElementById("msFacilityNote");
+  note.classList.add("hidden");
+  document.getElementById("msFacilityBody").innerHTML = bodyHtml;
+  host.classList.remove("hidden");
+  return host;
+}
+
+async function openMsFacilityPanel(row, month) {
+  const mid = String(row.id);
+  const title =
+    "#" + mid + " · " + (row.name || row.masterName || "Milestone " + mid);
+  const spinner = `<div class="flex items-center gap-3 p-12 text-slate-400">
+      <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500"></span>
+      <span class="text-[13px]">Reading facility-level data from CHAK DHIS2&hellip;</span>
+    </div>`;
+  _msPanelShell(title, "", spinner);
+
+  // #22 is sourced from the DWAPI upload workbook, not DHIS2, and its
+  // coverage object already carries the facility lists — no round trip.
+  // It is only attached to the Baseline tab's row, so fall back to the
+  // payload-level copy for the tabs that share the same coverage figure.
+  const cov =
+    (row.perf && row.perf.coverage) ||
+    (String(row.id) === "22" && _milestonePayload && _milestonePayload.dwapi);
+  if (cov) {
+    _msRenderDwapiPanel(cov);
+    return;
+  }
+
+  const key = mid + ":" + (month || "");
+  const body = () => document.getElementById("msFacilityBody");
+  try {
+    let data = _msFacilityCache[key];
+    if (!data) {
+      if (!_msFacilityInFlight[key]) {
+        const url =
+          "/api/milestone/facility-data?milestone=" +
+          encodeURIComponent(mid) +
+          (month ? "&month=" + encodeURIComponent(month) : "");
+        _msFacilityInFlight[key] = fetch(url, { cache: "no-store" })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (j) {
+            delete _msFacilityInFlight[key];
+            return j;
+          })
+          .catch(function (err) {
+            delete _msFacilityInFlight[key];
+            throw err;
+          });
+      }
+      data = await _msFacilityInFlight[key];
+      if (data && data.ok) _msFacilityCache[key] = data;
+    }
+    _msRenderFacilityPanel(data, title);
+  } catch (err) {
+    _msPanelShell(
+      title,
+      "",
+      `<div class="p-10 text-center text-[13px] text-rose-500">
+         Could not load facility data: ${escapeHtml(err.message || String(err))}
+       </div>`,
+    );
+    void body;
+  }
+}
+
+function _msRenderFacilityPanel(data, title) {
+  if (!data || !data.ok) {
+    _msPanelShell(
+      title,
+      "",
+      `<div class="p-10 text-center text-[13px] text-slate-500">
+         ${escapeHtml((data && data.error) || "No facility-level data is available for this milestone.")}
+       </div>`,
+    );
+    return;
+  }
+
+  const cols = data.columns || [];
+  const facs = data.facilities || [];
+  const totals = data.totals || [];
+  const sub =
+    `<span class="font-semibold text-slate-700">${escapeHtml(data.periodHuman || "")}</span>` +
+    ` &middot; <span class="font-semibold text-slate-700">${data.reportingCount || 0}</span> of ${data.censusCount || facs.length} census facilities reported` +
+    ` &middot; ${escapeHtml(data.source || "")}` +
+    ` <span class="text-slate-400">&middot; generated ${escapeHtml(data.generated || "")}</span>`;
+
+  if (!facs.length || !cols.length) {
+    _msPanelShell(
+      title,
+      sub,
+      `<div class="p-10 text-center text-[13px] text-slate-500">No inputs were reported for this milestone in ${escapeHtml(data.periodHuman || "this month")}.</div>`,
+    );
+    return;
+  }
+
+  // Grouped header: milestones whose inputs are category-option combos
+  // (DSD models, TPT statuses) get a spanning label above their columns,
+  // so "Community ART Group" reads as a DSD model rather than a bare word.
+  const groups = [];
+  cols.forEach(function (c) {
+    const g = c.group || "";
+    if (groups.length && groups[groups.length - 1].label === g)
+      groups[groups.length - 1].span += 1;
+    else groups.push({ label: g, span: 1 });
+  });
+  const hasGroups = groups.some(function (g) {
+    return g.label;
+  });
+  // The first four columns (Facility/MFL/County/Sub-county) belong to no
+  // group, so the spanning row must start with an equal-width blank cell —
+  // without it every group label slides left by four columns.
+  const groupRow = hasGroups
+    ? `<tr><th colspan="4" class="sticky top-0 z-10 border-b border-slate-200 bg-slate-100 px-2 py-1"></th>${groups
+        .map(function (g) {
+          return `<th colspan="${g.span}" class="sticky top-0 z-10 border-b border-l border-slate-200 bg-slate-100 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">${escapeHtml(g.label)}</th>`;
+        })
+        .join("")}</tr>`
+    : "";
+
+  // The second header row sticks immediately below the group row (24 px
+  // tall) when the caller has groups, and at the very top otherwise.
+  const headTop = hasGroups ? "top-[24px]" : "top-0";
+  const num = function (v) {
+    const n = Number(v) || 0;
+    return n ? n.toLocaleString() : "0";
+  };
+
+  const head = `<thead class="text-[10px] uppercase tracking-wide text-slate-500">
+      ${groupRow}
+      <tr>
+        <th class="sticky ${headTop} z-10 border-b border-slate-200 bg-slate-50 px-2 py-1.5 text-left font-bold">Facility</th>
+        <th class="sticky ${headTop} z-10 border-b border-slate-200 bg-slate-50 px-2 py-1.5 text-left font-bold">MFL</th>
+        <th class="sticky ${headTop} z-10 border-b border-slate-200 bg-slate-50 px-2 py-1.5 text-left font-bold">County</th>
+        <th class="sticky ${headTop} z-10 border-b border-slate-200 bg-slate-50 px-2 py-1.5 text-left font-bold">Sub-county</th>
+        ${cols
+          .map(function (c) {
+            return `<th class="sticky ${headTop} z-10 border-b border-l border-slate-200 bg-slate-50 px-2 py-1.5 text-right font-bold normal-case text-slate-600" title="${escapeHtml(c.label)}">${escapeHtml(c.label.length > 26 ? c.label.slice(0, 25) + "…" : c.label)}</th>`;
+          })
+          .join("")}
+      </tr>
+    </thead>`;
+
+  const body = facs
+    .map(function (f) {
+      const zero = !f.values.some(function (v) {
+        return Number(v);
+      });
+      return `<tr class="border-t border-slate-100 ${zero ? "text-slate-300" : "text-slate-700"} hover:bg-sky-50/50">
+        <td class="px-2 py-1.5 text-[12px] font-medium">${escapeHtml(f.name)}</td>
+        <td class="px-2 py-1.5 text-[11px] text-slate-400">${escapeHtml(f.mfl)}</td>
+        <td class="px-2 py-1.5 text-[11px] text-slate-400">${escapeHtml(f.county)}</td>
+        <td class="px-2 py-1.5 text-[11px] text-slate-400">${escapeHtml(f.subcounty)}</td>
+        ${f.values
+          .map(function (v) {
+            const n = Number(v) || 0;
+            return `<td class="border-l border-slate-100 px-2 py-1.5 text-right text-[12px] tabular-nums ${n ? "font-semibold text-slate-800" : "text-slate-300"}">${num(v)}</td>`;
+          })
+          .join("")}
+      </tr>`;
+    })
+    .join("");
+
+  const foot = `<tfoot class="sticky bottom-0 bg-slate-800 text-white">
+      <tr>
+        <td colspan="4" class="px-2 py-2 text-[11px] font-bold uppercase tracking-wide">Project total (${facs.length} facilities)</td>
+        ${totals
+          .map(function (t) {
+            return `<td class="border-l border-slate-700 px-2 py-2 text-right text-[12px] font-bold tabular-nums">${num(t)}</td>`;
+          })
+          .join("")}
+      </tr>
+    </tfoot>`;
+
+  _msPanelShell(
+    title,
+    sub,
+    `<div class="overflow-auto" style="max-height:70vh">
+       <table class="w-full border-collapse">${head}<tbody>${body}</tbody>${foot}</table>
+     </div>`,
+  );
+
+  const note = document.getElementById("msFacilityNote");
+  if (data.note) {
+    note.textContent = data.note;
+    note.classList.remove("hidden");
+  }
+}
+
+// #22's drill-down is the DWAPI upload log, which the payload already
+// carries: which dockets were expected, which facilities have never
+// uploaded and which have lapsed.
+function _msRenderDwapiPanel(cov) {
+  const dockets = (cov.dockets || [])
+    .map(function (d) {
+      const hit = Number(d.reporting) || 0;
+      const exp = Number(d.expected) || 0;
+      return `<span class="rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700">${escapeHtml(String(d.docket || "—"))} <span class="text-sky-500">${hit}/${exp} &middot; ${d.pct != null ? d.pct + "%" : "—"}</span></span>`;
+    })
+    .join(" ");
+  const sub =
+    `<span class="font-semibold text-slate-700">${escapeHtml(cov.asOf || cov.latestMonthHuman || "latest upload")}</span>` +
+    ` &middot; <span class="font-semibold text-slate-700">${cov.reporting || 0}</span> of ${cov.expected || 0} facilities uploaded` +
+    (cov.pct != null
+      ? ` &middot; <span class="font-semibold text-slate-700">${cov.pct}%</span>`
+      : "") +
+    ` &middot; ${escapeHtml(cov.source || "")}`;
+  // This panel is a coverage GAP list, not a value grid: the roster tells
+  // us who *should* upload, so the useful detail is who didn't.
+  const facilityList = function (label, items, total, tone) {
+    const arr = items || [];
+    const count = total || arr.length;
+    const shown = arr
+      .map(function (f) {
+        const bits = [f.mfl, f.county].filter(Boolean).join(" · ");
+        return `<div class="flex flex-wrap items-baseline gap-2 border-b border-slate-100 py-1.5 last:border-0">
+          <span class="text-[12px] font-medium text-slate-700">${escapeHtml(f.name || "(unnamed)")}</span>
+          <span class="text-[11px] text-slate-400">${escapeHtml(bits)}</span>
+        </div>`;
+      })
+      .join("");
+    const more =
+      count > arr.length
+        ? `<div class="pt-2 text-[11px] italic text-slate-400">… and ${count - arr.length} more</div>`
+        : "";
+    return `<div class="border-t border-slate-100 px-5 py-3">
+      <div class="text-[11px] font-bold uppercase tracking-wide ${tone}">${escapeHtml(label)} · ${count}</div>
+      <div class="mt-1">${
+        arr.length
+          ? shown + more
+          : '<span class="text-[11px] text-slate-400">None</span>'
+      }</div>
+    </div>`;
+  };
+  _msPanelShell(
+    "#22 · Digital Health Systems & Electronic Reporting Coverage",
+    sub,
+    `<div class="px-5 py-3">
+       <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Coverage by docket</div>
+       <div class="mt-1.5 flex flex-wrap gap-1.5">${dockets || '<span class="text-[11px] text-slate-400">None reported</span>'}</div>
+     </div>
+     ${facilityList("Never uploaded", cov.never, cov.neverCount, "text-rose-600")}
+     ${facilityList("Lapsed — uploaded before, silent in the newest window", cov.lapsed, cov.lapsedCount, "text-amber-600")}`,
+  );
+}
+
 async function renderMilestoneTrackerPage() {
   // Hide the general top filter bar (county, subcounty, facility, period)
   const topFilters = document.getElementById("topFilters");
@@ -1059,7 +1411,10 @@ async function renderMilestoneTrackerPage() {
 
       return `<tr class="border-t border-slate-100 hover:bg-sky-50/40 transition">
         <td class="px-3 py-2.5 align-top">
-          <div class="text-[11px] font-semibold text-slate-400">#${escapeHtml(String(row.id))}</div>
+          <div class="flex items-start gap-1">
+            <div class="text-[11px] font-semibold text-slate-400">#${escapeHtml(String(row.id))}</div>
+            ${msRowMenuButton(row)}
+          </div>
         </td>
         <td class="px-3 py-2.5 align-top min-w-[220px]">
           <div class="text-[13px] font-semibold text-slate-800 leading-snug">${escapeHtml(row.name || row.masterName || "Milestone " + row.id)}</div>
@@ -1208,6 +1563,25 @@ async function renderMilestoneTrackerPage() {
       btn.addEventListener("click", function () {
         state.milestoneMonth = btn.getAttribute("data-ms-month");
         renderMilestoneTrackerPage();
+      });
+    });
+
+  // ── Bind the ⋮ "View data" menus ──
+  // The table is re-rendered wholesale on every tab/filter change, so the
+  // listeners are re-attached here alongside the month pills.  The menu and
+  // the panel themselves live on document.body and therefore survive it.
+  const rowById = {};
+  (activeMonth.rows || []).forEach(function (r) {
+    rowById[String(r.id)] = r;
+  });
+  elements.chartRoot
+    .querySelectorAll("[data-ms-rowmenu]")
+    .forEach(function (btn) {
+      btn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        const row = rowById[btn.getAttribute("data-ms-rowmenu")];
+        if (!row) return;
+        _msOpenRowMenu(btn, row, activeMonth.periodYm || "");
       });
     });
 
