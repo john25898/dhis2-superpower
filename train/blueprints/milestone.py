@@ -8,13 +8,13 @@ Parses local workbooks (in train/):
   2. Milestones Summary2.xlsx  (Summary2-style tracker layout + M1 seeds)
   3. UJTP DWAPI UPLOADS*.xlsx  (NDWH per-facility electronic-upload log;
      supplies the #22 reporting-coverage reading on the Baseline tab)
-  4. JAMII TEKELEZI*EID TEST OUTCOMES*.csv  (the programme's own EID
-     test-outcome line list; supplies the #12 EID reading on the M1 tab)
 
 Milestones 6-9, 11, 14, 15, 16 and 21 are measured from CHAK DHIS2 MOH 731
 returns (and KHIS national commodity returns for #21).  #22 is measured
-from the NDWH upload workbook above instead — see _dwapi_coverage() — and
-#12 from the JAMII TEKELEZI EID line list — see _eid_jt_coverage().
+from the NDWH upload workbook above — see _dwapi_coverage() — and #12 from
+the JAMII TEKELEZI EID test-outcome line list, whose figures were extracted
+once and are now held as the `_EID_*` constants below rather than re-read
+from the CSV on every build — see _eid_jt_coverage().
 
 Serves a single read-only API:  GET /api/milestone/data
 """
@@ -88,6 +88,82 @@ _FACILITY_CACHE_LOCK = threading.Lock()
 # auto-follow behaviour.  Env override: MILESTONE_BASELINE_PERIOD.
 _BASELINE_PERIOD = os.getenv("MILESTONE_BASELINE_PERIOD", "202608").strip()
 
+# ── CHAK DHIS2 reporting window ─────────────────────────────────────────
+# The tracker carries two project months for now — August (the pinned
+# Baseline) and September (M1) — so this is the list of months it shows.
+#
+# An EXPLICIT list, deliberately not LAST_2_MONTHS.  CHAK's relative windows
+# EXCLUDE the month in progress (see the note in services/dhis2.py), so a
+# relative window would mean something different every month without anyone
+# asking it to.  Both periods fall inside one calendar year, so the
+# cross-year workaround in services/dhis2.py is not triggered and the whole
+# window is still a single analytics request.
+#
+# This constant decides what is DISPLAYED.  What is PULLED is this list
+# widened by _metric_periods() to cover the quarter-to-date maths in #9 —
+# see the note there for why pulling only these two months would corrupt
+# that reading.
+#
+# Widen the tracker by adding a month id here ('202608;202609;202610'), and
+# matching it to a Payment Schedule sheet in the FAA workbook.
+_METRIC_PERIODS = os.getenv("MILESTONE_PERIODS", "202608;202609").strip()
+
+
+def _metric_periods():
+    """The window to PULL: `_METRIC_PERIODS` widened for the quarter maths.
+
+    #9 (IIT) is *interrupted patients ÷ (TX_CURR at the previous quarter's
+    close + TX_NEW for the quarter to date)*, so the denominator reaches
+    back past the months on screen.  Pulling only `_METRIC_PERIODS` drops
+    July out of the August and September denominators — same numerator, a
+    third of the denominator — and the reading jumps from 41.7% to 83.5%,
+    i.e. a number that is an artefact of the fetch window rather than of the
+    data.  So each requested month also drags in its quarter's earlier
+    months and that quarter's predecessor's close.
+
+    For 202608;202609 that is 202606;202607;202608;202609 — the two months
+    on screen plus June and July, which the arithmetic reads.  Four months
+    of LAST_12_MONTHS, in one CHAK request, and it follows
+    `_METRIC_PERIODS` so adding a month there cannot quietly re-break #9.
+    """
+    wanted = set()
+    for part in _METRIC_PERIODS.split(";"):
+        year, month = _pe_key(part)
+        if not year or not month:
+            continue
+        wanted.add(f"{year:04d}{month:02d}")
+        q_year, q_month = _prev_quarter_close(year, month)
+        wanted.add(f"{q_year:04d}{q_month:02d}")
+        for qy, qm in _quarter_months_to(year, month):
+            wanted.add(f"{qy:04d}{qm:02d}")
+    return ";".join(sorted(wanted))
+
+# ── Disk snapshot of the last good payload ──────────────────────────────
+# The in-memory cache is empty for the whole of every restart, and a cold
+# build parses both FAA workbooks and pulls CHAK DHIS2 for all 259 Daraja
+# facilities in one analytics call (measured ~82 s on the box; the note on
+# _ensure_payload below records a 380 s worst case).  Through all of it the
+# route answers 202 "warming", so the tracker showed nothing for a minute or
+# more after every deploy.
+#
+# So the last GOOD payload is written to disk and read back at boot: the
+# first request after a restart is answered instantly from the snapshot
+# while a daemon thread rebuilds the live one.  Same idea as the KHIS
+# commodity cache further down.
+#
+# The file sits under train/data/ and is deliberately NOT committed.  A
+# deploy is `git reset --hard` (see deploy/deploy.sh), which leaves untracked
+# files alone, so the snapshot survives the deploy and is refreshed in place.
+# A missing, unreadable or over-age snapshot just means the old cold start —
+# nothing at runtime depends on it being there.  Delete it to force a
+# rebuild.
+_PAYLOAD_SNAPSHOT = BASE_DIR / "data" / "_milestone_payload.json"
+# Refuse a snapshot older than this: a week-old reading served as if it were
+# live would be worse than a slow start.  Env MILESTONE_SNAPSHOT_MAX_AGE.
+_PAYLOAD_SNAPSHOT_MAX_AGE = float(
+    os.getenv("MILESTONE_SNAPSHOT_MAX_AGE", str(7 * 24 * 3600))
+)
+
 FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 
@@ -104,23 +180,40 @@ _DWAPI_ROSTER_SHEET = "ndwh_"
 # accepted as the log.
 _DWAPI_DATA_SHEET = "Data"
 
-# ── Milestone 12 — EID testing coverage (JAMII TEKELEZI line list) ──────
-# The programme re-exports this line list from the NASCOP EID website every
-# reporting month and the filename carries the extract window ("… FOR IN
-# 01SEP2026  08OCT2026 (1).csv"), so it is GLOBBED and the newest match
-# wins — dropping next month's export into train/ is enough.
-EID_JT_GLOB = "JAMII TEKELEZI*EID TEST OUTCOMES*.csv"
-# The PCR Type values that mark an infant's FIRST PCR.  "Birth testing (0-2
-# weeks) or first contact" is the dominant one; the EID system also files a
-# few first tests under "Initial PCR (6 week or first contact)", which is
-# the same draw in different words.  Every other value on the sheet (2nd/3rd/
-# 4th PCR, Confirmatory PCR, Sample redraw) is a repeat and is excluded.
-_EID_INITIAL_PCRS = (
-    "Birth testing (0-2 weeks) or first contact",
-    "Initial PCR (6 week or first contact)",
+# ── Milestone 12 — EID testing coverage (figures kept in code) ──────────
+# The reading is extracted ONCE from the programme's own EID test-outcome
+# line list and is then held here as plain numbers, on purpose:
+#
+#   * the export is a snapshot of ONE closed reporting month.  Re-reading
+#     the same file on every build re-derives a number that is already
+#     known, and the number cannot change until a new export arrives;
+#   * it must not be shipped in the image.  The line list is patient-level
+#     (System ID, DOB, sex, mother's CCC number, mother's last viral load,
+#     facility, result) and this repository is public;
+#   * in fact it never WAS shipped — the CSV was untracked, so the deploy
+#     (a `git reset --hard` to the repo) never put it on the server and the
+#     tab read "no line list found" on the live site.
+#
+# Nothing at runtime reads the CSV any more.  To move the reading, replace
+# the figures below — that is the whole job.
+#
+# The values are for the export whose extract window opens in September 2026
+# ("… FOR  IN 01SEP2026  08OCT2026 (1).csv"): of its 200 rows, 58 carried an
+# initial PCR, 40 of those 58 were COLLECTED outside September (the extract
+# window is keyed on Date Tested, not Date Collected) and all 18 that were
+# collected in September were collected at 0-12 months of age.
+_EID_REPORTING_YM = (2026, 9)      # the month the extract OPENS in
+_EID_SOURCE_FILE = (
+    "JAMII TEKELEZI  PROGRAM EID TEST OUTCOMES FOR  IN 01SEP2026  "
+    "08OCT2026 (1).csv"
 )
-# "tested by 12 months of age" — completed months at sample collection.
-_EID_MAX_AGE_MONTHS = 12
+_EID_ROWS = 200              # rows in the export
+_EID_DENOMINATOR = 18        # initial PCRs COLLECTED in the reporting month
+_EID_NUMERATOR = 18          # …whose age at collection was 0-12 months
+_EID_OVER_12 = 0             # initial PCRs collected older than 12 months
+_EID_UNKNOWN_AGE = 0         # initial PCRs with an unusable DOB/collect date
+_EID_OUT_OF_MONTH = 40       # initial PCRs collected outside the month
+_EID_COLLECTION_WINDOW = "2026-09-01 \u2026 2026-09-17"
 
 # Payment-status values a milestone row can take (Summary2 seeds only).
 _STATUS_SET = {"Fully Paid", "Partially Paid", "Not Paid"}
@@ -137,16 +230,76 @@ def register_milestone_blueprint(app):
     _start_prewarm()
 
 
+def _load_snapshot():
+    """Seed the in-memory cache from the last good on-disk payload.
+
+    Returns True when a usable snapshot was loaded.  It is loaded **stale**
+    on purpose: `_ensure_payload()` then answers the first request from it
+    immediately and kicks off a background refresh, so a restart paints the
+    tracker at once instead of answering 202 "warming" for a minute.
+
+    Never raises — a broken snapshot must degrade to the old cold start and
+    nothing else.
+    """
+    global _MILESTONE_CACHE, _MILESTONE_CACHE_AT
+    if _MILESTONE_CACHE is not None:
+        return True
+    try:
+        if not _PAYLOAD_SNAPSHOT.exists():
+            return False
+        age = time.time() - _PAYLOAD_SNAPSHOT.stat().st_mtime
+        if age > _PAYLOAD_SNAPSHOT_MAX_AGE:
+            print(f"[MILESTONE] Persisted snapshot is {age / 3600:.1f}h old "
+                  f"— ignoring it and rebuilding from source")
+            return False
+        with open(_PAYLOAD_SNAPSHOT, encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if not isinstance(payload, dict) or not payload.get("months"):
+            return False
+        _MILESTONE_CACHE = payload
+        # Backdate the timestamp so _fresh() says "stale" and the normal
+        # serve-then-refresh path runs; the client still gets a full payload
+        # on its very first request.
+        _MILESTONE_CACHE_AT = time.time() - _MILESTONE_TTL - 1
+        print(f"[MILESTONE] Serving the persisted snapshot "
+              f"(built {payload.get('generated')}) — refreshing behind it")
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] Persisted snapshot unusable ({exc}); "
+              f"cold start as before")
+        return False
+
+
+def _save_snapshot(payload):
+    """Write the last good payload to disk.  Best effort; never raises.
+
+    Written to a temp file and moved into place so a reader can never see a
+    half-written snapshot.
+    """
+    try:
+        _PAYLOAD_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _PAYLOAD_SNAPSHOT.with_name(_PAYLOAD_SNAPSHOT.name + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, default=str)
+        os.replace(tmp, _PAYLOAD_SNAPSHOT)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] Persisted snapshot write failed: {exc}")
+
+
 def _start_prewarm():
     """Warm the payload cache in a daemon thread at boot.
 
-    A cold build loads both FAA workbooks and pulls LAST_12_MONTHS of
-    MOH 731 for all 259 Daraja org units from CHAK DHIS2 in one analytics
-    call (measured ~47 s locally, materially slower on a shared Render
-    CPU).  Running that inside the first browser request exceeded the
-    gunicorn worker timeout, Render answered 502, and the tracker page
-    showed "Failed to load milestone data".  Pre-warming moves the cost
-    off the request path so the first user request is a cache hit.
+    A cold build loads both FAA workbooks and pulls 12 months of MOH 731 for
+    all 259 Daraja org units from CHAK DHIS2 in one analytics call (measured
+    ~47 s locally, materially slower on a shared Render CPU).  Running that
+    inside the first browser request exceeded the gunicorn worker timeout,
+    Render answered 502, and the tracker page showed "Failed to load
+    milestone data".  Pre-warming moves the cost off the request path so the
+    first user request is a cache hit.
+
+    Before the thread starts, the payload from the previous process is read
+    back off disk (see _PAYLOAD_SNAPSHOT), so a restart — every deploy is
+    one — has something to serve while that fresh build runs.
 
     The thread is a daemon: a failed warm-up must never block or crash
     boot, and the request path still rebuilds on demand if it is missed.
@@ -155,6 +308,8 @@ def _start_prewarm():
     if _PREWARM_STARTED:
         return
     _PREWARM_STARTED = True
+
+    _load_snapshot()
 
     def _warm():
         # Let the WSGI server finish binding and answer the platform's
@@ -1002,6 +1157,9 @@ def _pe_key(pe):
 def _fetch_daraja_metrics_data(ou_ids):
     """Pull all MOH 731 DEs for the Daraja OU set (one analytics request).
 
+    The window is `_metric_periods()` — the tracker's own months wide
+    enough for the quarter-to-date maths — not LAST_12_MONTHS, so the
+    response only carries periods anything is scored from.
     Returns {de_id: {period_label: value}} — {} if the server is
     unreachable or returned nothing (caller degrades gracefully).
     """
@@ -1009,7 +1167,7 @@ def _fetch_daraja_metrics_data(ou_ids):
         from services.dhis2 import _chak_analytics_fetch
 
         return _chak_analytics_fetch(
-            _ALL_METRIC_DE_IDS, list(ou_ids), "LAST_12_MONTHS"
+            _ALL_METRIC_DE_IDS, list(ou_ids), _metric_periods()
         ) or {}
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK DHIS2 metrics fetch failed: {exc}")
@@ -1019,14 +1177,14 @@ def _fetch_daraja_metrics_data(ou_ids):
 def _fetch_iit_numerator(ou_ids):
     """#9 numerator — the 'Interruption in Treatment' outcomes of Tx_ML.
 
-    Returns {period_label: value} across the last 12 months so the tracker
+    Returns {period_label: value} across `_metric_periods()` so the tracker
     can pick the anchor month straight out of it.
     """
     try:
         from services.dhis2 import _chak_analytics_fetch_coc
 
         return _chak_analytics_fetch_coc(
-            _DE_TX_ML_OUTCOMES, list(ou_ids), "LAST_12_MONTHS",
+            _DE_TX_ML_OUTCOMES, list(ou_ids), _metric_periods(),
             name_prefixes=(_IIT_OUTCOME_PREFIX,),
         ) or {}
     except Exception as exc:  # noqa: BLE001
@@ -1043,7 +1201,7 @@ def _fetch_coc_breakdowns(ou_ids):
     are requested together: their category combos are distinct, so the 48
     COC uids cannot collide.
 
-    Returns {period_name: {coc_uid: value}} across the last 12 months, so
+    Returns {period_name: {coc_uid: value}} across `_metric_periods()`, so
     the tracker can read the anchor month straight out of it — {} on any
     failure (including "the instance has no values for these elements").
     """
@@ -1052,7 +1210,7 @@ def _fetch_coc_breakdowns(ou_ids):
 
         return _chak_analytics_coc_cells(
             [_DE_TX_CURR_DSD, _DE_TX_CURR_TPT_INIT, _DE_TX_CURR_AHD_SCREEN],
-            list(ou_ids), "LAST_12_MONTHS",
+            list(ou_ids), _metric_periods(),
         ) or {}
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK COC breakdown fetch failed: {exc}")
@@ -1853,78 +2011,15 @@ def _dwapi_coverage():
 # The registry asks for "Proportion of HIV exposed infants receiving EID
 # testing as per national algorithm", target >95%, and is verified off the
 # NASCOP EID website — NOT CHAK DHIS2 and NOT the three 'Daraja Milestone-*'
-# data sets, so the reading comes from the programme's own EID line list
-# export.  See _eid_jt_coverage().
+# data sets, so the reading comes from the programme's own EID line list.
+#
+# That line list is NOT read at runtime any more.  Its figures were
+# extracted once and now live as the `_EID_*` constants near the top of this
+# module — see the note there.  See _eid_jt_coverage().
 # ══════════════════════════════════════════════════════════════════════
 
-def _eid_jt_latest_file():
-    """Newest JAMII TEKELEZI EID line list in train/, or None.
-
-    Globbed rather than hard-coded for the same reason as the DWAPI
-    workbook: the file is re-issued every reporting month with the extract
-    window baked into its name, so the newest mtime is always the freshest
-    snapshot and dropping next month's export in is enough.
-    """
-    try:
-        found = sorted(
-            BASE_DIR.glob(EID_JT_GLOB),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-    except OSError:
-        return None
-    return found[0] if found else None
-
-
-def _eid_reporting_ym(path):
-    """(year, month) of the extract window from the file name, or None.
-
-    '… FOR  IN 01SEP2026  08OCT2026 (1).csv' -> (2026, 9).  The month the
-    extract OPENS in is the reporting month, and reading it off the name
-    lets the reading move to the tab whose own sheet covers that month
-    without a code change when next month's export arrives.
-    """
-    m = re.search(r"(\d{1,2})\s*([A-Za-z]{3})[A-Za-z]*\s*(\d{4})",
-                  path.name if path else "")
-    if not m:
-        return None
-    ord_ = _MONTH_ORD.get(m.group(2).lower()[:3])
-    if ord_ is None:
-        return None
-    return (int(m.group(3)), ord_ + 1)
-
-
-def _eid_parse_date(value):
-    """A date from the line list's 'DD-MM-YY' shape, or None."""
-    text = str(value or "").strip()
-    if not text:
-        return None
-    for fmt in ("%d-%m-%y", "%d-%m-%Y", "%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    return None
-
-
-def _eid_age_months(dob, collected):
-    """Completed months between DOB and sample collection, or None.
-
-    Day-precise: a 13-08-2025 birth collected on 21-08-2026 is 12 months
-    old (the 13th falls after the 21st), so the anniversary itself counts
-    as the Nth month.  The sheet's own 'Age (Months)' column is a
-    fractional figure the sheet computes off its own clock and disagrees
-    with DOB on a couple of rows, so it is deliberately NOT used.
-    """
-    if not dob or not collected:
-        return None
-    return ((collected.year - dob.year) * 12
-            + (collected.month - dob.month)
-            - (1 if collected.day < dob.day else 0))
-
-
 def _eid_jt_coverage():
-    """Milestone 12's reading off the JAMII TEKELEZI EID line list.
+    """Milestone 12's reading — the EID figures embedded in this module.
 
     The indicator is "proportion of HIV-exposed infants with an initial PCR
     (EID) test done who were tested by 12 months of age":
@@ -1950,19 +2045,28 @@ def _eid_jt_coverage():
     those samples were collected in September, so without this filter the
     reading would silently absorb the two preceding months' samples.
 
-    `status` is 'ok' only when the file parsed and carried at least one
-    initial PCR, so a missing or renamed export degrades to no metric
-    rather than a misleading zero.
+    The arithmetic is kept here rather than the percentage being written out
+    as a literal, so the band and the wording still follow from the numbers
+    and there is exactly one place — the `_EID_*` constants — to update when
+    a new export arrives.
     """
+    denominator = _EID_DENOMINATOR
+    numerator = _EID_NUMERATOR
+    over12 = _EID_OVER_12
+    unknown_age = _EID_UNKNOWN_AGE
+    out_of_month = _EID_OUT_OF_MONTH
+    human = _month_human(_EID_REPORTING_YM)
+    window = _EID_COLLECTION_WINDOW
+
     out = {
         "status": "empty",
         "source": ("JAMII TEKELEZI programme — NASCOP EID website "
                    "test-outcome line list"),
-        "file": "",
-        "period": None,
-        "asOf": None,
-        "denominator": 0,
-        "numerator": 0,
+        "file": _EID_SOURCE_FILE,
+        "period": human or None,
+        "asOf": human or None,
+        "denominator": denominator,
+        "numerator": numerator,
         "pct": None,
         "unlock": 0,
         "band": "",
@@ -1970,138 +2074,55 @@ def _eid_jt_coverage():
         "formula": "",
         "note": "",
     }
-    path = _eid_jt_latest_file()
-    if path is None:
+    if not denominator:
         out["note"] = (
-            "No JAMII TEKELEZI EID test-outcome line list was found in the "
-            "app folder, so #12 (Integrated eVTP Services Cascade) cannot "
-            "be scored this month."
+            f"{human or 'The reporting month'} carries no initial PCR, so "
+            "the ratio has no denominator this month."
         )
         return out
-    out["file"] = path.name
-    try:
-        with path.open(newline="", encoding="utf-8-sig") as fh:
-            rows = list(csv.DictReader(fh))
-        if not rows:
-            out["note"] = f"{path.name} carried no rows."
-            return out
 
-        def cell(row, name):
-            """Case-insensitive column read — the export's header spacing
-            has drifted between re-issues, so the name is normalised."""
-            for key, value in row.items():
-                if key and key.strip().lower() == name:
-                    return value
-            return None
-
-        reporting_ym = _eid_reporting_ym(path)
-        initial = [r for r in rows
-                   if str(cell(r, "pcr type") or "").strip()
-                   in _EID_INITIAL_PCRS]
-        # Keep only the samples COLLECTED in the reporting month.  A row
-        # collected before it (or in the few days the extract overshoots
-        # past it) belongs to another month's return.  If the file name
-        # gives no month, the filter is skipped rather than emptied.
-        out_of_month = 0
-        if reporting_ym:
-            kept = []
-            for row in initial:
-                collected = _eid_parse_date(cell(row, "date collected"))
-                if (collected
-                        and collected.year == reporting_ym[0]
-                        and collected.month == reporting_ym[1]):
-                    kept.append(row)
-                else:
-                    out_of_month += 1
-            initial = kept
-        unknown_age = 0
-        over12 = 0
-        numerator = 0
-        for row in initial:
-            months = _eid_age_months(
-                _eid_parse_date(cell(row, "dob")),
-                _eid_parse_date(cell(row, "date collected")),
-            )
-            if months is None:
-                unknown_age += 1
-                continue
-            if months > _EID_MAX_AGE_MONTHS:
-                over12 += 1
-            elif months >= 0:
-                numerator += 1
-
-        denominator = len(initial)
-        if not denominator:
-            out["status"] = "empty"
-            _human = _month_human(reporting_ym)
-            out["note"] = (
-                f"{path.name} carried no initial PCR ('"
-                f"{_EID_INITIAL_PCRS[0]}') rows"
-                + (f" collected in {_human}" if _human else "")
-                + ", so the ratio has no denominator this month."
-            )
-            return out
-
-        pct = numerator / denominator * 100.0
-        unlock, band = _unlock_bands("eid", pct)
-
-        # Collection window of the rows that COUNTED, so the tab states
-        # the span the ratio actually covers rather than the extract's own
-        # (Date Tested) window.
-        stamps = [d for d in (
-            _eid_parse_date(cell(r, "date collected")) for r in initial
-        ) if d]
-        window = (f"{min(stamps).isoformat()} … {max(stamps).isoformat()}"
-                  if stamps else "")
-
-        out.update({
-            "status": "ok",
-            "period": _month_human(_eid_reporting_ym(path)),
-            "asOf": _month_human(_eid_reporting_ym(path)) or None,
-            "denominator": denominator,
-            "numerator": numerator,
-            "pct": round(pct, 1),
-            "unlock": unlock,
-            "band": band,
-            "actual": (f"{numerator} of {denominator} initial PCRs "
-                       f"collected at 0\u201312 months"),
-            "rows": len(rows),
-            "monthRows": denominator + over12 + unknown_age,
-            "outOfMonth": out_of_month,
-            "over12": over12,
-            "unknownAge": unknown_age,
-            "collectionWindow": window,
-            "formula": (
-                "Infants whose initial PCR sample was collected at 0\u201312 "
-                "months \u00f7 infants with an initial PCR collected at any "
-                "age \u00d7 100. Line list (JAMII TEKELEZI EID test "
-                "outcomes, exported from the NASCOP EID website): keep PCR "
-                "Type = 'Birth testing (0-2 weeks) or first contact' (or "
-                "'Initial PCR (6 week or first contact)'), keep only rows "
-                "whose Date Collected is in the reporting month, and drop "
-                "every 2nd/3rd/4th, confirmatory and redraw row; "
-                "age = Date Collected \u2212 DOB. Source: " + path.name
-            ),
-            "note": (
-                f"{numerator} of {denominator} HIV-exposed infants whose "
-                f"initial PCR sample was collected in the reporting month "
-                f"were tested by 12 months ({pct:.1f}%)"
-                + (f"; {over12} were older than 12 months at collection"
-                   if over12 else "")
-                + (f"; {unknown_age} had an unusable DOB or collection date"
-                   if unknown_age else "")
-                + (f"; {out_of_month} initial-PCR rows were collected "
-                   f"outside the reporting month and excluded"
-                   if out_of_month else "")
-                + (f". Samples counted were collected {window}."
-                   if window else ".")
-            ),
-        })
-        return out
-    except Exception as exc:  # noqa: BLE001
-        out["status"] = "error"
-        out["note"] = f"Could not read {path.name}: {exc}"
-        return out
+    pct = numerator / denominator * 100.0
+    unlock, band = _unlock_bands("eid", pct)
+    out.update({
+        "status": "ok",
+        "pct": round(pct, 1),
+        "unlock": unlock,
+        "band": band,
+        "actual": (f"{numerator} of {denominator} initial PCRs "
+                   f"collected at 0\u201312 months"),
+        "rows": _EID_ROWS,
+        "monthRows": denominator + over12 + unknown_age,
+        "outOfMonth": out_of_month,
+        "over12": over12,
+        "unknownAge": unknown_age,
+        "collectionWindow": window,
+        "formula": (
+            "Infants whose initial PCR sample was collected at 0\u201312 "
+            "months \u00f7 infants with an initial PCR collected at any "
+            "age \u00d7 100. Line list (JAMII TEKELEZI EID test "
+            "outcomes, exported from the NASCOP EID website): keep PCR "
+            "Type = 'Birth testing (0-2 weeks) or first contact' (or "
+            "'Initial PCR (6 week or first contact)'), keep only rows "
+            "whose Date Collected is in the reporting month, and drop "
+            "every 2nd/3rd/4th, confirmatory and redraw row; "
+            "age = Date Collected \u2212 DOB. Source: " + _EID_SOURCE_FILE
+        ),
+        "note": (
+            f"{numerator} of {denominator} HIV-exposed infants whose "
+            f"initial PCR sample was collected in the reporting month "
+            f"were tested by 12 months ({pct:.1f}%)"
+            + (f"; {over12} were older than 12 months at collection"
+               if over12 else "")
+            + (f"; {unknown_age} had an unusable DOB or collection date"
+               if unknown_age else "")
+            + (f"; {out_of_month} initial-PCR rows were collected "
+               f"outside the reporting month and excluded"
+               if out_of_month else "")
+            + (f". Samples counted were collected {window}."
+               if window else ".")
+        ),
+    })
+    return out
 
 
 def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
@@ -3614,12 +3635,11 @@ def _build_payload():
     # #22 it is attached here rather than inside _compute_daraja_metrics.
     #
     # It lands on the tab whose own project month IS the month the extract
-    # opens in — September 2026 for the "01SEP2026 08OCT2026" export, i.e.
-    # the M1 tab — and never on the Baseline, which is pinned to August.
-    # Reading the month off the file name keeps that mapping automatic when
-    # next month's export replaces this one.
+    # covers — September 2026, i.e. the M1 tab — and never on the Baseline,
+    # which is pinned to August.  That month is `_EID_REPORTING_YM`, read
+    # straight from the figures embedded at the top of this module.
     eid = _eid_jt_coverage()
-    _eid_ym = _eid_reporting_ym(_eid_jt_latest_file())
+    _eid_ym = _EID_REPORTING_YM
     if eid.get("status") == "ok" and eid.get("pct") is not None:
         _eid_metric = _metric_doc(
             12,
@@ -3742,6 +3762,12 @@ def _build_locked():
         rebuilt = kept
     _MILESTONE_CACHE = rebuilt
     _MILESTONE_CACHE_AT = time.time()
+    # Persist only a payload that actually scored, so the next restart has
+    # something worth serving.  A build that came back empty/error is still
+    # cached in memory (the UI must see it), but it is not written to disk.
+    if ((rebuilt.get("khis") or {}).get("status") == "ok"
+            and rebuilt.get("months")):
+        _save_snapshot(rebuilt)
     return _MILESTONE_CACHE
 
 
@@ -3760,7 +3786,12 @@ def _spawn_refresh():
         global _BACKGROUND_REFRESH
         try:
             with _BUILD_LOCK:
-                _build_locked()
+                # Re-check under the lock: the boot pre-warm (or a request
+                # that arrived with ?refresh=1) may have completed a build
+                # while this thread was queued, and paying for a second one
+                # would only hammer CHAK for a payload we already have.
+                if not _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
+                    _build_locked()
         except Exception as exc:  # noqa: BLE001
             print(f"[MILESTONE] Background refresh failed: {exc}")
         finally:
@@ -3791,12 +3822,14 @@ def _ensure_payload(force=False):
                           _PayloadWarming so the request answers instantly
 
     The last case is the important one.  A cold build loads both FAA workbooks
-    and pulls LAST_12_MONTHS of MOH 731 from CHAK; when CHAK is unreachable
-    that could take minutes.  Blocking the request on _BUILD_LOCK while it ran
-    is exactly what made the Milestone tab hang for 2-6 minutes (measured
-    380 s).  The route now answers 202 "warming" instead and the client
+    and pulls CHAK DHIS2 for the Daraja facilities; when that works it still
+    takes about a minute (measured 82 s on the box) and when CHAK is
+    unreachable it can take minutes (measured 380 s).  Blocking the request on
+    _BUILD_LOCK while it ran is exactly what made the Milestone tab hang for
+    2-6 minutes.  The route answers 202 "warming" instead and the client
     re-polls, so the tab is usable immediately and fills in when the build
-    lands.
+    lands — and after the first build the payload is on disk, so a restart
+    (every deploy is one) is answered from the snapshot at once.
     """
     if not force and _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
         return _MILESTONE_CACHE
@@ -3809,10 +3842,13 @@ def _ensure_payload(force=False):
 
     if _MILESTONE_CACHE is not None:
         # Serve the last good payload immediately; refresh behind the scenes.
-        with _BUILD_LOCK:
-            if _fresh(_MILESTONE_CACHE, _MILESTONE_CACHE_AT):
-                return _MILESTONE_CACHE
-            _spawn_refresh()
+        # Do NOT take _BUILD_LOCK: the boot pre-warm holds it for the whole
+        # of a cold build (a minute or more), and waiting here would put the
+        # multi-minute hang straight back in front of the user.  Serving a
+        # stale payload is the point — the client polls and picks up the
+        # fresh one.  _spawn_refresh() is safe lock-free: it de-dupes on its
+        # own lock and re-checks freshness under _BUILD_LOCK.
+        _spawn_refresh()
         return _MILESTONE_CACHE
 
     # Nothing cached.  Do NOT take _BUILD_LOCK: the boot pre-warm (or another
