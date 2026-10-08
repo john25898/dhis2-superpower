@@ -1324,10 +1324,14 @@ def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
     band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
-          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21).  pct is the 0–100
-          achievement measure.
+          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), 'binary'
+          (one-time ids 1–4).  pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
+    if band == "binary":  # ids 1–4 — DHIS2-adjudicated 0 / 100
+        if pct >= 100:
+            return 100, "Performance 100% \u2014 one-time milestone delivered"
+        return 0, "Performance 0% \u2014 one-time milestone not delivered"
     if band == "dsd":  # id 10 — registry: ≥90 / 70–89 / 50–69 / <50
         if pct >= 90:
             return 100, "\u226590% enrolled in a DSD model"
@@ -2700,6 +2704,188 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         return khis
 
 
+# ══════════════════════════════════════════════════════════════════════
+# One-time milestones M-1 … M-4 — the GOR's binary verdict
+#
+# These four are NOT measured off the facility MOH 731 returns.  Their
+# performance is a one-off adjudication recorded in the monthly data set
+# "Daraja Milestone-One Time" (CiBlrDp37eC), which is assigned to the
+# SINGLE org unit Kenya (level 1, HfVjCurKxh2) rather than to the 259
+# Daraja facilities — so it is read from the data-value store, not from
+# the facility analytics roll-up.
+#
+# Each M-x element carries the shared category combo "Daraja Milestone
+# Metrics" (yfJs1ON43xK) whose "Performance Percent" option
+# (V5IfLBcbfno) is the verdict:
+#
+#     100  →  the milestone was delivered: it unlocks the full payment
+#       0  →  the milestone was not delivered: it unlocks nothing
+#
+# The value is a verdict rather than a monthly measure, so the LATEST
+# period carrying one is treated as the standing result and layered onto
+# every month tab.
+# ══════════════════════════════════════════════════════════════════════
+_MILESTONE_ONE_TIME_OU = "HfVjCurKxh2"
+_MILESTONE_PERF_CATCOMBO = "yfJs1ON43xK"
+_MILESTONE_PERF_OPTION = "V5IfLBcbfno"
+_MILESTONE_PERF_COC_FALLBACK = "wn0fO6RMY7W"
+_MILESTONE_PERF_ELEMENTS = {
+    1: "mTecQoXsf2o",   # M-1: Milestone Plan and Workplan
+    2: "gyrDO1xkxwn",   # M-2: Program Personnel
+    3: "QrS7RPeMOkI",   # M-3: MEL Plan and DQA Protocol
+    4: "UpkDyr7OSJo",   # M-4: Risk Analysis, Security Plan, IT Audit
+}
+
+_MILESTONE_PERF_CACHE = None
+_MILESTONE_PERF_CACHE_AT = 0.0
+_MILESTONE_PERF_ID = None
+_MILESTONE_PERF_TTL = 300.0
+
+
+def _milestone_perf_coc():
+    """uid of the 'Performance Percent' category option combo (cached).
+
+    Resolved from metadata rather than trusted from a constant, so a
+    re-import that mints a new combo id still reads the right cell; the
+    known id is only a fallback when CHAK is unreachable.
+    """
+    global _MILESTONE_PERF_ID
+    if _MILESTONE_PERF_ID:
+        return _MILESTONE_PERF_ID
+    try:
+        from requests.auth import HTTPBasicAuth
+
+        from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
+
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+        resp = chak_get(
+            "/categoryOptionCombos.json",
+            {
+                "filter": f"categoryCombo.id:eq:{_MILESTONE_PERF_CATCOMBO}",
+                "fields": "id,categoryOptions[id]",
+                "paging": "false",
+            },
+            read_timeout=30,
+            auth=auth,
+        )
+        if resp.ok:
+            for coc in resp.json().get("categoryOptionCombos") or []:
+                opts = coc.get("categoryOptions") or []
+                if (len(opts) == 1
+                        and opts[0].get("id") == _MILESTONE_PERF_OPTION):
+                    _MILESTONE_PERF_ID = coc.get("id")
+                    break
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] Performance-Percent combo lookup failed: {exc}")
+    if not _MILESTONE_PERF_ID:
+        _MILESTONE_PERF_ID = _MILESTONE_PERF_COC_FALLBACK
+    return _MILESTONE_PERF_ID
+
+
+def _fetch_milestone_performance():
+    """Latest 'Performance Percent' verdict per one-time milestone id.
+
+    Returns {id: {'pct': 100|0, 'period': '202609', 'asOf': 'September
+    2026', 'element': uid}}.  {} when CHAK is unreachable or nothing has
+    been adjudicated — the caller then leaves those rows on their "—".
+    """
+    global _MILESTONE_PERF_CACHE, _MILESTONE_PERF_CACHE_AT
+    now = time.time()
+    if (_MILESTONE_PERF_CACHE is not None
+            and now - _MILESTONE_PERF_CACHE_AT < _MILESTONE_PERF_TTL):
+        return _MILESTONE_PERF_CACHE
+    out = {}
+    try:
+        from requests.auth import HTTPBasicAuth
+
+        from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
+
+        auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+        perf_coc = _milestone_perf_coc()
+        latest = {}   # element uid -> ((year, month), period, value)
+        # CHAK rejects a semicolon-separated `dataElement` list (409 E2001),
+        # so each element is read on its own — four cheap point reads.
+        for uid in sorted(set(_MILESTONE_PERF_ELEMENTS.values())):
+            resp = chak_get(
+                "/dataValueSets.json",
+                {
+                    "dataElement": uid,
+                    "orgUnit": _MILESTONE_ONE_TIME_OU,
+                    "startDate": "2024-01-01",
+                    "endDate": date.today().isoformat(),
+                },
+                read_timeout=120,
+                auth=auth,
+            )
+            if not resp.ok:
+                print(f"[MILESTONE] Performance fetch HTTP {resp.status_code}"
+                      f" on {uid}")
+                continue
+            for v in (resp.json() or {}).get("dataValues") or []:
+                if v.get("categoryOptionCombo") != perf_coc:
+                    continue
+                if v.get("value") in (None, ""):
+                    continue
+                pe = str(v.get("period") or "")
+                try:
+                    val = float(v["value"])
+                except (TypeError, ValueError):
+                    continue
+                prev = latest.get(uid)
+                if prev and _pe_key(prev[1]) >= _pe_key(pe):
+                    continue      # an older period never displaces a newer one
+                latest[uid] = (_pe_key(pe), pe, val)
+        for mid, uid in _MILESTONE_PERF_ELEMENTS.items():
+            hit = latest.get(uid)
+            if not hit:
+                continue
+            out[mid] = {
+                "pct": hit[2],
+                "period": hit[1],
+                "asOf": _month_human(hit[0]) or hit[1],
+                "element": uid,
+            }
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] Performance fetch failed: {exc}")
+        return out
+    _MILESTONE_PERF_CACHE = out
+    _MILESTONE_PERF_CACHE_AT = now
+    return out
+
+
+def _assign_milestone_perf(months, perf_by_id):
+    """Layer the one-time M-1…M-4 verdict onto the month tabs' rows.
+
+    Applied AFTER every `_attach_perf` pass, because that helper strips
+    `perf` off any row it was not handed — running this first would be
+    undone.  A GOR-verified Summary2 seed keeps its own Alerts chip.
+    """
+    if not perf_by_id:
+        return
+    for month in months:
+        for row in month.get("rows") or []:
+            rec = perf_by_id.get(row.get("id"))
+            if not rec:
+                continue
+            unlock, band = _unlock_bands("binary", rec["pct"])
+            row["perf"] = _metric_doc(
+                row["id"],
+                row.get("name") or row.get("masterName") or "",
+                rec.get("asOf") or rec.get("period") or "latest",
+                "100% \u2014 one-time milestone delivered",
+                f"Performance {rec['pct']:,.0f}%",
+                rec["pct"], unlock, band,
+                "CHAK DHIS2 \u00b7 data set 'Daraja Milestone-One Time' \u00b7 "
+                f"element {rec['element']} \u00b7 category option "
+                "'Performance Percent' (100 = delivered, 0 = not)",
+            )
+            if not row.get("alerts"):
+                alert = _alert_for_unlock(unlock)
+                if alert:
+                    row["alerts"] = alert
+                    row["alertsSource"] = "dhis2"
+
+
 def _attach_perf(rows, metrics):
     """Overlay a live CHAK DHIS2 baseline on a month's rows.
 
@@ -2924,6 +3110,14 @@ def _build_payload():
         _ym = _base_ym if _month.get("isBaseline") else _period_label_ym(
             _month.get("period"))
         _month["periodYm"] = f"{_ym[0]}{_ym[1]:02d}" if _ym else None
+
+    # ── One-time milestones M-1 … M-4 (DHIS2 'Performance Percent') ──────
+    # Recorded once, at the Kenya org unit, in the "Daraja Milestone-One
+    # Time" data set: 100 unlocks the milestone's full payment, 0 unlocks
+    # nothing.  Applied last — and to every tab — because it is a standing
+    # verdict, not a monthly reading, and because the facility-level
+    # `_attach_perf` passes above strip `perf` off rows they were not given.
+    _assign_milestone_perf(months, _fetch_milestone_performance())
 
     return {
         "ok": True,
