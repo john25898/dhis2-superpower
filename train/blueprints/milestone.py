@@ -2743,18 +2743,21 @@ def _compute_khis_metrics(target_period=None, default_period=None):
 # ══════════════════════════════════════════════════════════════════════
 # Adjudicated milestones — the GOR's own 'Performance Percent'
 #
-# These are NOT measured off the facility MOH 731 returns.  Their
-# performance is adjudicated directly in DHIS2, in one of two data sets
-# that are both assigned to the SINGLE org unit Kenya (level 1,
-# HfVjCurKxh2) rather than to the 259 Daraja facilities — so they are read
-# from the data-value store, not from the facility analytics roll-up:
+# The three 'Daraja Milestone-*' data sets together hold all 26 M-x
+# milestones, split by payment frequency, and are all assigned to the
+# SINGLE org unit Kenya (level 1, HfVjCurKxh2) rather than to the 259
+# Daraja facilities — so they are read from the data-value store, not from
+# the facility analytics roll-up:
 #
-#   'Daraja Milestone-One Time' (CiBlrDp37eC) — ids 1–4, 24
-#   'Daraja Milestone-Monthly'  (W2pkAFEn3z5) — ids 25, 26
+#   'Daraja Milestone-Monthly'   (W2pkAFEn3z5) — ids 5–12, 14–17, 21–23, 25, 26
+#   'Daraja Milestone-One Time'  (CiBlrDp37eC) — ids 1–4, 20, 24
+#   'Daraja Milestone-Quarterly' (Z32JgdPI1af) — ids 13, 18, 19
 #
 # Every M-x element carries the shared category combo "Daraja Milestone
 # Metrics" (yfJs1ON43xK) whose "Performance Percent" option
-# (V5IfLBcbfno) is the reading.  Its scale comes from the milestone
+# (V5IfLBcbfno) is the reading and whose "Monthly Paid" option is the
+# amount actually paid — both come off the one element.  The performance
+# scale comes from the milestone
 # registry, not from a single house rule: ids 1–4 are a one-time
 # approve/reject verdict (100 or 0), while id 20 (PT pass rate),
 # id 24/25 (counties reached) and id 26 (facilities reached) are graded
@@ -2772,18 +2775,44 @@ _MILESTONE_ONE_TIME_OU = "HfVjCurKxh2"
 _MILESTONE_PERF_CATCOMBO = "yfJs1ON43xK"
 _MILESTONE_PERF_OPTION = "V5IfLBcbfno"
 _MILESTONE_PERF_COC_FALLBACK = "wn0fO6RMY7W"
-# id -> (data element uid, data set it is captured in)
-_MILESTONE_PERF_ELEMENTS = {
+_MILESTONE_PAID_COC_FALLBACK = "fIMmBiy3Fnm"
+# id -> (data element uid, the data set it is captured in).  Every M-1…M-26
+# is registered in exactly one of the three data sets, so the element map is
+# the full family rather than the adjudicated subset.
+_MILESTONE_ELEMENTS = {
     1: ("mTecQoXsf2o", "Daraja Milestone-One Time"),
     2: ("gyrDO1xkxwn", "Daraja Milestone-One Time"),
     3: ("QrS7RPeMOkI", "Daraja Milestone-One Time"),
     4: ("UpkDyr7OSJo", "Daraja Milestone-One Time"),
     5: ("Ru1XXdo0cZu", "Daraja Milestone-Monthly"),
+    6: ("zren68K4Tun", "Daraja Milestone-Monthly"),
+    7: ("PFz46PDjqip", "Daraja Milestone-Monthly"),
+    8: ("VJIqVLB5Lzx", "Daraja Milestone-Monthly"),
+    9: ("oiGFfWd3hjO", "Daraja Milestone-Monthly"),
+    10: ("kYRBMeyyMDH", "Daraja Milestone-Monthly"),
+    11: ("qJ38aRUhR4I", "Daraja Milestone-Monthly"),
+    12: ("WrXPvhsBkDa", "Daraja Milestone-Monthly"),
+    13: ("U4UqGWlG6g3", "Daraja Milestone-Quarterly"),
+    14: ("Ot1OGMmjxWk", "Daraja Milestone-Monthly"),
+    15: ("I9X7H6aMuFb", "Daraja Milestone-Monthly"),
+    16: ("h7x41Ztpdp4", "Daraja Milestone-Monthly"),
+    17: ("K8ffUF0eWIX", "Daraja Milestone-Monthly"),
+    18: ("iiQE8JkqH3M", "Daraja Milestone-Quarterly"),
+    19: ("B9n7IWUSmTt", "Daraja Milestone-Quarterly"),
     20: ("zQPxC5HChpo", "Daraja Milestone-One Time"),
+    21: ("evbLJoLoaeT", "Daraja Milestone-Monthly"),
+    22: ("Odoe5c3veGp", "Daraja Milestone-Monthly"),
     23: ("rQFnIiU74KK", "Daraja Milestone-Monthly"),
     24: ("EpYEZAmggQB", "Daraja Milestone-One Time"),
     25: ("wBAD3UdRPPg", "Daraja Milestone-Monthly"),
     26: ("dzUvZ3gpmmI", "Daraja Milestone-Monthly"),
+}
+# The subset whose PERFORMANCE is adjudicated in the 'Performance Percent'
+# cell.  The other ids are measured off the facility MOH 731 returns, so
+# only their PAYMENT comes from these data sets.
+_MILESTONE_PERF_IDS = (1, 2, 3, 4, 5, 20, 23, 24, 25, 26)
+_MILESTONE_PERF_ELEMENTS = {
+    mid: _MILESTONE_ELEMENTS[mid] for mid in _MILESTONE_PERF_IDS
 }
 # id -> payment band.  'binary' is the submit/approve pair used by the
 # one-time ids and by the monthly Performance Reports, whose registry text
@@ -2799,22 +2828,23 @@ _MILESTONE_PERF_BAND = {
     26: "pct80",           # ≥80 / 70-79 / 60-69 / <60 (% of facilities)
 }
 
-_MILESTONE_PERF_CACHE = None
-_MILESTONE_PERF_CACHE_AT = 0.0
-_MILESTONE_PERF_ID = None
+_MILESTONE_CELLS_CACHE = None
+_MILESTONE_CELLS_CACHE_AT = 0.0
+_MILESTONE_COC_MAP = None
 _MILESTONE_PERF_TTL = 300.0
 
 
-def _milestone_perf_coc():
-    """uid of the 'Performance Percent' category option combo (cached).
+def _milestone_coc_map():
+    """{category option combo name: uid} for 'Daraja Milestone Metrics'.
 
     Resolved from metadata rather than trusted from a constant, so a
     re-import that mints a new combo id still reads the right cell; the
-    known id is only a fallback when CHAK is unreachable.
+    known ids are only fallbacks when CHAK is unreachable.
     """
-    global _MILESTONE_PERF_ID
-    if _MILESTONE_PERF_ID:
-        return _MILESTONE_PERF_ID
+    global _MILESTONE_COC_MAP
+    if _MILESTONE_COC_MAP is not None:
+        return _MILESTONE_COC_MAP
+    out = {}
     try:
         from requests.auth import HTTPBasicAuth
 
@@ -2825,7 +2855,7 @@ def _milestone_perf_coc():
             "/categoryOptionCombos.json",
             {
                 "filter": f"categoryCombo.id:eq:{_MILESTONE_PERF_CATCOMBO}",
-                "fields": "id,categoryOptions[id]",
+                "fields": "id,name,categoryOptions[id]",
                 "paging": "false",
             },
             read_timeout=30,
@@ -2834,34 +2864,47 @@ def _milestone_perf_coc():
         if resp.ok:
             for coc in resp.json().get("categoryOptionCombos") or []:
                 opts = coc.get("categoryOptions") or []
-                if (len(opts) == 1
-                        and opts[0].get("id") == _MILESTONE_PERF_OPTION):
-                    _MILESTONE_PERF_ID = coc.get("id")
-                    break
+                if coc.get("name") and len(opts) == 1:
+                    out[coc["name"]] = coc["id"]
     except Exception as exc:  # noqa: BLE001
-        print(f"[MILESTONE] Performance-Percent combo lookup failed: {exc}")
-    if not _MILESTONE_PERF_ID:
-        _MILESTONE_PERF_ID = _MILESTONE_PERF_COC_FALLBACK
-    return _MILESTONE_PERF_ID
+        print(f"[MILESTONE] category-combo lookup failed: {exc}")
+    out.setdefault("Performance Percent", _MILESTONE_PERF_COC_FALLBACK)
+    out.setdefault("Monthly Paid", _MILESTONE_PAID_COC_FALLBACK)
+    _MILESTONE_COC_MAP = out
+    return out
 
 
-def _fetch_milestone_performance():
-    """Latest 'Performance Percent' per adjudicated milestone id.
+def _milestone_perf_coc():
+    """uid of the 'Performance Percent' category option combo (cached)."""
+    return _milestone_coc_map()["Performance Percent"]
 
-    Returns {id: {'pct': float, 'period': '202609'|None, 'asOf': str|None,
-    'element': uid, 'dataset': str, 'recorded': bool}}.  Every id in the
-    family is present: one with no cell filled in comes back as pct 0.0,
-    `recorded` False — "not yet achieved, unlocks nothing" — rather than
-    being dropped, so the row is scored rather than left blank.
 
-    Returns {} only when CHAK itself is unreachable, so the caller can
-    tell "nothing adjudicated" from "could not ask".
+def _milestone_paid_coc():
+    """uid of the 'Monthly Paid' category option combo (cached)."""
+    return _milestone_coc_map()["Monthly Paid"]
+
+
+def _fetch_milestone_cells():
+    """Latest 'Performance Percent' and 'Monthly Paid' per milestone id.
+
+    Every M-1…M-26 element is read ONCE and both cells of interest are taken
+    off the same response (CHAK rejects a semicolon-joined `dataElement`
+    list with 409 E2001, so these stay point reads).
+
+    Returns {id: {'pct', 'pct_period', 'pct_asOf', 'paid', 'paid_period',
+    'paid_asOf', 'element', 'dataset'}} covering every id in the family; a
+    cell that is blank comes back None.  Returns {} only when CHAK itself is
+    unreachable, so the caller can tell "nothing recorded" from "could not
+    ask".
+
+    The cells are standing figures rather than monthly measures, so the
+    LATEST period carrying a value is the one kept.
     """
-    global _MILESTONE_PERF_CACHE, _MILESTONE_PERF_CACHE_AT
+    global _MILESTONE_CELLS_CACHE, _MILESTONE_CELLS_CACHE_AT
     now = time.time()
-    if (_MILESTONE_PERF_CACHE is not None
-            and now - _MILESTONE_PERF_CACHE_AT < _MILESTONE_PERF_TTL):
-        return _MILESTONE_PERF_CACHE
+    if (_MILESTONE_CELLS_CACHE is not None
+            and now - _MILESTONE_CELLS_CACHE_AT < _MILESTONE_PERF_TTL):
+        return _MILESTONE_CELLS_CACHE
     out = {}
     try:
         from requests.auth import HTTPBasicAuth
@@ -2869,12 +2912,14 @@ def _fetch_milestone_performance():
         from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
 
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
-        perf_coc = _milestone_perf_coc()
-        latest = {}   # element uid -> ((year, month), period, value)
-        # CHAK rejects a semicolon-separated `dataElement` list (409 E2001),
-        # so each element is read on its own — cheap point reads.
-        uids = sorted({uid for uid, _ds in _MILESTONE_PERF_ELEMENTS.values()})
-        for uid in uids:
+        # combo uid -> the field it feeds; anything else on the element
+        # (allocated amount, earned, verified) is not ours to read.
+        keep = {
+            _milestone_perf_coc(): "pct",
+            _milestone_paid_coc(): "paid",
+        }
+        seen = {}   # element uid -> {field: ((year, month), period, value)}
+        for uid in sorted({u for u, _ds in _MILESTONE_ELEMENTS.values()}):
             resp = chak_get(
                 "/dataValueSets.json",
                 {
@@ -2887,38 +2932,63 @@ def _fetch_milestone_performance():
                 auth=auth,
             )
             if not resp.ok:
-                print(f"[MILESTONE] Performance fetch HTTP {resp.status_code}"
+                print(f"[MILESTONE] data-value fetch HTTP {resp.status_code}"
                       f" on {uid}")
                 continue
             for v in (resp.json() or {}).get("dataValues") or []:
-                if v.get("categoryOptionCombo") != perf_coc:
-                    continue
-                if v.get("value") in (None, ""):
+                field = keep.get(v.get("categoryOptionCombo"))
+                if not field or v.get("value") in (None, ""):
                     continue
                 pe = str(v.get("period") or "")
                 try:
                     val = float(v["value"])
                 except (TypeError, ValueError):
                     continue
-                prev = latest.get(uid)
+                slots = seen.setdefault(uid, {})
+                prev = slots.get(field)
                 if prev and _pe_key(prev[1]) >= _pe_key(pe):
                     continue      # an older period never displaces a newer one
-                latest[uid] = (_pe_key(pe), pe, val)
-        for mid, (uid, dataset) in _MILESTONE_PERF_ELEMENTS.items():
-            hit = latest.get(uid)
-            out[mid] = {
-                "pct": hit[2] if hit else 0.0,
-                "period": hit[1] if hit else None,
-                "asOf": (_month_human(hit[0]) if hit else None),
-                "element": uid,
-                "dataset": dataset,
-                "recorded": bool(hit),
-            }
+                slots[field] = (_pe_key(pe), pe, val)
+        for mid, (uid, dataset) in _MILESTONE_ELEMENTS.items():
+            slots = seen.get(uid) or {}
+            rec = {"element": uid, "dataset": dataset}
+            for field in ("pct", "paid"):
+                hit = slots.get(field)
+                rec[field] = hit[2] if hit else None
+                rec[field + "_period"] = hit[1] if hit else None
+                rec[field + "_asOf"] = _month_human(hit[0]) if hit else None
+            out[mid] = rec
     except Exception as exc:  # noqa: BLE001
-        print(f"[MILESTONE] Performance fetch failed: {exc}")
+        print(f"[MILESTONE] data-value fetch failed: {exc}")
         return out
-    _MILESTONE_PERF_CACHE = out
-    _MILESTONE_PERF_CACHE_AT = now
+    _MILESTONE_CELLS_CACHE = out
+    _MILESTONE_CELLS_CACHE_AT = now
+    return out
+
+
+def _fetch_milestone_performance():
+    """The adjudicated subset of `_fetch_milestone_cells()`.
+
+    Returns {id: {'pct': float, 'period': '202609'|None, 'asOf': str|None,
+    'element': uid, 'dataset': str, 'recorded': bool}}.  Every id in the
+    family is present: one with no cell filled in comes back as pct 0.0,
+    `recorded` False — "not yet achieved, unlocks nothing" — rather than
+    being dropped, so the row is scored rather than left blank.
+    """
+    cells = _fetch_milestone_cells()
+    out = {}
+    for mid in _MILESTONE_PERF_IDS:
+        rec = cells.get(mid)
+        if not rec:
+            continue
+        out[mid] = {
+            "pct": rec["pct"] if rec["pct"] is not None else 0.0,
+            "period": rec["pct_period"],
+            "asOf": rec["pct_asOf"],
+            "element": rec["element"],
+            "dataset": rec["dataset"],
+            "recorded": rec["pct"] is not None,
+        }
     return out
 
 
@@ -2971,6 +3041,43 @@ def _assign_milestone_perf(months, perf_by_id):
                 if alert:
                     row["alerts"] = alert
                     row["alertsSource"] = "dhis2"
+
+
+def _assign_milestone_paid(months, cells):
+    """Layer each milestone's recorded 'Monthly Paid' onto every month tab.
+
+    Read from the same three 'Daraja Milestone-*' data sets the performance
+    comes from — for all 26 ids, not just the adjudicated subset, because
+    'Monthly Paid' is filled in for milestones whose performance is
+    measured off the facility returns.
+
+    Unlike the performance cell, a blank 'Monthly Paid' is NOT coerced to
+    zero: "not yet paid" and "paid nothing" are different claims, and the
+    cell is money, so the row simply carries `monthlyPaid` None and the
+    front-end renders the empty cell.
+
+    Runs after the Baseline/M1 split so the standing figure lands on every
+    tab including the Baseline copy.
+    """
+    if not cells:
+        return
+    for month in months:
+        for row in month.get("rows") or []:
+            rec = cells.get(row.get("id"))
+            if not rec:
+                row.pop("monthlyPaid", None)
+                continue
+            paid = rec.get("paid")
+            if paid is None:
+                row["monthlyPaid"] = None
+                continue
+            row["monthlyPaid"] = {
+                "amount": paid,
+                "asOf": (rec.get("paid_asOf") or rec.get("paid_period")
+                         or "latest reporting month"),
+                "dataset": rec.get("dataset"),
+                "element": rec.get("element"),
+            }
 
 
 def _attach_perf(rows, metrics):
@@ -3205,6 +3312,12 @@ def _build_payload():
     # verdict, not a monthly reading, and because the facility-level
     # `_attach_perf` passes above strip `perf` off rows they were not given.
     _assign_milestone_perf(months, _fetch_milestone_performance())
+
+    # ── 'Monthly Paid' for all 26 milestones ────────────────────────────
+    # The amount CHAK has actually paid per milestone, read from the same
+    # three data sets.  Read once and reused: _fetch_milestone_performance()
+    # above shares the same cache, so this costs no extra CHAK round-trips.
+    _assign_milestone_paid(months, _fetch_milestone_cells())
 
     return {
         "ok": True,

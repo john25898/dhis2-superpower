@@ -315,6 +315,27 @@ function msEarnedCell(row, isFinalPay) {
   return `<span class="whitespace-nowrap text-[12px] font-semibold text-emerald-600" title="${escapeHtml(title)}">${fmtMoney(earned)}</span>`;
 }
 
+// "Monthly Payments - Paid" = the amount CHAK has actually paid for the
+// milestone, read from the 'Monthly Paid' category option of the same three
+// 'Daraja Milestone-*' data sets the performance comes from. Unlike Earned
+// (an estimate), this is money that has moved, so a blank cell stays blank
+// rather than rendering a misleading $0.
+function msPaidCell(row) {
+  const paid = row && row.monthlyPaid;
+  if (!paid || paid.amount === null || paid.amount === undefined)
+    return milestoneEmptyCell();
+  const amt = Number(paid.amount);
+  if (!Number.isFinite(amt)) return milestoneEmptyCell();
+  const title =
+    "Recorded in CHAK DHIS2 · data set '" +
+    (paid.dataset || "") +
+    "' · element " +
+    (paid.element || "") +
+    " · category option 'Monthly Paid' · as of " +
+    (paid.asOf || "latest reporting month");
+  return `<span class="whitespace-nowrap text-[12px] font-semibold text-slate-700" title="${escapeHtml(title)}">${fmtMoney(amt)}</span>`;
+}
+
 function msKhisChipHtml(khis) {
   if (!khis) return "";
   if (khis.status === "ok") {
@@ -423,7 +444,7 @@ function msKhisNoteHtml(khis) {
     (Number(khis.matched) || 0) +
     " of " +
     (Number(khis.total) || 0) +
-    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification — #22 Electronic Reporting is the exception, scored on the Baseline tab from the NDWH upload log instead."
+    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, EID, SHA, reporting, records-based items) stay “—” until their record-based verification — #22 Electronic Reporting is the exception, scored on the Baseline tab from the NDWH upload log instead. “Monthly Payments - Paid” is the amount CHAK has entered in the “Monthly Paid” cell of the three Daraja Milestone data sets, for all 26 milestones — a milestone whose cell is still blank stays “—”."
   );
 }
 
@@ -1413,6 +1434,7 @@ async function renderMilestoneTrackerPage() {
         <td class="px-3 py-2.5 text-right text-[13px] font-semibold text-slate-600 whitespace-nowrap" title="Max monthly payment on the earliest schedule carrying this milestone; later months may differ">${fmtMoney(row.amount)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts, row.alertsSource)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, false)}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msPaidCell(row)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
@@ -1506,6 +1528,7 @@ async function renderMilestoneTrackerPage() {
         <td class="px-3 py-2.5 text-right align-top">${msPerformanceCell(row.perf)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts, row.alertsSource)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, activeMonth.isFinalPay)}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msPaidCell(row)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestonePaymentChip(status)}</td>
