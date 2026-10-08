@@ -1324,14 +1324,48 @@ def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
     band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
-          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), 'binary'
-          (one-time ids 1–4).  pct is the 0–100 achievement measure.
+          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), plus the
+          adjudicated-milestone scales 'binary' (ids 1–4), 'pt90' (20),
+          'county15' (24/25), 'pct80' (26) and 'county4' (23).
+          pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
     if band == "binary":  # ids 1–4 — DHIS2-adjudicated 0 / 100
         if pct >= 100:
             return 100, "Performance 100% \u2014 one-time milestone delivered"
         return 0, "Performance 0% \u2014 one-time milestone not delivered"
+    if band == "pt90":  # id 20 — registry: ≥90 / 80–89 / 70–79 / <70
+        if pct >= 90:
+            return 100, "PT pass rate \u226590%"
+        if pct >= 80:
+            return 80, "PT pass rate 80\u201389%"
+        if pct >= 70:
+            return 50, "PT pass rate 70\u201379%"
+        return 0, "PT pass rate <70% \u2014 no payment"
+    if band == "pct80":  # id 26 — registry: ≥80 / 70–79 / 60–69 / <60
+        if pct >= 80:
+            return 100, "\u226580% of supported facilities reached"
+        if pct >= 70:
+            return 80, "70\u201379% of facilities reached"
+        if pct >= 60:
+            return 50, "60\u201369% of facilities reached"
+        return 0, "<60% of facilities reached \u2014 no payment"
+    if band == "county15":  # ids 24/25 — registry: ≥12 / 9–11 / 5–8 / <5
+        if pct >= 80:
+            return 100, "\u226512 of 15 counties"
+        if pct >= 60:
+            return 80, "9\u201311 of 15 counties"
+        if pct >= 33:
+            return 50, "5\u20138 of 15 counties"
+        return 0, "<5 of 15 counties \u2014 no payment"
+    if band == "county4":  # id 23 — registry: 4/4 / 3/4 / 2/4 / ≤1 of 4
+        if pct >= 100:
+            return 100, "4 of 4 counties"
+        if pct >= 75:
+            return 80, "3 of 4 counties"
+        if pct >= 50:
+            return 50, "2 of 4 counties"
+        return 0, "\u22641 of 4 counties \u2014 no payment"
     if band == "dsd":  # id 10 — registry: ≥90 / 70–89 / 50–69 / <50
         if pct >= 90:
             return 100, "\u226590% enrolled in a DSD model"
@@ -2705,35 +2739,56 @@ def _compute_khis_metrics(target_period=None, default_period=None):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# One-time milestones M-1 … M-4 — the GOR's binary verdict
+# Adjudicated milestones — the GOR's own 'Performance Percent'
 #
-# These four are NOT measured off the facility MOH 731 returns.  Their
-# performance is a one-off adjudication recorded in the monthly data set
-# "Daraja Milestone-One Time" (CiBlrDp37eC), which is assigned to the
-# SINGLE org unit Kenya (level 1, HfVjCurKxh2) rather than to the 259
-# Daraja facilities — so it is read from the data-value store, not from
-# the facility analytics roll-up.
+# These are NOT measured off the facility MOH 731 returns.  Their
+# performance is adjudicated directly in DHIS2, in one of two data sets
+# that are both assigned to the SINGLE org unit Kenya (level 1,
+# HfVjCurKxh2) rather than to the 259 Daraja facilities — so they are read
+# from the data-value store, not from the facility analytics roll-up:
 #
-# Each M-x element carries the shared category combo "Daraja Milestone
+#   'Daraja Milestone-One Time' (CiBlrDp37eC) — ids 1–4, 24
+#   'Daraja Milestone-Monthly'  (W2pkAFEn3z5) — ids 25, 26
+#
+# Every M-x element carries the shared category combo "Daraja Milestone
 # Metrics" (yfJs1ON43xK) whose "Performance Percent" option
-# (V5IfLBcbfno) is the verdict:
+# (V5IfLBcbfno) is the reading.  Its scale comes from the milestone
+# registry, not from a single house rule: ids 1–4 are a one-time
+# approve/reject verdict (100 or 0), while id 20 (PT pass rate),
+# id 24/25 (counties reached) and id 26 (facilities reached) are graded
+# percentages.  See _unlock_bands().
 #
-#     100  →  the milestone was delivered: it unlocks the full payment
-#       0  →  the milestone was not delivered: it unlocks nothing
+# 🔥 A milestone with NO Performance Percent recorded is treated as 0 —
+# not yet achieved, so it unlocks nothing.  Leaving the cell blank in
+# DHIS2 therefore reads as "no payment", which is the conservative
+# reading the programme asked for; the band label says so explicitly.
 #
-# The value is a verdict rather than a monthly measure, so the LATEST
-# period carrying one is treated as the standing result and layered onto
-# every month tab.
+# The value is a standing result rather than a monthly measure, so the
+# LATEST period carrying one is taken and layered onto every month tab.
 # ══════════════════════════════════════════════════════════════════════
 _MILESTONE_ONE_TIME_OU = "HfVjCurKxh2"
 _MILESTONE_PERF_CATCOMBO = "yfJs1ON43xK"
 _MILESTONE_PERF_OPTION = "V5IfLBcbfno"
 _MILESTONE_PERF_COC_FALLBACK = "wn0fO6RMY7W"
+# id -> (data element uid, data set it is captured in)
 _MILESTONE_PERF_ELEMENTS = {
-    1: "mTecQoXsf2o",   # M-1: Milestone Plan and Workplan
-    2: "gyrDO1xkxwn",   # M-2: Program Personnel
-    3: "QrS7RPeMOkI",   # M-3: MEL Plan and DQA Protocol
-    4: "UpkDyr7OSJo",   # M-4: Risk Analysis, Security Plan, IT Audit
+    1: ("mTecQoXsf2o", "Daraja Milestone-One Time"),
+    2: ("gyrDO1xkxwn", "Daraja Milestone-One Time"),
+    3: ("QrS7RPeMOkI", "Daraja Milestone-One Time"),
+    4: ("UpkDyr7OSJo", "Daraja Milestone-One Time"),
+    20: ("zQPxC5HChpo", "Daraja Milestone-One Time"),
+    24: ("EpYEZAmggQB", "Daraja Milestone-One Time"),
+    25: ("wBAD3UdRPPg", "Daraja Milestone-Monthly"),
+    26: ("dzUvZ3gpmmI", "Daraja Milestone-Monthly"),
+}
+# id -> payment band.  'binary' is the one-time approve/reject pair;
+# the rest are the graded scales quoted in the milestone registry.
+_MILESTONE_PERF_BAND = {
+    1: "binary", 2: "binary", 3: "binary", 4: "binary",
+    20: "pt90",        # ≥90 / 80-89 / 70-79 / <70  (% of testing sites)
+    24: "county15",    # ≥12 / 9-11 / 5-8 / <5     (of 15 counties)
+    25: "county15",    # ≥12 / 9-11 / 5-8 / <5     (of 15 counties)
+    26: "pct80",       # ≥80 / 70-79 / 60-69 / <60 (% of facilities)
 }
 
 _MILESTONE_PERF_CACHE = None
@@ -2783,11 +2838,16 @@ def _milestone_perf_coc():
 
 
 def _fetch_milestone_performance():
-    """Latest 'Performance Percent' verdict per one-time milestone id.
+    """Latest 'Performance Percent' per adjudicated milestone id.
 
-    Returns {id: {'pct': 100|0, 'period': '202609', 'asOf': 'September
-    2026', 'element': uid}}.  {} when CHAK is unreachable or nothing has
-    been adjudicated — the caller then leaves those rows on their "—".
+    Returns {id: {'pct': float, 'period': '202609'|None, 'asOf': str|None,
+    'element': uid, 'dataset': str, 'recorded': bool}}.  Every id in the
+    family is present: one with no cell filled in comes back as pct 0.0,
+    `recorded` False — "not yet achieved, unlocks nothing" — rather than
+    being dropped, so the row is scored rather than left blank.
+
+    Returns {} only when CHAK itself is unreachable, so the caller can
+    tell "nothing adjudicated" from "could not ask".
     """
     global _MILESTONE_PERF_CACHE, _MILESTONE_PERF_CACHE_AT
     now = time.time()
@@ -2804,14 +2864,15 @@ def _fetch_milestone_performance():
         perf_coc = _milestone_perf_coc()
         latest = {}   # element uid -> ((year, month), period, value)
         # CHAK rejects a semicolon-separated `dataElement` list (409 E2001),
-        # so each element is read on its own — four cheap point reads.
-        for uid in sorted(set(_MILESTONE_PERF_ELEMENTS.values())):
+        # so each element is read on its own — cheap point reads.
+        uids = sorted({uid for uid, _ds in _MILESTONE_PERF_ELEMENTS.values()})
+        for uid in uids:
             resp = chak_get(
                 "/dataValueSets.json",
                 {
                     "dataElement": uid,
                     "orgUnit": _MILESTONE_ONE_TIME_OU,
-                    "startDate": "2024-01-01",
+                    "startDate": "2023-01-01",
                     "endDate": date.today().isoformat(),
                 },
                 read_timeout=120,
@@ -2835,15 +2896,15 @@ def _fetch_milestone_performance():
                 if prev and _pe_key(prev[1]) >= _pe_key(pe):
                     continue      # an older period never displaces a newer one
                 latest[uid] = (_pe_key(pe), pe, val)
-        for mid, uid in _MILESTONE_PERF_ELEMENTS.items():
+        for mid, (uid, dataset) in _MILESTONE_PERF_ELEMENTS.items():
             hit = latest.get(uid)
-            if not hit:
-                continue
             out[mid] = {
-                "pct": hit[2],
-                "period": hit[1],
-                "asOf": _month_human(hit[0]) or hit[1],
+                "pct": hit[2] if hit else 0.0,
+                "period": hit[1] if hit else None,
+                "asOf": (_month_human(hit[0]) if hit else None),
                 "element": uid,
+                "dataset": dataset,
+                "recorded": bool(hit),
             }
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] Performance fetch failed: {exc}")
@@ -2854,11 +2915,17 @@ def _fetch_milestone_performance():
 
 
 def _assign_milestone_perf(months, perf_by_id):
-    """Layer the one-time M-1…M-4 verdict onto the month tabs' rows.
+    """Layer the adjudicated milestones' verdicts onto the month tabs.
 
     Applied AFTER every `_attach_perf` pass, because that helper strips
     `perf` off any row it was not handed — running this first would be
     undone.  A GOR-verified Summary2 seed keeps its own Alerts chip.
+
+    The payment scale is per-milestone (`_MILESTONE_PERF_BAND`): the
+    one-time ids climb a binary yes/no, the graded ids climb the registry
+    band their own threshold text spells out.  A milestone whose
+    Performance Percent cell is empty scores 0 on that same scale, so it
+    reads "no payment" rather than staying blank.
     """
     if not perf_by_id:
         return
@@ -2867,17 +2934,29 @@ def _assign_milestone_perf(months, perf_by_id):
             rec = perf_by_id.get(row.get("id"))
             if not rec:
                 continue
-            unlock, band = _unlock_bands("binary", rec["pct"])
+            kind = _MILESTONE_PERF_BAND.get(row["id"], "binary")
+            unlock, band = _unlock_bands(kind, rec["pct"])
+            if rec.get("recorded"):
+                target = f"Performance {rec['pct']:,.0f}%"
+                formula = (
+                    f"CHAK DHIS2 \u00b7 data set '{rec['dataset']}' \u00b7 "
+                    f"element {rec['element']} \u00b7 category option "
+                    "'Performance Percent'"
+                )
+            else:
+                target = "no Performance Percent recorded \u2014 0%"
+                formula = (
+                    f"CHAK DHIS2 \u00b7 data set '{rec['dataset']}' \u00b7 "
+                    f"element {rec['element']} \u00b7 "
+                    "'Performance Percent' is blank, treated as 0"
+                )
             row["perf"] = _metric_doc(
                 row["id"],
                 row.get("name") or row.get("masterName") or "",
-                rec.get("asOf") or rec.get("period") or "latest",
-                "100% \u2014 one-time milestone delivered",
+                rec.get("asOf") or rec.get("period") or "not recorded",
+                target,
                 f"Performance {rec['pct']:,.0f}%",
-                rec["pct"], unlock, band,
-                "CHAK DHIS2 \u00b7 data set 'Daraja Milestone-One Time' \u00b7 "
-                f"element {rec['element']} \u00b7 category option "
-                "'Performance Percent' (100 = delivered, 0 = not)",
+                rec["pct"], unlock, band, formula,
             )
             if not row.get("alerts"):
                 alert = _alert_for_unlock(unlock)
