@@ -1325,8 +1325,8 @@ def _unlock_bands(band, pct):
 
     band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
           'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), plus the
-          adjudicated-milestone scales 'binary' (ids 1–4), 'pt90' (20),
-          'county15' (24/25), 'pct80' (26) and 'county4' (23).
+          adjudicated-milestone scales 'binary' (ids 1–4), 'approval' (5),
+          'pt90' (20), 'proportional' (ids 23/24/25) and 'pct80' (26).
           pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
@@ -1334,6 +1334,14 @@ def _unlock_bands(band, pct):
         if pct >= 100:
             return 100, "Performance 100% \u2014 one-time milestone delivered"
         return 0, "Performance 0% \u2014 one-time milestone not delivered"
+    if band == "approval":  # id 5 — monthly reports, 100% or nothing
+        if pct >= 100:
+            return 100, "Monthly performance reports submitted and approved"
+        return (
+            0,
+            f"Reports approved at {pct:g}% \u2014 the registry pays only on "
+            "full approval, so nothing unlocks",
+        )
     if band == "pt90":  # id 20 — registry: ≥90 / 80–89 / 70–79 / <70
         if pct >= 90:
             return 100, "PT pass rate \u226590%"
@@ -1350,22 +1358,16 @@ def _unlock_bands(band, pct):
         if pct >= 60:
             return 50, "60\u201369% of facilities reached"
         return 0, "<60% of facilities reached \u2014 no payment"
-    if band == "county15":  # ids 24/25 — registry: ≥12 / 9–11 / 5–8 / <5
-        if pct >= 80:
-            return 100, "\u226512 of 15 counties"
-        if pct >= 60:
-            return 80, "9\u201311 of 15 counties"
-        if pct >= 33:
-            return 50, "5\u20138 of 15 counties"
-        return 0, "<5 of 15 counties \u2014 no payment"
-    if band == "county4":  # id 23 — registry: 4/4 / 3/4 / 2/4 / ≤1 of 4
-        if pct >= 100:
-            return 100, "4 of 4 counties"
-        if pct >= 75:
-            return 80, "3 of 4 counties"
-        if pct >= 50:
-            return 50, "2 of 4 counties"
-        return 0, "\u22641 of 4 counties \u2014 no payment"
+    if band == "proportional":  # ids 23/24/25 — the cell IS the percentage
+        # The county work is entered as a share (e.g. 3/4 typed as 75), so
+        # the recorded value is the performance itself and the payment is
+        # that same share of the allocation: 80% achieved unlocks 80%.
+        pct = max(0.0, min(100.0, pct))
+        return (
+            int(round(pct)),
+            f"{pct:g}% of the counties delivered \u2014 {pct:g}% of the "
+            "allocation unlocked",
+        )
     if band == "dsd":  # id 10 — registry: ≥90 / 70–89 / 50–69 / <50
         if pct >= 90:
             return 100, "\u226590% enrolled in a DSD model"
@@ -2776,19 +2778,25 @@ _MILESTONE_PERF_ELEMENTS = {
     2: ("gyrDO1xkxwn", "Daraja Milestone-One Time"),
     3: ("QrS7RPeMOkI", "Daraja Milestone-One Time"),
     4: ("UpkDyr7OSJo", "Daraja Milestone-One Time"),
+    5: ("Ru1XXdo0cZu", "Daraja Milestone-Monthly"),
     20: ("zQPxC5HChpo", "Daraja Milestone-One Time"),
+    23: ("rQFnIiU74KK", "Daraja Milestone-Monthly"),
     24: ("EpYEZAmggQB", "Daraja Milestone-One Time"),
     25: ("wBAD3UdRPPg", "Daraja Milestone-Monthly"),
     26: ("dzUvZ3gpmmI", "Daraja Milestone-Monthly"),
 }
-# id -> payment band.  'binary' is the one-time approve/reject pair;
-# the rest are the graded scales quoted in the milestone registry.
+# id -> payment band.  'binary' is the submit/approve pair used by the
+# one-time ids and by the monthly Performance Reports, whose registry text
+# only ever pays 100% or nothing; the rest are the graded scales quoted in
+# the milestone registry.
 _MILESTONE_PERF_BAND = {
     1: "binary", 2: "binary", 3: "binary", 4: "binary",
-    20: "pt90",        # ≥90 / 80-89 / 70-79 / <70  (% of testing sites)
-    24: "county15",    # ≥12 / 9-11 / 5-8 / <5     (of 15 counties)
-    25: "county15",    # ≥12 / 9-11 / 5-8 / <5     (of 15 counties)
-    26: "pct80",       # ≥80 / 70-79 / 60-69 / <60 (% of facilities)
+    5: "approval",         # reports submitted and approved, or not
+    20: "pt90",            # ≥90 / 80-89 / 70-79 / <70  (% of testing sites)
+    23: "proportional",    # the recorded % is the payment %
+    24: "proportional",    # the recorded % is the payment %
+    25: "proportional",    # the recorded % is the payment %
+    26: "pct80",           # ≥80 / 70-79 / 60-69 / <60 (% of facilities)
 }
 
 _MILESTONE_PERF_CACHE = None
