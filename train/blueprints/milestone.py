@@ -2754,10 +2754,16 @@ def _compute_khis_metrics(target_period=None, default_period=None):
 #   'Daraja Milestone-Quarterly' (Z32JgdPI1af) — ids 13, 18, 19
 #
 # Every M-x element carries the shared category combo "Daraja Milestone
-# Metrics" (yfJs1ON43xK) whose "Performance Percent" option
-# (V5IfLBcbfno) is the reading and whose "Monthly Paid" option is the
-# amount actually paid — both come off the one element.  The performance
-# scale comes from the milestone
+# Metrics" (yfJs1ON43xK), read for two different purposes:
+#
+#   • 'Performance Percent' — for the FEW ids whose performance is
+#     adjudicated here (`_MILESTONE_PERF_IDS`) instead of measured off the
+#     facility returns.
+#   • 'Monthly Paid' — the amount actually paid, for EVERY M-1…M-26.
+#
+# Nothing else is taken from these data sets: the allocated-amount, earned
+# and verified cells belong to the programme's own accounting, not to this
+# tracker.  The performance scale of the adjudicated ids comes from the milestone
 # registry, not from a single house rule: ids 1–4 are a one-time
 # approve/reject verdict (100 or 0), while id 20 (PT pass rate),
 # id 24/25 (counties reached) and id 26 (facilities reached) are graded
@@ -2773,7 +2779,10 @@ def _compute_khis_metrics(target_period=None, default_period=None):
 # ══════════════════════════════════════════════════════════════════════
 _MILESTONE_ONE_TIME_OU = "HfVjCurKxh2"
 _MILESTONE_PERF_CATCOMBO = "yfJs1ON43xK"
-_MILESTONE_PERF_OPTION = "V5IfLBcbfno"
+# The two category options that matter, with the combination each resolves
+# to today: 'Performance Percent' V5IfLBcbfno -> wn0fO6RMY7W and
+# 'Monthly Paid' fIMmBiy3Fnm.  Both are looked up by NAME at runtime and
+# these ids are only the fallback when CHAK cannot be asked.
 _MILESTONE_PERF_COC_FALLBACK = "wn0fO6RMY7W"
 _MILESTONE_PAID_COC_FALLBACK = "fIMmBiy3Fnm"
 # id -> (data element uid, the data set it is captured in).  Every M-1…M-26
@@ -2885,17 +2894,29 @@ def _milestone_paid_coc():
 
 
 def _fetch_milestone_cells():
-    """Latest 'Performance Percent' and 'Monthly Paid' per milestone id.
+    """'Performance Percent' for the adjudicated ids, 'Monthly Paid' for all.
 
-    Every M-1…M-26 element is read ONCE and both cells of interest are taken
-    off the same response (CHAK rejects a semicolon-joined `dataElement`
-    list with 409 E2001, so these stay point reads).
+    Two different breadths deliberately, because the programme uses these
+    two cells for two different jobs:
+
+      * 'Monthly Paid' is wanted for EVERY M-1…M-26 — it is the amount
+        actually paid, and is filled in for milestones whose performance is
+        measured off the facility returns just as much as for the
+        adjudicated ones.
+      * 'Performance Percent' is wanted ONLY for the adjudicated ids
+        (`_MILESTONE_PERF_IDS`).  The other milestones are scored from
+        CHAK DHIS2 / KHIS facility data, so a percent entered against them
+        in these data sets is not their performance and must not be read.
+
+    Each element is read ONCE (CHAK rejects a semicolon-joined
+    `dataElement` list with 409 E2001, so these stay point reads) and the
+    wanted cells are taken off that one response.
 
     Returns {id: {'pct', 'pct_period', 'pct_asOf', 'paid', 'paid_period',
     'paid_asOf', 'element', 'dataset'}} covering every id in the family; a
-    cell that is blank comes back None.  Returns {} only when CHAK itself is
-    unreachable, so the caller can tell "nothing recorded" from "could not
-    ask".
+    cell that is blank — or not wanted for that id — comes back None.
+    Returns {} only when CHAK itself is unreachable, so the caller can tell
+    "nothing recorded" from "could not ask".
 
     The cells are standing figures rather than monthly measures, so the
     LATEST period carrying a value is the one kept.
@@ -2912,14 +2933,15 @@ def _fetch_milestone_cells():
         from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
 
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
-        # combo uid -> the field it feeds; anything else on the element
-        # (allocated amount, earned, verified) is not ours to read.
-        keep = {
-            _milestone_perf_coc(): "pct",
-            _milestone_paid_coc(): "paid",
-        }
+        perf_coc = _milestone_perf_coc()
+        paid_coc = _milestone_paid_coc()
+        # element uid -> the job it does here.  It is the same element that
+        # carries both cells, so one element may legitimately contribute a
+        # paid figure and, if adjudicated, a performance figure too.
+        element_of = {uid: mid for mid, (uid, _ds)
+                      in _MILESTONE_ELEMENTS.items()}
         seen = {}   # element uid -> {field: ((year, month), period, value)}
-        for uid in sorted({u for u, _ds in _MILESTONE_ELEMENTS.values()}):
+        for uid in sorted(element_of):
             resp = chak_get(
                 "/dataValueSets.json",
                 {
@@ -2936,9 +2958,16 @@ def _fetch_milestone_cells():
                       f" on {uid}")
                 continue
             for v in (resp.json() or {}).get("dataValues") or []:
-                field = keep.get(v.get("categoryOptionCombo"))
-                if not field or v.get("value") in (None, ""):
+                coc = v.get("categoryOptionCombo")
+                if v.get("value") in (None, ""):
                     continue
+                if coc == paid_coc:
+                    field = "paid"
+                elif (coc == perf_coc
+                        and element_of[uid] in _MILESTONE_PERF_IDS):
+                    field = "pct"
+                else:
+                    continue      # allocated amount / earned / verified
                 pe = str(v.get("period") or "")
                 try:
                     val = float(v["value"])
