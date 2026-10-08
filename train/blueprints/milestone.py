@@ -8,10 +8,13 @@ Parses local workbooks (in train/):
   2. Milestones Summary2.xlsx  (Summary2-style tracker layout + M1 seeds)
   3. UJTP DWAPI UPLOADS*.xlsx  (NDWH per-facility electronic-upload log;
      supplies the #22 reporting-coverage reading on the Baseline tab)
+  4. JAMII TEKELEZI*EID TEST OUTCOMES*.csv  (the programme's own EID
+     test-outcome line list; supplies the #12 EID reading on the M1 tab)
 
 Milestones 6-9, 11, 14, 15, 16 and 21 are measured from CHAK DHIS2 MOH 731
 returns (and KHIS national commodity returns for #21).  #22 is measured
-from the NDWH upload workbook above instead — see _dwapi_coverage().
+from the NDWH upload workbook above instead — see _dwapi_coverage() — and
+#12 from the JAMII TEKELEZI EID line list — see _eid_jt_coverage().
 
 Serves a single read-only API:  GET /api/milestone/data
 """
@@ -100,6 +103,24 @@ _DWAPI_ROSTER_SHEET = "ndwh_"
 # still parses: any sheet whose header row holds both 'code' and 'updated' is
 # accepted as the log.
 _DWAPI_DATA_SHEET = "Data"
+
+# ── Milestone 12 — EID testing coverage (JAMII TEKELEZI line list) ──────
+# The programme re-exports this line list from the NASCOP EID website every
+# reporting month and the filename carries the extract window ("… FOR IN
+# 01SEP2026  08OCT2026 (1).csv"), so it is GLOBBED and the newest match
+# wins — dropping next month's export into train/ is enough.
+EID_JT_GLOB = "JAMII TEKELEZI*EID TEST OUTCOMES*.csv"
+# The PCR Type values that mark an infant's FIRST PCR.  "Birth testing (0-2
+# weeks) or first contact" is the dominant one; the EID system also files a
+# few first tests under "Initial PCR (6 week or first contact)", which is
+# the same draw in different words.  Every other value on the sheet (2nd/3rd/
+# 4th PCR, Confirmatory PCR, Sample redraw) is a repeat and is excluded.
+_EID_INITIAL_PCRS = (
+    "Birth testing (0-2 weeks) or first contact",
+    "Initial PCR (6 week or first contact)",
+)
+# "tested by 12 months of age" — completed months at sample collection.
+_EID_MAX_AGE_MONTHS = 12
 
 # Payment-status values a milestone row can take (Summary2 seeds only).
 _STATUS_SET = {"Fully Paid", "Partially Paid", "Not Paid"}
@@ -1324,9 +1345,10 @@ def _unlock_bands(band, pct):
     """Apply the FAA 'Payment Scale per Achievement Threshold' for a metric.
 
     band: 'count' (id 6/8), 'linkage' (7), 'iit' (9), 'ahd' (11), 'tb' (14),
-          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), plus the
-          adjudicated-milestone scales 'binary' (ids 1–4), 'approval' (5),
-          'pt90' (20), 'proportional' (ids 23/24/25) and 'pct80' (26).
+          'tpt' (15), 'dsd' (10), 'vl' (16), 'commodity' (21), 'eid' (12),
+          plus the adjudicated-milestone scales 'binary' (ids 1–4),
+          'approval' (5), 'pt90' (20), 'proportional' (ids 23/24/25) and
+          'pct80' (26).
           pct is the 0–100 achievement measure.
     Returns (unlock_pct, band_label).
     """
@@ -1358,6 +1380,14 @@ def _unlock_bands(band, pct):
         if pct >= 60:
             return 50, "60\u201369% of facilities reached"
         return 0, "<60% of facilities reached \u2014 no payment"
+    if band == "eid":  # id 12 — registry: 100% ≥95 / 90% 85–94 / 80% 75–84
+        if pct >= 95:
+            return (100, "EID testing \u226595% of the exposed infants")
+        if pct >= 85:
+            return (90, "EID testing 85\u201394% of the exposed infants")
+        if pct >= 75:
+            return (80, "EID testing 75\u201384% of the exposed infants")
+        return (0, "EID testing <75% \u2014 no payment")
     if band == "proportional":  # ids 23/24/25 — the cell IS the percentage
         # The county work is entered as a share (e.g. 3/4 typed as 75), so
         # the recorded value is the performance itself and the payment is
@@ -1808,6 +1838,232 @@ def _dwapi_coverage():
                     "M1."
                     if latest else ""
                 )
+            ),
+        })
+        return out
+    except Exception as exc:  # noqa: BLE001
+        out["status"] = "error"
+        out["note"] = f"Could not read {path.name}: {exc}"
+        return out
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Milestone 12 — Integrated eVTP Services Cascade (EID testing)
+#
+# The registry asks for "Proportion of HIV exposed infants receiving EID
+# testing as per national algorithm", target >95%, and is verified off the
+# NASCOP EID website — NOT CHAK DHIS2 and NOT the three 'Daraja Milestone-*'
+# data sets, so the reading comes from the programme's own EID line list
+# export.  See _eid_jt_coverage().
+# ══════════════════════════════════════════════════════════════════════
+
+def _eid_jt_latest_file():
+    """Newest JAMII TEKELEZI EID line list in train/, or None.
+
+    Globbed rather than hard-coded for the same reason as the DWAPI
+    workbook: the file is re-issued every reporting month with the extract
+    window baked into its name, so the newest mtime is always the freshest
+    snapshot and dropping next month's export in is enough.
+    """
+    try:
+        found = sorted(
+            BASE_DIR.glob(EID_JT_GLOB),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return None
+    return found[0] if found else None
+
+
+def _eid_reporting_ym(path):
+    """(year, month) of the extract window from the file name, or None.
+
+    '… FOR  IN 01SEP2026  08OCT2026 (1).csv' -> (2026, 9).  The month the
+    extract OPENS in is the reporting month, and reading it off the name
+    lets the reading move to the tab whose own sheet covers that month
+    without a code change when next month's export arrives.
+    """
+    m = re.search(r"(\d{1,2})\s*([A-Za-z]{3})[A-Za-z]*\s*(\d{4})",
+                  path.name if path else "")
+    if not m:
+        return None
+    ord_ = _MONTH_ORD.get(m.group(2).lower()[:3])
+    if ord_ is None:
+        return None
+    return (int(m.group(3)), ord_ + 1)
+
+
+def _eid_parse_date(value):
+    """A date from the line list's 'DD-MM-YY' shape, or None."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    for fmt in ("%d-%m-%y", "%d-%m-%Y", "%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _eid_age_months(dob, collected):
+    """Completed months between DOB and sample collection, or None.
+
+    Day-precise: a 13-08-2025 birth collected on 21-08-2026 is 12 months
+    old (the 13th falls after the 21st), so the anniversary itself counts
+    as the Nth month.  The sheet's own 'Age (Months)' column is a
+    fractional figure the sheet computes off its own clock and disagrees
+    with DOB on a couple of rows, so it is deliberately NOT used.
+    """
+    if not dob or not collected:
+        return None
+    return ((collected.year - dob.year) * 12
+            + (collected.month - dob.month)
+            - (1 if collected.day < dob.day else 0))
+
+
+def _eid_jt_coverage():
+    """Milestone 12's reading off the JAMII TEKELEZI EID line list.
+
+    The indicator is "proportion of HIV-exposed infants with an initial PCR
+    (EID) test done who were tested by 12 months of age":
+
+        denominator = the line list's INITIAL PCRs — PCR Type is 'Birth
+                      testing (0-2 weeks) or first contact' (or the
+                      equivalent 'Initial PCR (6 week or first contact)').
+                      Every 2nd/3rd/4th PCR, confirmatory PCR and sample
+                      redraw is a repeat and is excluded, which is also
+                      what "count each infant once, at their first PCR"
+                      asks for.
+        numerator   = those initial PCRs whose age at SAMPLE COLLECTION
+                      (Date Collected − DOB, day-precise) is 0–12 months.
+        pct         = numerator ÷ denominator × 100, banded on the
+                      registry's ≥95 / 85–94 / 75–84 / <75 scale.
+
+    The whole extract is used, because the extract IS the reporting month's
+    line list (its own step 1: "extract the line list of PCR tests done
+    during the milestone reporting month").  No second date filter is
+    applied on top.
+
+    `status` is 'ok' only when the file parsed and carried at least one
+    initial PCR, so a missing or renamed export degrades to no metric
+    rather than a misleading zero.
+    """
+    out = {
+        "status": "empty",
+        "source": ("JAMII TEKELEZI programme — NASCOP EID website "
+                   "test-outcome line list"),
+        "file": "",
+        "period": None,
+        "asOf": None,
+        "denominator": 0,
+        "numerator": 0,
+        "pct": None,
+        "unlock": 0,
+        "band": "",
+        "actual": "",
+        "formula": "",
+        "note": "",
+    }
+    path = _eid_jt_latest_file()
+    if path is None:
+        out["note"] = (
+            "No JAMII TEKELEZI EID test-outcome line list was found in the "
+            "app folder, so #12 (Integrated eVTP Services Cascade) cannot "
+            "be scored this month."
+        )
+        return out
+    out["file"] = path.name
+    try:
+        with path.open(newline="", encoding="utf-8-sig") as fh:
+            rows = list(csv.DictReader(fh))
+        if not rows:
+            out["note"] = f"{path.name} carried no rows."
+            return out
+
+        def cell(row, name):
+            """Case-insensitive column read — the export's header spacing
+            has drifted between re-issues, so the name is normalised."""
+            for key, value in row.items():
+                if key and key.strip().lower() == name:
+                    return value
+            return None
+
+        initial = [r for r in rows
+                   if str(cell(r, "pcr type") or "").strip()
+                   in _EID_INITIAL_PCRS]
+        unknown_age = 0
+        over12 = 0
+        numerator = 0
+        for row in initial:
+            months = _eid_age_months(
+                _eid_parse_date(cell(row, "dob")),
+                _eid_parse_date(cell(row, "date collected")),
+            )
+            if months is None:
+                unknown_age += 1
+                continue
+            if months > _EID_MAX_AGE_MONTHS:
+                over12 += 1
+            elif months >= 0:
+                numerator += 1
+
+        denominator = len(initial)
+        if not denominator:
+            out["status"] = "empty"
+            out["note"] = (
+                f"{path.name} carried no initial PCR ('"
+                f"{_EID_INITIAL_PCRS[0]}') rows, so the ratio has no "
+                "denominator this month."
+            )
+            return out
+
+        pct = numerator / denominator * 100.0
+        unlock, band = _unlock_bands("eid", pct)
+
+        # Collection window, so the tab can say which months the extract
+        # actually spans rather than implying a clean calendar month.
+        stamps = [d for d in (
+            _eid_parse_date(cell(r, "date collected")) for r in rows
+        ) if d]
+        window = (f"{min(stamps).isoformat()} … {max(stamps).isoformat()}"
+                  if stamps else "")
+
+        out.update({
+            "status": "ok",
+            "period": _month_human(_eid_reporting_ym(path)),
+            "asOf": _month_human(_eid_reporting_ym(path)) or None,
+            "denominator": denominator,
+            "numerator": numerator,
+            "pct": round(pct, 1),
+            "unlock": unlock,
+            "band": band,
+            "actual": (f"{numerator} of {denominator} initial PCRs "
+                       f"collected at 0\u201312 months"),
+            "rows": len(rows),
+            "over12": over12,
+            "unknownAge": unknown_age,
+            "collectionWindow": window,
+            "formula": (
+                "Infants whose initial PCR sample was collected at 0\u201312 "
+                "months \u00f7 infants with an initial PCR collected at any "
+                "age \u00d7 100. Line list (JAMII TEKELEZI EID test "
+                "outcomes, exported from the NASCOP EID website): keep PCR "
+                "Type = 'Birth testing (0-2 weeks) or first contact' (or "
+                "'Initial PCR (6 week or first contact)') and drop every "
+                "2nd/3rd/4th, confirmatory and redraw row; age = Date "
+                "Collected \u2212 DOB. Source: " + path.name
+            ),
+            "note": (
+                f"{numerator} of {denominator} HIV-exposed infants with an "
+                f"initial PCR in the extract were tested by 12 months "
+                f"({pct:.1f}%)"
+                + (f"; {over12} were older than 12 months at collection"
+                   if over12 else "")
+                + (f"; {unknown_age} had an unusable DOB or collection date"
+                   if unknown_age else "")
+                + (f". Samples were collected {window}." if window else ".")
             ),
         })
         return out
@@ -3322,6 +3578,61 @@ def _build_payload():
                 _month["dwapi"] = coverage
                 break
 
+    # ── #12 Integrated eVTP Services Cascade — EID testing ───────────────
+    # Sourced from the JAMII TEKELEZI EID line list, NOT CHAK DHIS2, so like
+    # #22 it is attached here rather than inside _compute_daraja_metrics.
+    #
+    # It lands on the tab whose own project month IS the month the extract
+    # opens in — September 2026 for the "01SEP2026 08OCT2026" export, i.e.
+    # the M1 tab — and never on the Baseline, which is pinned to August.
+    # Reading the month off the file name keeps that mapping automatic when
+    # next month's export replaces this one.
+    eid = _eid_jt_coverage()
+    _eid_ym = _eid_reporting_ym(_eid_jt_latest_file())
+    if eid.get("status") == "ok" and eid.get("pct") is not None:
+        _eid_metric = _metric_doc(
+            12,
+            "Integrated eVTP Services Cascade",
+            eid.get("asOf") or "latest EID extract",
+            ">95% of HIV-exposed infants receive EID testing as per the "
+            "national EID algorithm",
+            eid.get("actual") or "",
+            eid["pct"],
+            eid.get("unlock"),
+            eid.get("band"),
+            eid.get("formula") or "",
+        )
+        # The front-end's perf cell renders pct/actual/tooltip; the full
+        # numerator/denominator breakdown rides alongside so the panel can
+        # expand on it — same shape as #22's `coverage`.
+        _eid_metric["eid"] = eid
+        _eid_target = None
+        for _month in months:
+            if _month.get("isBaseline"):
+                continue
+            if _eid_ym and _period_label_ym(_month.get("period")) != _eid_ym:
+                continue
+            _eid_target = _month
+            break
+        if _eid_target is None and len(months) > 1:
+            # No tab covers that month yet — put the reading on M1 so it is
+            # visible rather than silently dropped.
+            _eid_target = months[1]
+        if _eid_target is not None:
+            _eid_target["eid"] = eid
+            for _row in _eid_target.get("rows") or []:
+                if _row.get("id") != 12:
+                    continue
+                _row["perf"] = _eid_metric
+                _row["eid"] = eid
+                # Same precedence as _attach_perf: a GOR-verified Summary2
+                # seed always wins, otherwise band the EID reading.
+                if not _row.get("alerts"):
+                    _alert = _alert_for_unlock(_eid_metric.get("unlock"))
+                    if _alert:
+                        _row["alerts"] = _alert
+                        _row["alertsSource"] = "eid"
+
     # ── A concrete CHAK period per tab ───────────────────────────────────
     # The ⋮ → "View data" panel asks DHIS2 for one month, but the schedule
     # sheets only carry a human label ("Month 1: (September 1 - September
@@ -3358,6 +3669,7 @@ def _build_payload():
         "tiers": tiers,
         "khis": khis,
         "dwapi": coverage,
+        "eid": eid,
     }
 
 
