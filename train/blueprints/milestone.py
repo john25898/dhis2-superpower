@@ -1931,7 +1931,8 @@ def _eid_jt_coverage():
 
         denominator = the line list's INITIAL PCRs — PCR Type is 'Birth
                       testing (0-2 weeks) or first contact' (or the
-                      equivalent 'Initial PCR (6 week or first contact)').
+                      equivalent 'Initial PCR (6 week or first contact)') —
+                      whose DATE COLLECTED falls in the reporting month.
                       Every 2nd/3rd/4th PCR, confirmatory PCR and sample
                       redraw is a repeat and is excluded, which is also
                       what "count each infant once, at their first PCR"
@@ -1941,10 +1942,13 @@ def _eid_jt_coverage():
         pct         = numerator ÷ denominator × 100, banded on the
                       registry's ≥95 / 85–94 / 75–84 / <75 scale.
 
-    The whole extract is used, because the extract IS the reporting month's
-    line list (its own step 1: "extract the line list of PCR tests done
-    during the milestone reporting month").  No second date filter is
-    applied on top.
+    Date Collected is ALSO scoped to the reporting month, because that is
+    what the indicator counts: infants whose sample was COLLECTED in the
+    month under review.  This is not redundant with the extract's own
+    window — that window is keyed on Date TESTED (the September export
+    tested 197 of its 200 rows in September) while only about a third of
+    those samples were collected in September, so without this filter the
+    reading would silently absorb the two preceding months' samples.
 
     `status` is 'ok' only when the file parsed and carried at least one
     initial PCR, so a missing or renamed export degrades to no metric
@@ -1990,9 +1994,26 @@ def _eid_jt_coverage():
                     return value
             return None
 
+        reporting_ym = _eid_reporting_ym(path)
         initial = [r for r in rows
                    if str(cell(r, "pcr type") or "").strip()
                    in _EID_INITIAL_PCRS]
+        # Keep only the samples COLLECTED in the reporting month.  A row
+        # collected before it (or in the few days the extract overshoots
+        # past it) belongs to another month's return.  If the file name
+        # gives no month, the filter is skipped rather than emptied.
+        out_of_month = 0
+        if reporting_ym:
+            kept = []
+            for row in initial:
+                collected = _eid_parse_date(cell(row, "date collected"))
+                if (collected
+                        and collected.year == reporting_ym[0]
+                        and collected.month == reporting_ym[1]):
+                    kept.append(row)
+                else:
+                    out_of_month += 1
+            initial = kept
         unknown_age = 0
         over12 = 0
         numerator = 0
@@ -2012,20 +2033,23 @@ def _eid_jt_coverage():
         denominator = len(initial)
         if not denominator:
             out["status"] = "empty"
+            _human = _month_human(reporting_ym)
             out["note"] = (
                 f"{path.name} carried no initial PCR ('"
-                f"{_EID_INITIAL_PCRS[0]}') rows, so the ratio has no "
-                "denominator this month."
+                f"{_EID_INITIAL_PCRS[0]}') rows"
+                + (f" collected in {_human}" if _human else "")
+                + ", so the ratio has no denominator this month."
             )
             return out
 
         pct = numerator / denominator * 100.0
         unlock, band = _unlock_bands("eid", pct)
 
-        # Collection window, so the tab can say which months the extract
-        # actually spans rather than implying a clean calendar month.
+        # Collection window of the rows that COUNTED, so the tab states
+        # the span the ratio actually covers rather than the extract's own
+        # (Date Tested) window.
         stamps = [d for d in (
-            _eid_parse_date(cell(r, "date collected")) for r in rows
+            _eid_parse_date(cell(r, "date collected")) for r in initial
         ) if d]
         window = (f"{min(stamps).isoformat()} … {max(stamps).isoformat()}"
                   if stamps else "")
@@ -2042,6 +2066,8 @@ def _eid_jt_coverage():
             "actual": (f"{numerator} of {denominator} initial PCRs "
                        f"collected at 0\u201312 months"),
             "rows": len(rows),
+            "monthRows": denominator + over12 + unknown_age,
+            "outOfMonth": out_of_month,
             "over12": over12,
             "unknownAge": unknown_age,
             "collectionWindow": window,
@@ -2051,19 +2077,24 @@ def _eid_jt_coverage():
                 "age \u00d7 100. Line list (JAMII TEKELEZI EID test "
                 "outcomes, exported from the NASCOP EID website): keep PCR "
                 "Type = 'Birth testing (0-2 weeks) or first contact' (or "
-                "'Initial PCR (6 week or first contact)') and drop every "
-                "2nd/3rd/4th, confirmatory and redraw row; age = Date "
-                "Collected \u2212 DOB. Source: " + path.name
+                "'Initial PCR (6 week or first contact)'), keep only rows "
+                "whose Date Collected is in the reporting month, and drop "
+                "every 2nd/3rd/4th, confirmatory and redraw row; "
+                "age = Date Collected \u2212 DOB. Source: " + path.name
             ),
             "note": (
-                f"{numerator} of {denominator} HIV-exposed infants with an "
-                f"initial PCR in the extract were tested by 12 months "
-                f"({pct:.1f}%)"
+                f"{numerator} of {denominator} HIV-exposed infants whose "
+                f"initial PCR sample was collected in the reporting month "
+                f"were tested by 12 months ({pct:.1f}%)"
                 + (f"; {over12} were older than 12 months at collection"
                    if over12 else "")
                 + (f"; {unknown_age} had an unusable DOB or collection date"
                    if unknown_age else "")
-                + (f". Samples were collected {window}." if window else ".")
+                + (f"; {out_of_month} initial-PCR rows were collected "
+                   f"outside the reporting month and excluded"
+                   if out_of_month else "")
+                + (f". Samples counted were collected {window}."
+                   if window else ".")
             ),
         })
         return out
