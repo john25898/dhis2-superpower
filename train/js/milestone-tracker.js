@@ -357,9 +357,11 @@ function msKhisChipHtml(khis) {
 
 // ---------------------------------------------------------------------
 // Milestone 22 — Digital Health Systems & Electronic Reporting Coverage.
-// Sourced from the NDWH's own UJTP DWAPI upload workbook (a per-facility
-// submission log), NOT CHAK DHIS2, and scored on the Baseline tab only:
-// the workbook is the snapshot for the month the baseline is pinned to.
+// Sourced from the NDWH's own UJTP DWAPI upload workbooks (per-facility
+// submission logs), NOT CHAK DHIS2.  Each issue carries one submission
+// window whose stamps land in the month AFTER the month reported on, so
+// NDWH's August issue scores the Baseline tab and its September issue
+// scores the M1 September tab.
 // ---------------------------------------------------------------------
 function msDwapiChipHtml(dwapi) {
   if (!dwapi) return "";
@@ -389,7 +391,10 @@ function msDwapiNoteHtml(dwapi) {
   const dockets = (dwapi.dockets || [])
     .map((d) => `${d.docket} ${d.pct}%`)
     .join(" · ");
-  const month = dwapi.latestMonthHuman
+  const rep = dwapi.reportingMonthHuman
+    ? escapeHtml(String(dwapi.reportingMonthHuman))
+    : "";
+  const stamp = dwapi.latestMonthHuman
     ? escapeHtml(String(dwapi.latestMonthHuman))
     : "the workbook's newest submission month";
   return (
@@ -398,13 +403,17 @@ function msDwapiNoteHtml(dwapi) {
     escapeHtml(String(Number(dwapi.reporting) || 0)) +
     " of " +
     escapeHtml(String(Number(dwapi.expected) || 0)) +
-    " expected HIV facilities submitted an upload in " +
-    month +
+    " expected HIV facilities are reporting electronically" +
+    (rep ? " for " + rep : "") +
     " (" +
     escapeHtml(String(Number(dwapi.pct) || 0)) +
     "%" +
     (dockets ? " — docket coverage that month: " + escapeHtml(dockets) : "") +
-    "), so it bands at " +
+    "). An upload stamp in " +
+    stamp +
+    " is what closes " +
+    (rep ? rep : "the month") +
+    ", so it bands at " +
     escapeHtml(String(Number(dwapi.unlock) || 0)) +
     "% unlock. " +
     escapeHtml(
@@ -418,12 +427,12 @@ function msDwapiNoteHtml(dwapi) {
       ? " A further " +
         escapeHtml(String(Number(dwapi.lapsedCount))) +
         " submitted in an earlier month but not in " +
-        month +
+        stamp +
         "."
       : "") +
-    " It is scored on the Baseline tab, because the workbook whose stamps read " +
-    month +
-    " is the reporting snapshot NDWH issued for the month the baseline is pinned to."
+    " The reading sits on the tab for " +
+    (rep ? rep : "the month it covers") +
+    ", so NDWH's August and September issues appear on the Baseline and M1 tabs respectively."
   );
 }
 
@@ -979,15 +988,41 @@ async function openMsFacilityPanel(row, month) {
     </div>`;
   _msPanelShell(title, "", spinner);
 
-  // #22 is sourced from the DWAPI upload workbook, not DHIS2, and its
+  // #22 is sourced from the DWAPI upload workbooks, not DHIS2, and its
   // coverage object already carries the facility lists — no round trip.
-  // It is only attached to the Baseline tab's row, so fall back to the
-  // payload-level copy for the tabs that share the same coverage figure.
-  const cov =
-    (row.perf && row.perf.coverage) ||
-    (String(row.id) === "22" && _milestonePayload && _milestonePayload.dwapi);
-  if (cov) {
-    _msRenderDwapiPanel(cov);
+  // Each issue is attached to the tab whose month it reports on, so when
+  // the row carries no reading of its own fall back to the payload reading
+  // for THIS tab's month (there can be two: NDWH's August and September
+  // issues are both on disk).  If none matches, say so rather than falling
+  // through to a CHAK DHIS2 lookup that cannot answer for #22 at all.
+  if (String(row.id) === "22") {
+    const want = String(month || "");
+    const all =
+      (_milestonePayload && _milestonePayload.dwapiAll) ||
+      (_milestonePayload && _milestonePayload.dwapi
+        ? [_milestonePayload.dwapi]
+        : []);
+    const cov =
+      (row.perf && row.perf.coverage) ||
+      all.find(
+        (c) =>
+          String(c.reportingMonth || "").replace("-", "") === want &&
+          c.status === "ok",
+      ) ||
+      (want === "" ? _milestonePayload.dwapi : null);
+    if (cov) {
+      _msRenderDwapiPanel(cov);
+      return;
+    }
+    _msPanelShell(
+      title,
+      "",
+      `<div class="p-8 text-[13px] text-slate-500">
+         No NDWH DWAPI upload reading covers this tab&rsquo;s month. #22 is
+         scored from the NDWH&rsquo;s monthly DWAPI upload workbook, so it is
+         shown on the tabs whose month NDWH has issued a file for.
+       </div>`,
+    );
     return;
   }
 
@@ -1244,7 +1279,7 @@ function _msRenderDwapiPanel(cov) {
     .join(" ");
   const sub =
     `<span class="font-semibold text-slate-700">${escapeHtml(cov.asOf || cov.latestMonthHuman || "latest upload")}</span>` +
-    ` &middot; <span class="font-semibold text-slate-700">${cov.reporting || 0}</span> of ${cov.expected || 0} facilities uploaded` +
+    ` &middot; <span class="font-semibold text-slate-700">${cov.reporting || 0}</span> of ${cov.expected || 0} facilities reporting` +
     (cov.pct != null
       ? ` &middot; <span class="font-semibold text-slate-700">${cov.pct}%</span>`
       : "") +

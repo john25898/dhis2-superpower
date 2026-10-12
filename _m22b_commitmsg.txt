@@ -1,0 +1,22 @@
+Milestone 22: file each DWAPI issue under the month it reports on
+
+An NDWH DWAPI upload issue is stamped in the month AFTER the one it
+reports on, and NDWH runs a month behind, so the previous issue is still
+on disk when the next arrives and is still the only source for the older
+reading. Scoring just the newest workbook therefore blanked a month and
+put September's figure on the August tab.
+
+Each issue is now scored on its own and filed under its reporting month:
+the August issue (September stamps) gives 204 of 211 = 96.7% on the
+Baseline tab, and the September issue (October stamps) gives 188 of 211
+= 89.1% on the M1 September tab.
+
+- _dwapi_workbooks globs every issue; _dwapi_coverages scores each.
+- _prev_month_key derives the reporting month from the stamp month.
+- _dwapi_coverage now accepts a workbook path instead of always reading
+  the newest one, and reports reportingMonth/reportingMonthHuman.
+- The M22 attach block matches a reading to a tab by the workbook's own
+  month rather than newest-file-wins, and leaves the other tabs empty.
+- The payload carries dwapiAll alongside dwapi (the newest issue).
+- The front-end renders the reading for the tab it is opened from, and
+  says so instead of guessing when no issue covers that month.

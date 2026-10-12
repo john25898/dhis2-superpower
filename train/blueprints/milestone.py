@@ -184,9 +184,16 @@ SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 # month under a new name, in two house styles so far:
 #   "UJTP DWAPI UPLOADS-August 2026 (3).xlsx"
 #   "AFGHS-Chak Daraja Dwapi Uploads-September 2026.xlsx"
-# Newest mtime wins.  NOTE the workbook is *.xlsx, which this repository
-# ignores by default — a newly added file must be force-added (`git add -f`)
-# or it never reaches the server and the reading silently goes stale.
+#
+# EVERY matching issue is scored, not just the newest, because an issue
+# carries ONE submission window and NDWH runs a month behind: when the
+# September issue (October stamps) arrives, the August issue (September
+# stamps) is still on disk and is still the only source for the August
+# reading.  See _dwapi_coverages().
+#
+# NOTE the workbook is *.xlsx, which this repository ignores by default — a
+# newly added file must be force-added (`git add -f`) or it never reaches
+# the server and that month's reading silently goes missing.
 DWAPI_GLOBS = (
     "UJTP DWAPI UPLOADS*.xlsx",
     "AFGHS-Chak Daraja Dwapi Uploads*.xlsx",
@@ -1401,6 +1408,22 @@ def _pe_key(pe):
     return (0, 0)
 
 
+def _prev_month_key(ym):
+    """(year, month) one calendar month before a (year, month), or None.
+
+    Exists for the DWAPI stamps: an upload is stamped in the month AFTER
+    the one it reports on, so #22's reporting month is the newest stamp
+    month minus one.
+    """
+    try:
+        year, month = int(ym[0]), int(ym[1])
+    except (TypeError, ValueError, IndexError):
+        return None
+    if not (1 <= month <= 12) or not year:
+        return None
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
 def _fetch_daraja_metrics_data(ou_ids):
     """Pull all MOH 731 DEs for the Daraja OU set (one analytics request).
 
@@ -1944,12 +1967,13 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
 # submission log), NOT CHAK DHIS2.  See _dwapi_coverage().
 # ══════════════════════════════════════════════════════════════════════
 
-def _dwapi_latest_workbook():
-    """Newest DWAPI upload workbook in train/, or None.
+def _dwapi_workbooks():
+    """Every DWAPI upload workbook in train/, newest mtime first.
 
     Globbed rather than hard-coded because NDWH re-issues the file monthly
-    under a new name; newest mtime wins, so the freshest snapshot is the
-    one scored without a code change.
+    under a new name, and EVERY issue is wanted: each one carries a single
+    submission window, so last month's issue is still the only source for
+    last month's reading when the next issue lands.
     """
     found = []
     for pattern in DWAPI_GLOBS:
@@ -1957,12 +1981,17 @@ def _dwapi_latest_workbook():
             found.extend(BASE_DIR.glob(pattern))
         except OSError:
             continue
-    if not found:
-        return None
     try:
-        return max(found, key=lambda p: p.stat().st_mtime)
+        return sorted(set(found), key=lambda p: p.stat().st_mtime,
+                      reverse=True)
     except OSError:
-        return None
+        return []
+
+
+def _dwapi_latest_workbook():
+    """Newest DWAPI upload workbook in train/, or None."""
+    books = _dwapi_workbooks()
+    return books[0] if books else None
 
 
 def _dwapi_key(value):
@@ -2008,7 +2037,7 @@ def _dwapi_read(ws, required):
     return {}, {}
 
 
-def _dwapi_coverage():
+def _dwapi_coverage(path=None):
     """Milestone 22's electronic-reporting coverage reading.
 
     The measure is the one the milestone text asks for — "of the HIV
@@ -2020,6 +2049,9 @@ def _dwapi_coverage():
         reporting = those roster facilities carrying an upload timestamp in
                     the workbook's newest submission month.
         pct       = reporting / expected × 100.
+
+    `path` defaults to the newest workbook on disk; pass one to score a
+    particular issue (that is what _dwapi_coverages() does).
 
     The roster is read from CODE, not from the workbook.  It was extracted
     once from the `ndwh_` sheet of the August 2026 UJTP DWAPI workbook and
@@ -2048,13 +2080,18 @@ def _dwapi_coverage():
         newest month carries the bulk of the rows — the newest stamp is the
         live submission window.
 
-    Read against the September-issued "AFGHS-Chak Daraja Dwapi Uploads-
-    September 2026.xlsx" the newest stamp month is 2026-10 — the file is
-    NAMED September because September is the reporting month it covers, and
-    its stamps are the October upload that closed it — and the headline is
-    188 of 211 (89.1%).  The 23 that are silent in that month (3 of which
-    do not appear in the workbook at all, and 20 of which uploaded in an
-    earlier month) are returned explicitly so the panel can name them.
+    Stamp month vs REPORTING month.  An `Updated` stamp is written in the
+    month AFTER the month being reported on — an October upload is
+    September's return — so `reportingMonth` is the newest stamp month
+    minus one, and that is the month the reading belongs to.  Both issues
+    on disk confirm the rule: the August-issued workbook stamps 2026-09 and
+    gives 204 of 211 (96.7%) for August, and the September-issued
+    "AFGHS-Chak Daraja Dwapi Uploads-September 2026.xlsx" stamps 2026-10
+    and gives 188 of 211 (89.1%) for September.
+
+    The facilities that are silent in the window (3 of which do not appear
+    in the workbook at all, and the rest of which uploaded in an earlier
+    month) are returned explicitly so the panel can name them.
 
     `status` is 'ok' only when the log was readable, so a missing or
     renamed workbook degrades to no metric rather than a misleading zero.
@@ -2079,7 +2116,8 @@ def _dwapi_coverage():
         return out
     out["expected"] = len(roster)
 
-    path = _dwapi_latest_workbook()
+    if path is None:
+        path = _dwapi_latest_workbook()
     if path is None:
         out["note"] = (
             "No DWAPI upload workbook was found in the app folder, so the "
@@ -2186,6 +2224,10 @@ def _dwapi_coverage():
 
         # 'YYYY-MM' -> 'YYYYMM' so the shared period helpers can read it.
         latest_ym = _pe_key(latest.replace("-", "")) if latest else (0, 0)
+        # The stamp month is one AFTER the month reported on (an October
+        # upload closes September), so that is what the reading is filed
+        # under — and what lets two issues sit on two tabs.
+        rep_ym = _prev_month_key(latest_ym)
         out.update({
             "status": "ok",
             "expected": len(roster),
@@ -2218,20 +2260,24 @@ def _dwapi_coverage():
             "everReporting": len(roster & ever),
             "latestMonth": latest,
             "latestMonthHuman": _month_human(latest_ym),
+            "reportingMonth": (f"{rep_ym[0]:04d}-{rep_ym[1]:02d}"
+                               if rep_ym else ""),
+            "reportingMonthHuman": _month_human(rep_ym),
             "formula": (
-                "C&T / TST facilities carrying an upload timestamp in the "
-                "workbook's newest submission month ÷ the 211 C&T / TST "
-                "facilities held in the app × 100 "
+                "C&T / TST facilities carrying an upload stamp in "
+                f"{_month_human(latest_ym)} — the submission window that "
+                f"closes {_month_human(rep_ym) or 'the reporting month'} — "
+                "÷ the 211 C&T / TST facilities held in the app × 100 "
                 f"({len(reporting)} of {len(roster)}). Source: "
-                f"{path.name}, sheet '{log_sheet}' for the upload log. "
-                f"The month is {_month_human(latest_ym)}, the newest stamp "
-                "in the log."
+                f"{path.name}, sheet '{log_sheet}' for the upload log."
             ),
             "note": (
                 f"{len(reporting)} of {len(roster)} C&T / TST facilities "
-                f"submitted an upload in {_month_human(latest_ym)} "
-                f"({pct:.1f}%). "
-                + (f"{len(lapsed)} of them are silent in that month but "
+                f"are reporting electronically for "
+                f"{_month_human(rep_ym) or _month_human(latest_ym)} "
+                f"({pct:.1f}%) — they carry an upload stamp in "
+                f"{_month_human(latest_ym)}, the window that closes it. "
+                + (f"{len(lapsed)} of them are silent in that window but "
                    "have uploaded before. "
                    if lapsed else "")
                 + (f"{len(never)} do not appear in this workbook at all. "
@@ -2248,6 +2294,26 @@ def _dwapi_coverage():
         out["status"] = "error"
         out["note"] = f"Could not read {path.name}: {exc}"
         return out
+
+
+def _dwapi_coverages():
+    """One reading per DWAPI workbook on disk, newest-issued first.
+
+    An issue covers one submission window, so scoring all of them is what
+    lets #22 answer for every month NDWH has issued a file for — the August
+    issue (September stamps) and the September issue (October stamps) sit
+    on their own tabs instead of the newest silently replacing the older
+    month's reading.
+
+    Always returns at least one entry: with no workbook on disk it is the
+    single "unavailable" reading, so callers never special-case an empty
+    list.  Index 0 is the newest issue, i.e. the one to show when only one
+    reading is wanted.
+    """
+    books = _dwapi_workbooks()
+    if not books:
+        return [_dwapi_coverage(None)]
+    return [_dwapi_coverage(path) for path in books]
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -3815,58 +3881,81 @@ def _build_payload():
             _attach_perf(m1["rows"], khis_m1.get("metrics"))
 
     # ── #22 Digital Health Systems & Electronic Reporting Coverage ───────
-    # Sourced from the NDWH's UJTP DWAPI upload workbook, NOT CHAK DHIS2,
-    # so it is attached here rather than inside _compute_daraja_metrics.
+    # Sourced from the NDWH's DWAPI upload workbooks, NOT CHAK DHIS2, so it
+    # is attached here rather than inside _compute_daraja_metrics.
     #
-    # It lands on the BASELINE tab ONLY.  The Baseline tab is the tracker's
-    # live read of the latest reported month, so the newest upload workbook
-    # belongs there and nowhere else; attaching it after the M1 re-score
-    # above also keeps it off M2–M6, which share the baseline's metrics
-    # list.
+    # An issue carries ONE submission window and its stamps name the month
+    # AFTER the month being reported on (October stamps close September), so
+    # each issue belongs to exactly one tab: NDWH's August issue (September
+    # stamps) to the Baseline tab, its September issue (October stamps) to
+    # the M1 September tab.  Scoring every issue rather than only the newest
+    # is what puts a reading on both — and anchoring on the WORKBOOK's own
+    # month, never on "newest file wins", is what stops the September issue
+    # from blanking the August reading.
     #
     # Note this assigns row['perf'] directly instead of going through
     # _attach_perf(): that helper POPs 'perf' off every row whose id is
     # absent from the metrics list it is handed, so passing a single-metric
     # list would strip the nine CHAK baseline metrics off the tab.
-    coverage = _dwapi_coverage()
-    if coverage.get("status") == "ok" and coverage.get("pct") is not None:
-        _cov_ym = _baseline_period_ym()
-        if not _cov_ym:
-            _cov_ym = _pe_key(
-                str(coverage.get("latestMonth") or "").replace("-", ""))
-        coverage["asOf"] = _month_human(_cov_ym) or coverage.get(
+    coverages = _dwapi_coverages()
+    coverage = coverages[0]
+    _cov_scored = 0
+    for _cov in coverages:
+        if _cov.get("status") != "ok" or _cov.get("pct") is None:
+            continue
+        # The reporting month is what the reading IS; fall back to the stamp
+        # month minus one should an older issue ever lack it.
+        _cov_ym = _pe_key(
+            str(_cov.get("reportingMonth") or "").replace("-", ""))
+        if not _cov_ym or not _cov_ym[0]:
+            _cov_ym = _prev_month_key(_pe_key(
+                str(_cov.get("latestMonth") or "").replace("-", "")))
+        _cov["asOf"] = _month_human(_cov_ym) or _cov.get(
             "latestMonthHuman") or None
         _cov_metric = _metric_doc(
             22,
             "Digital Health Systems & Electronic Reporting Coverage",
-            coverage["asOf"] or "latest upload",
+            _cov["asOf"] or "latest upload",
             "≥95% of HIV facilities reporting electronically",
-            coverage.get("actual") or "",
-            coverage["pct"],
-            coverage.get("unlock"),
-            coverage.get("band"),
-            coverage.get("formula") or "",
+            _cov.get("actual") or "",
+            _cov["pct"],
+            _cov.get("unlock"),
+            _cov.get("band"),
+            _cov.get("formula") or "",
         )
         # The front-end's perf cell renders pct/actual/tooltip; the full
         # breakdown rides alongside so the panel can expand on it.
-        _cov_metric["coverage"] = coverage
+        _cov_metric["coverage"] = _cov
+        # Land it on the tab whose own project month IS the month this
+        # workbook reports on.
+        _cov_target = None
         for _month in months:
-            if not _month.get("isBaseline"):
+            _ym = _baseline_period_ym() if _month.get("isBaseline") \
+                else _period_label_ym(_month.get("period"))
+            if _ym and _cov_ym and tuple(_ym) == tuple(_cov_ym):
+                _cov_target = _month
+                break
+        if _cov_target is None:
+            # No tab covers that month — disclose it on the Baseline tab
+            # rather than dropping the reading without a word.
+            _cov_target = next(
+                (m for m in months if m.get("isBaseline")), None)
+        if _cov_target is None:
+            continue
+        _cov_target["dwapi"] = _cov
+        _cov_scored += 1
+        for _row in _cov_target.get("rows") or []:
+            if _row.get("id") != 22:
                 continue
-            for _row in _month.get("rows") or []:
-                if _row.get("id") != 22:
-                    continue
-                _row["perf"] = _cov_metric
-                # Same precedence as _attach_perf: a GOR-verified Summary2
-                # seed always wins, otherwise band the coverage reading.
-                if not _row.get("alerts"):
-                    _alert = _alert_for_unlock(_cov_metric.get("unlock"))
-                    if _alert:
-                        _row["alerts"] = _alert
-                        _row["alertsSource"] = "dwapi"
-            _month["dwapi"] = coverage
-            break
-    else:
+            _row["perf"] = _cov_metric
+            # Same precedence as _attach_perf: a GOR-verified Summary2
+            # seed always wins, otherwise band the coverage reading.
+            if not _row.get("alerts"):
+                _alert = _alert_for_unlock(_cov_metric.get("unlock"))
+                if _alert:
+                    _row["alerts"] = _alert
+                    _row["alertsSource"] = "dwapi"
+    if not _cov_scored:
         # Disclose the gap on the Baseline tab rather than leaving #22
         # silently unscored with no explanation.
         for _month in months:
@@ -3964,6 +4053,7 @@ def _build_payload():
         "tiers": tiers,
         "khis": khis,
         "dwapi": coverage,
+        "dwapiAll": coverages,
         "eid": eid,
     }
 
