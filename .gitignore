@@ -28,6 +28,12 @@ Thumbs.db
 *.docx
 *.zip
 
+# ...except the NDWH DWAPI upload workbooks.  Milestone #22 is scored off the
+# newest one on the server, so NDWH's monthly re-issue has to be committable.
+# These are negations of the *.xlsx rule above, so they must stay BELOW it.
+!UJTP DWAPI UPLOADS*.xlsx
+!AFGHS-Chak Daraja Dwapi Uploads*.xlsx
+
 # Ad-hoc / generated scripts
 _check_*.py
 _create_*.py

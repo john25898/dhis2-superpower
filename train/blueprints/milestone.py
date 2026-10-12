@@ -168,17 +168,264 @@ FAA_XLSX = BASE_DIR / "FAA_Monthly_Milestone_Plan_w_PaySched_CHAK_Revised.xlsx"
 SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 
 # ── Milestone 22 — electronic-reporting coverage (NDWH / DWAPI) ─────────
-# The NDWH produces this upload workbook as a dated snapshot, and the
-# filename carries a version suffix ("UJTP DWAPI UPLOADS-August 2026 (3)
-# .xlsx").  It is therefore GLOBBED and the newest match wins, so dropping
-# next month's file into train/ is enough — no code change, no redeploy.
-DWAPI_GLOB = "UJTP DWAPI UPLOADS*.xlsx"
-# Sheet carrying the expected-facility roster the milestone is scored against.
-_DWAPI_ROSTER_SHEET = "ndwh_"
+# Two different things are needed, and they come from two different places:
+#
+#   1. THE ROSTER — the 211 facilities the milestone answers for.  That
+#      list is FIXED, so it is held in code (_M22_CT_TST_ROSTER below)
+#      rather than re-read from the workbook every build.  NDWH re-issues
+#      the file each month with a slightly different expected-site count
+#      (the September issue says 210), and a denominator that moves under
+#      the reading is worse than a slow one to update.
+#
+#   2. THE STAMPS — which of those facilities have uploaded.  That DOES
+#      change, so the newest upload workbook in train/ is read for it.
+#
+# The workbook is GLOBBED rather than named because NDWH re-issues it every
+# month under a new name, in two house styles so far:
+#   "UJTP DWAPI UPLOADS-August 2026 (3).xlsx"
+#   "AFGHS-Chak Daraja Dwapi Uploads-September 2026.xlsx"
+# Newest mtime wins.  NOTE the workbook is *.xlsx, which this repository
+# ignores by default — a newly added file must be force-added (`git add -f`)
+# or it never reaches the server and the reading silently goes stale.
+DWAPI_GLOBS = (
+    "UJTP DWAPI UPLOADS*.xlsx",
+    "AFGHS-Chak Daraja Dwapi Uploads*.xlsx",
+)
 # Sheet carrying the per-facility upload log.  A workbook that renames it
 # still parses: any sheet whose header row holds both 'code' and 'updated' is
 # accepted as the log.
 _DWAPI_DATA_SHEET = "Data"
+
+# ── Milestone 22 — the C&T / TST roster (figures kept in code) ──────────
+# The 211 facilities the electronic-reporting coverage milestone answers for,
+# extracted ONCE from the `ndwh_` sheet of the August 2026 UJTP DWAPI
+# workbook and held here on purpose:
+#
+#   * the list is the C&T / TST (care & treatment, and testing) sites the
+#     programme is accountable for, and it does not change month to month;
+#   * re-reading it from the workbook every build would let the denominator
+#     drift — the September issue of the workbook declares 210 expected
+#     sites against this 211, and the reading must stay comparable;
+#   * the workbook only reaches the server if it is force-added (see
+#     DWAPI_GLOBS above), so the roster cannot be trusted to be there.
+#
+# Each entry is (MFL code, facility name, county).  The name and county are
+# kept so the drill-down panel can name a facility that is silent without
+# needing the workbook to carry a roster sheet at all.
+_M22_CT_TST_ROSTER = (
+    ('10043', 'Baari Health Centre', 'Nyandarua'),
+    ('10044', 'Bamboo Health Centre', 'Nyandarua'),
+    ('10100', 'Consolata Mission Hospital (Mathari)', 'Nyeri'),
+    ('10171', 'Engineer District Hospital', 'Nyandarua'),
+    ('10221', 'Gatithi Dispensary', 'Kirinyaga'),
+    ('10244', 'Geta Bush Health centre', 'Nyandarua'),
+    ('10267', 'Githumu Hospital', "Murang'a"),
+    ('10312', 'Heni Health Centre', 'Nyandarua'),
+    ('10321', 'Holy Cross Dispensary', 'Kiambu'),
+    ('10398', 'Kagio Catholic Dispensary (Mary Immucate Catholic', 'Kirinyaga'),
+    ('10419', 'Kahembe Health Centre', 'Nyandarua'),
+    ('10429', 'Kaimbaga Dispensary', 'Nyandarua'),
+    ('10481', 'Karangatha Health Centre', 'Nyandarua'),
+    ('10509', 'Kasuku Health Centre', 'Nyandarua'),
+    ('10602', 'Kijabe (AIC) Hospital', 'Kiambu'),
+    ('10603', 'Kikuyu (PCEA) Hospital', 'Kiambu'),
+    ('10657', 'Leshau Pondo Health Centre', 'Nyandarua'),
+    ('10681', 'Manunga Health Centre', 'Nyandarua'),
+    ('10693', 'Kijabe (AIC) Hospital Marira Medical Clinic', 'Kiambu'),
+    ('10732', 'Mirangine Health Centre', 'Nyandarua'),
+    ('10786', 'Murungaru Health Centre', 'Nyandarua'),
+    ('10808', 'Mwea Mission (Our Lady of Lourdes) Hospital', 'Kirinyaga'),
+    ('10820', 'Nandarasi Dispensary', 'Nyandarua'),
+    ('10825', 'Nazareth Hospital', 'Kiambu'),
+    ('10829', 'Ndaragwa Health Centre', 'Nyandarua'),
+    ('10832', 'Ndemi Health Centre', 'Nyandarua'),
+    ('10840', 'Ndunyu Njeru Dispensary', 'Nyandarua'),
+    ('10851', 'New Mawingu Health Centre', 'Nyandarua'),
+    ('10852', 'New Tumaini Health Centre', 'Nyandarua'),
+    ('10856', 'Ngano Health Centre', 'Nyandarua'),
+    ('10871', 'Ngorika Health Centre', 'Nyandarua'),
+    ('10878', 'Njabini Health Centre', 'Nyandarua'),
+    ('10887', 'North Kinangop Catholic Hospital', 'Nyandarua'),
+    ('10911', 'Olborosat Dispensary', 'Nyandarua'),
+    ('10912', 'Old Mawingu Health Centre', 'Nyandarua'),
+    ('10916', 'Olkalou Sub-District Hospital', 'Nyandarua'),
+    ('10988', 'Sacred Heart Dispensary', 'Kiambu'),
+    ('11004', 'Shamata Health Centre', 'Nyandarua'),
+    ('11009', 'Silibwet Health Centre (Nyandaruawest)', 'Nyandarua'),
+    ('11030', 'St Charles Lwanga Dispensary', 'Kiambu'),
+    ('11041', 'St Joseph Catholic Dispensary (Ruiru)', 'Kiambu'),
+    ('11059', 'St Mathews and Sarah Dispensary', 'Nyandarua'),
+    ('11069', 'St Teresa Catholic Dispensary', 'Kirinyaga'),
+    ('11076', 'Subuku Dispensary (Nyandarua North)', 'Nyandarua'),
+    ('11124', 'Tumutumu (PCEA) Hospital', 'Nyeri'),
+    ('11126', 'Turasha Dispensary', 'Nyandarua'),
+    ('11173', 'Wanjohi Health Centre', 'Nyandarua'),
+    ('11183', 'Weru Health Centre (Nyandarua South)', 'Nyandarua'),
+    ('11923', 'Akachiu Health Centre', 'Meru'),
+    ('11928', 'Amugaa Health Centre', 'Meru'),
+    ('11942', 'Baragu Health Centre', 'Tharaka-Nithi'),
+    ('11962', 'Kambu Catholic Dispensary', 'Makueni'),
+    ('11970', 'Chogoria (PCEA) Hospital', 'Tharaka-Nithi'),
+    ('11971', 'Chugu Dispensary', 'Meru'),
+    ('11972', 'Chuka Cottage Hospital', 'Tharaka-Nithi'),
+    ('11973', 'Chuka District Hospital', 'Tharaka-Nithi'),
+    ('11976', 'Consolata Mission Hospital Nkubu', 'Meru'),
+    ('11981', 'D Comboni Mission', 'Machakos'),
+    ('11984', 'Dallas Dispensary', 'Embu'),
+    ('12004', 'Embu Provincial General Hospital', 'Embu'),
+    ('12013', 'Faith Nursing Home (Ikutha)', 'Kitui'),
+    ('12015', 'Family Care Medical Centre(Meru)', 'Meru'),
+    ('12023', 'Gachuriri Dispensary', 'Embu'),
+    ('12027', 'Gakoromone Dispensary', 'Meru'),
+    ('12031', 'Gatimbi Health Centre', 'Meru'),
+    ('12034', 'Gatunga Health Centre', 'Tharaka-Nithi'),
+    ('12036', 'Giaki Sub-District Hospital', 'Meru'),
+    ('12041', 'Githongo District Hospital', 'Meru'),
+    ('12044', 'Consolata Hospital Gitoro', 'Meru'),
+    ('12071', 'Igoki Dispensary', 'Meru'),
+    ('12097', 'Ithimbari Dispensary', 'Meru'),
+    ('12119', 'Kaanwa Dispensary', 'Tharaka-Nithi'),
+    ('12130', 'Kairuri Health Center', 'Embu'),
+    ('12132', 'Kajuki Health Centre', 'Tharaka-Nithi'),
+    ('12162', 'Kambandi Dispensary', 'Tharaka-Nithi'),
+    ('12164', 'Kamumu Dispensary', 'Embu'),
+    ('12174', 'Kangeta Health Centre', 'Meru'),
+    ('12179', 'Kanja Health Centre', 'Embu'),
+    ('12181', 'Kanyakine District Hospital', 'Meru'),
+    ('12185', 'Kanyuambora Dispensary', 'Embu'),
+    ('12190', 'Kanziku Health Centre', 'Kitui'),
+    ('12192', 'Kaongo Health Centre', 'Meru'),
+    ('12195', 'Karama Dispensary', 'Meru'),
+    ('12198', 'Karau Health Centre', 'Embu'),
+    ('12203', 'Karurumo Rhtc', 'Embu'),
+    ('12204', 'Kasaala Health Centre', 'Kitui'),
+    ('12205', 'PCEA Kasasule Dispensary', 'Makueni'),
+    ('12213', 'Katakani Dispensary', 'Kitui'),
+    ('12222', 'Kathangacini Dispensary', 'Tharaka-Nithi'),
+    ('12226', 'Kathanje Dispensary', 'Embu'),
+    ('12232', 'Kathigu Health Centre', 'Meru'),
+    ('12234', 'Kathithi Dispensary', 'Meru'),
+    ('12241', 'Katilini Health Centre', 'Kitui'),
+    ('12251', 'Katyethoka Health Centre', 'Kitui'),
+    ('12271', 'Kiambere Dam Dispensary', 'Embu'),
+    ('12272', 'Kiamuchairu Health Centre', 'Tharaka-Nithi'),
+    ('12274', 'Kiamuringa Dispensary', 'Embu'),
+    ('12277', 'Kiangondu Dispensary', 'Tharaka-Nithi'),
+    ('12279', 'Kianjokoma Sub-District Hospital', 'Embu'),
+    ('12282', 'Kibirichia Sub-District Hospital', 'Meru'),
+    ('12287', 'Kibugu Health Centre', 'Embu'),
+    ('12288', 'Kibugua Health Centre', 'Tharaka-Nithi'),
+    ('12290', 'Kiburine Dispensary', 'Meru'),
+    ('12296', 'Kieni Kia Ndege Dispensary', 'Meru'),
+    ('12297', 'Kiereni Dispensary', 'Tharaka-Nithi'),
+    ('12300', 'Kigumo Dispensary', 'Embu'),
+    ('12302', 'Kiirua Dispensary', 'Meru'),
+    ('12303', 'St Theresa Kiirua Hospital (Kiirua)', 'Meru'),
+    ('12306', 'Kikoko Mission Hospital', 'Makueni'),
+    ('12319', 'Kina Dispensary', 'Meru'),
+    ('12325', 'Kinoro Sub-District Hospital', 'Meru'),
+    ('12326', 'Kinoru Dispensary', 'Meru'),
+    ('12328', 'Kionyo Dispensary (Imenti South)', 'Meru'),
+    ('12333', 'Kirie Dispensary', 'Embu'),
+    ('12337', 'Kirogine Dispensary', 'Meru'),
+    ('12359', 'Kithimu Dispensary', 'Embu'),
+    ('12390', 'Kunati Health Centre', 'Meru'),
+    ('12391', 'Kunene Dispensary', 'Meru'),
+    ('12413', 'Consolata Kyeni Hospital', 'Embu'),
+    ('12422', 'Laare Health Centre', 'Meru'),
+    ('12426', 'Lewa Downs Dispensary', 'Meru'),
+    ('12445', 'Magutuni District Hospital', 'Tharaka-Nithi'),
+    ('12453', 'Makengi Dispensary (Embu)', 'Embu'),
+    ('12454', 'Makima Dispensary', 'Embu'),
+    ('12456', 'Makueni Catholic Dispensary', 'Makueni'),
+    ('12489', 'Matuu Mission Health Centre', 'Machakos'),
+    ('12492', 'Maua Methodist Hospital', 'Meru'),
+    ('12500', 'Mbeu Sub-District Hospital', 'Meru'),
+    ('12502', 'Mbitini Catholic Dispensary', 'Makueni'),
+    ('12516', 'Meru District Hospital', 'Meru'),
+    ('12525', 'Mikinduri Sub-District Hospial', 'Meru'),
+    ('12526', 'Mikumbune Sub-District Hospital', 'Meru'),
+    ('12534', 'Mitunguu Dispensary', 'Meru'),
+    ('12546', 'Mpukoni Health Centre', 'Tharaka-Nithi'),
+    ('12550', 'Mufu Dispensary', 'Embu'),
+    ('12560', 'Mukothima Health Centre', 'Tharaka-Nithi'),
+    ('12561', 'Mukui Health Centre', 'Tharaka-Nithi'),
+    ('12563', 'Mukuuni Dispensary', 'Tharaka-Nithi'),
+    ('12566', 'Mulango (AIC) Health Centre', 'Kitui'),
+    ('12569', 'Mulutu Mission Dispensary', 'Kitui'),
+    ('12589', 'Muthambi Health Centre', 'Tharaka-Nithi'),
+    ('12591', 'Muthara Sub-District Hospital', 'Meru'),
+    ('12598', 'Mutionjuri Health Centre', 'Meru'),
+    ('12599', 'Mutito Catholic Dispensary', 'Kitui'),
+    ('12604', 'Our Lady of Lourdes Mutomo Hospital', 'Kitui'),
+    ('12605', 'Mutuati Sub-District Hospital', 'Meru'),
+    ('12625', 'Mweronkaga Dispensary', 'Meru'),
+    ('12631', 'Naari Health Centre', 'Meru'),
+    ('12642', 'Nembure Health Centre', 'Embu'),
+    ('12645', 'Nganduri Dispensary', 'Embu'),
+    ('12666', 'Nkubu Dispensary', 'Meru'),
+    ('12673', 'Nthagaiya Catholic Dispensary', 'Embu'),
+    ('12675', 'Nthambiro Dispensary', 'Meru'),
+    ('12684', 'Nyambene District Hospital', 'Meru'),
+    ('12700', 'Ontulili Dispensary', 'Meru'),
+    ('12717', 'Ruiri Rural Health Demonstration Centre', 'Meru'),
+    ('12719', 'Runyenjes District Hospital', 'Embu'),
+    ('12722', 'Rwika Dispensary', 'Embu'),
+    ('12743', 'St Ann Hospital', 'Meru'),
+    ('12745', 'St Assisi Sisters of Mary Immaculate Nursing Home', 'Machakos'),
+    ('12769', 'St Orsola Mission Hospital', 'Tharaka-Nithi'),
+    ('12790', 'Embu Children Clinic', 'Embu'),
+    ('12791', 'Acef Ena Health Centre', 'Embu'),
+    ('12793', 'Thanantu Faith Hospital', 'Tharaka-Nithi'),
+    ('12795', 'Tharaka District Hospital', 'Tharaka-Nithi'),
+    ('12799', 'Tigania Hospital', 'Meru'),
+    ('12802', 'Timau Sub-District Hospital', 'Meru'),
+    ('12813', 'Tunyai Health centre', 'Tharaka-Nithi'),
+    ('12816', 'Tuuru Catholic Health Centre', 'Meru'),
+    ('12820', 'Ugweri Dispensary', 'Embu'),
+    ('12829', 'Uringu Health Centre', 'Meru'),
+    ('12831', 'Uruku Health Centre', 'Meru'),
+    ('12838', 'Wachoro Dispensary', 'Embu'),
+    ('12860', 'AIC Zombe Health Centre', 'Kitui'),
+    ('14394', 'Cmf Aitong Health Centre', 'Narok'),
+    ('14485', 'Ewaso Ngiro Health Centre', 'Narok'),
+    ('14553', 'Mother Angela Huruma Hospital', 'Laikipia'),
+    ('15128', 'Mararianta Dispensary', 'Narok'),
+    ('15282', 'Naivasha (AIC) Medical Centre', 'Nakuru'),
+    ('15636', 'St Elizabeth Health Centre', 'Narok'),
+    ('15652', 'St Mary Health Centre (Kiserian)', 'Kajiado'),
+    ('15702', 'Talek Health Centre', 'Narok'),
+    ('16234', 'Miathene District Hospital', 'Meru'),
+    ('16235', 'Kiguchwa Dispensary', 'Meru'),
+    ('16463', 'Gategi Health Centre', 'Embu'),
+    ('16464', 'Ishiara Sub-District Hospital', 'Embu'),
+    ('16465', 'Kiambere Health Centre', 'Embu'),
+    ('16466', 'Kiritiri Health Centre', 'Embu'),
+    ('16467', 'Mbeere District Hospital', 'Embu'),
+    ('16555', 'Theere Health Centre', 'Meru'),
+    ('16742', 'St Mark Medical Clinic - Tala', 'Machakos'),
+    ('16995', 'St Joseph Kavisuni Health Centre', 'Kitui'),
+    ('17003', 'Kiraone Dispensary', 'Meru'),
+    ('17094', 'Tinganga Catholic Dispensary', 'Kiambu'),
+    ('17262', 'Kawiru Dispensary', 'Meru'),
+    ('17287', 'Mboroga Dispensary', 'Meru'),
+    ('17379', 'Mutiokiama Health Centre', 'Meru'),
+    ('17381', 'Kaelo Dispensary', 'Meru'),
+    ('17431', 'AIC Kalamba Dispensary', 'Makueni'),
+    ('17490', 'Nazareth Hospital (Ruiru)', 'Kiambu'),
+    ('17560', 'Njabini Catholic Dispensary', 'Nyandarua'),
+    ('18080', 'Gatunga Model Health Centre', 'Tharaka-Nithi'),
+    ('18781', 'Gatimu Health Centre', 'Nyandarua'),
+    ('18782', 'Chamuka (CDF) Dispensary', 'Nyandarua'),
+    ('19879', 'Imenti North Dice (Meru)', 'Meru'),
+    ('19963', 'Holy family catholic hospital githunguri', 'Kiambu'),
+    ('20579', 'Kaliani Dispensary-Kitui', 'Kitui'),
+    ('22085', 'Athi Mission Clinic', 'Kitui'),
+    ('22152', 'Kitololoni Catholic Dispensary', 'Embu'),
+    ('23887', 'Kibunga Sub-District Hospital', 'Tharaka-Nithi'),
+    ('24622', 'HWWK Maua Dice', 'Meru'),
+)
+_M22_CT_TST_MFLS = tuple(code for code, _n, _c in _M22_CT_TST_ROSTER)
 
 # ── Milestone 12 — EID testing coverage (figures kept in code) ──────────
 # The reading is extracted ONCE from the programme's own EID test-outcome
@@ -1698,21 +1945,24 @@ def _metric_doc(metric_id, name, anchor, target, actual, pct, unlock,
 # ══════════════════════════════════════════════════════════════════════
 
 def _dwapi_latest_workbook():
-    """Newest UJTP DWAPI upload workbook in train/, or None.
+    """Newest DWAPI upload workbook in train/, or None.
 
-    Globbed rather than hard-coded because the file is re-issued monthly
-    with a version suffix; newest mtime wins so the freshest snapshot is
-    always the one scored.
+    Globbed rather than hard-coded because NDWH re-issues the file monthly
+    under a new name; newest mtime wins, so the freshest snapshot is the
+    one scored without a code change.
     """
+    found = []
+    for pattern in DWAPI_GLOBS:
+        try:
+            found.extend(BASE_DIR.glob(pattern))
+        except OSError:
+            continue
+    if not found:
+        return None
     try:
-        found = sorted(
-            BASE_DIR.glob(DWAPI_GLOB),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
+        return max(found, key=lambda p: p.stat().st_mtime)
     except OSError:
         return None
-    return found[0] if found else None
 
 
 def _dwapi_key(value):
@@ -1761,14 +2011,27 @@ def _dwapi_read(ws, required):
 def _dwapi_coverage():
     """Milestone 22's electronic-reporting coverage reading.
 
-    The measure is deliberately the one the milestone text asks for — "of
-    the HIV facilities, how many are reporting electronically":
+    The measure is the one the milestone text asks for — "of the HIV
+    facilities, how many are reporting electronically":
 
-        expected  = distinct MFLs on the `ndwh_` roster sheet (the care &
-                    treatment and testing sites the programme answers for).
-        reporting = those roster MFLs carrying an upload timestamp in the
-                    workbook's newest submission month.
+        expected  = the fixed C&T / TST roster held in this module
+                    (_M22_CT_TST_ROSTER — the 211 care & treatment and
+                    testing sites the programme answers for).
+        reporting = those roster facilities carrying an upload timestamp in
+                    the workbook's newest submission month.
         pct       = reporting / expected × 100.
+
+    The roster is read from CODE, not from the workbook.  It was extracted
+    once from the `ndwh_` sheet of the August 2026 UJTP DWAPI workbook and
+    never changes, while the workbook is re-issued every month with its own
+    idea of how many sites to expect (the September issue says 210 against
+    this 211), so holding it here keeps the denominator stable and lets the
+    reading be scored off whichever issue is newest.
+
+    Only the upload log is read at runtime, and only the sheet holding it
+    ("Data"): the workbook carries eight sheets and ~2,500 rows, and the
+    log alone answers the question in ~0.2 s — which matters, because this
+    reading is built inside the payload the tracker waits on.
 
     A facility is counted once it has an `Updated` stamp *in that month*,
     because a row only exists in the log when an upload happened — the
@@ -1776,27 +2039,24 @@ def _dwapi_coverage():
 
     The month is the newest stamp present in the workbook, and milestone 22
     is MONTHLY, so the reading is scoped to it.  Two facts were verified
-    against the live workbook before that filter was introduced
+    against a live workbook before that filter was introduced
     (2026-10-02):
 
-      * `Date`, `logDate` and `Updated` agree on the month for all 1116
-        rows, so "the row's month" is unambiguous.
-      * the stamps are a cumulative history (2021-07 … 2026-09) in which the
-        newest month carries the bulk of the rows (741, against 27 in the
-        month before it) — the newest stamp is the live submission window.
+      * `Date`, `logDate` and `Updated` agree on the month for every row, so
+        "the row's month" is unambiguous.
+      * the stamps are a cumulative history (2021-02 … 2026-10) in which the
+        newest month carries the bulk of the rows — the newest stamp is the
+        live submission window.
 
-    The file is *named* "August 2026" while its stamps read September: it is
-    the August reporting snapshot NDWH issued in September.  That is why the
-    reading sits on the Baseline tab (pinned to August) while being filtered
-    on the September stamp.
+    Read against the September-issued "AFGHS-Chak Daraja Dwapi Uploads-
+    September 2026.xlsx" the newest stamp month is 2026-10 — the file is
+    NAMED September because September is the reporting month it covers, and
+    its stamps are the October upload that closed it — and the headline is
+    188 of 211 (89.1%).  The 23 that are silent in that month (3 of which
+    do not appear in the workbook at all, and 20 of which uploaded in an
+    earlier month) are returned explicitly so the panel can name them.
 
-    Counted this way the headline is 204 of 211 (96.7%), which is identical
-    to "facilities with a C&T or an HTS upload that month" — no facility
-    submits only MNCH or PREP.  Sites that have never submitted at all, and
-    sites that submitted in an earlier month but not this one, are both
-    returned explicitly so the panel can name them.
-
-    `status` is 'ok' only when the roster was readable, so a missing or
+    `status` is 'ok' only when the log was readable, so a missing or
     renamed workbook degrades to no metric rather than a misleading zero.
     """
     out = {
@@ -1807,11 +2067,23 @@ def _dwapi_coverage():
         "pct": None,
         "note": "",
     }
+    # The roster is the fixed C&T / TST list held in this module, so the
+    # denominator is available — and the panel can still name a facility —
+    # even when no workbook can be read.
+    names_by_key = {k: n for k, n, _c in _M22_CT_TST_ROSTER}
+    county_by_key = {k: c for k, _n, c in _M22_CT_TST_ROSTER}
+    roster = set(names_by_key)
+    if not roster:
+        out["status"] = "error"
+        out["note"] = "The C&T / TST roster held in the app is empty."
+        return out
+    out["expected"] = len(roster)
+
     path = _dwapi_latest_workbook()
     if path is None:
         out["note"] = (
-            "No UJTP DWAPI upload workbook was found in the app folder, so "
-            "the electronic-reporting coverage reading is unavailable."
+            "No DWAPI upload workbook was found in the app folder, so the "
+            "electronic-reporting coverage reading is unavailable."
         )
         return out
     out["workbook"] = path.name
@@ -1819,59 +2091,36 @@ def _dwapi_coverage():
         wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
         try:
             names = list(wb.sheetnames)
-            roster_sheet = _DWAPI_ROSTER_SHEET if _DWAPI_ROSTER_SHEET in names \
-                else next(
-                    (n for n in names
-                     if _dwapi_read(wb[n], ("mfl",))[0]),
-                    None,
-                )
-            if roster_sheet is None:
-                out["note"] = (
-                    f"No roster sheet with an 'mfl' column was found in "
-                    f"{path.name}, so the expected-facility list could not "
-                    "be read."
-                )
-                return out
-            _ridx, roster_tbl = _dwapi_read(wb[roster_sheet], ("mfl",))
-
-            log_sheet = _DWAPI_DATA_SHEET if _DWAPI_DATA_SHEET in names and \
-                _dwapi_read(wb[_DWAPI_DATA_SHEET], ("code", "updated"))[0] \
-                else next(
-                    (n for n in names
-                     if n != roster_sheet
-                     and _dwapi_read(wb[n], ("code", "updated"))[0]),
-                    None,
-                )
+            # Read the log sheet ONCE.  The workbook holds eight sheets and
+            # several thousand rows, so iterating a sheet twice just to test
+            # for a header is a measurable waste inside the payload build.
+            log_sheet, log_tbl = None, {}
+            if _DWAPI_DATA_SHEET in names:
+                _idx, _tbl = _dwapi_read(
+                    wb[_DWAPI_DATA_SHEET], ("code", "updated"))
+                if _idx:
+                    log_sheet, log_tbl = _DWAPI_DATA_SHEET, _tbl
+            if log_sheet is None:
+                for _name in names:
+                    _idx, _tbl = _dwapi_read(wb[_name], ("code", "updated"))
+                    if _idx:
+                        log_sheet, log_tbl = _name, _tbl
+                        break
             if log_sheet is None:
                 out["note"] = (
                     f"No upload log with 'Code' and 'Updated' columns was "
                     f"found in {path.name}, so nothing could be scored."
                 )
                 return out
-            _lidx, log_tbl = _dwapi_read(wb[log_sheet], ("code", "updated"))
         finally:
             wb.close()
-
-        # ── the expected roster ──
-        names_by_key, county_by_key = {}, {}
-        for mfl, name, county in zip(
-            roster_tbl.get("mfl", []),
-            roster_tbl.get("name", [None] * len(roster_tbl.get("mfl", []))),
-            roster_tbl.get("county", [None] * len(roster_tbl.get("mfl", []))),
-        ):
-            key = _dwapi_key(mfl)
-            if not key or key in names_by_key:
-                continue
-            names_by_key[key] = str(name or "").strip()
-            county_by_key[key] = str(county or "").strip()
-        roster = set(names_by_key)
 
         # ── the upload log ──
         # 'Updated' / 'logDate' arrive as ISO-8601 strings
         # ('2026-09-14T21:18:17.000Z') and 'Date' as a bare 'YYYY-MM', so the
         # month is read off the text rather than through _iso(), which only
         # understands real date/datetime objects.
-        submitted, by_docket, months, ever, rows = set(), {}, set(), set(), []
+        rows, months = [], set()
         codes = log_tbl.get("code", [])
         stamps = log_tbl.get("updated", [])
         dockets = log_tbl.get("docket", [None] * len(codes))
@@ -1883,7 +2132,6 @@ def _dwapi_coverage():
                 continue
             if stamp is None or str(stamp).strip() == "":
                 continue
-            ever.add(key)
             month = ""
             for candidate in (_iso(stamp), stamp, _iso(stamp_date), stamp_date):
                 text = str(candidate or "").strip()
@@ -1901,22 +2149,22 @@ def _dwapi_coverage():
         # The milestone is MONTHLY, so the reading is scoped to the newest
         # submission month in the workbook (the docstring records why that
         # stamp is a sound calendar anchor when the file name is not).
+        #
+        # Everything is then restricted to the 211-facility C&T / TST
+        # roster: the workbook also logs sites outside it, and those must
+        # not inflate either the numerator or the per-docket detail.
         latest = max(months) if months else ""
+        ever = {k for k, _m, _d in rows if k in roster}
+        submitted, by_docket = set(), {}
         for key, month, label in rows:
-            if month != latest:
+            if key not in roster or month != latest:
                 continue
             submitted.add(key)
             if label:
                 by_docket.setdefault(label, set()).add(key)
 
-        if not roster:
-            out["note"] = (
-                f"The roster sheet in {path.name} listed no facility codes."
-            )
-            return out
-
         reporting = sorted(roster & submitted)
-        never = sorted(roster - ever)                  # never submitted
+        never = sorted(roster - ever)                  # absent from the log
         lapsed = sorted((roster & ever) - submitted)   # earlier months only
         pct = len(reporting) / len(roster) * 100.0
         unlock, band = _unlock_bands("reporting", pct)
@@ -1971,30 +2219,27 @@ def _dwapi_coverage():
             "latestMonth": latest,
             "latestMonthHuman": _month_human(latest_ym),
             "formula": (
-                "Facilities carrying an upload timestamp in the workbook's "
-                "newest submission month ÷ facilities on the NDWH "
-                "expected-facility roster × 100 "
+                "C&T / TST facilities carrying an upload timestamp in the "
+                "workbook's newest submission month ÷ the 211 C&T / TST "
+                "facilities held in the app × 100 "
                 f"({len(reporting)} of {len(roster)}). Source: "
-                f"{path.name}, sheet '{roster_sheet}' for the roster and "
-                f"'{log_sheet}' for the upload log. The month is "
-                f"{_month_human(latest_ym)}, the newest stamp in the log."
+                f"{path.name}, sheet '{log_sheet}' for the upload log. "
+                f"The month is {_month_human(latest_ym)}, the newest stamp "
+                "in the log."
             ),
             "note": (
-                f"{len(reporting)} of {len(roster)} expected HIV facilities "
+                f"{len(reporting)} of {len(roster)} C&T / TST facilities "
                 f"submitted an upload in {_month_human(latest_ym)} "
                 f"({pct:.1f}%). "
-                + (f"{len(never)} have never submitted any docket. "
-                   if never else "")
-                + (f"A further {len(lapsed)} submitted in an earlier month "
-                   "but not this one. "
+                + (f"{len(lapsed)} of them are silent in that month but "
+                   "have uploaded before. "
                    if lapsed else "")
+                + (f"{len(never)} do not appear in this workbook at all. "
+                   if never else "")
                 + (
-                    f"The workbook's stamps read "
-                    f"{_month_human(latest_ym)} because it is the "
-                    "August reporting snapshot NDWH issued in September, "
-                    "so it is scored against the Baseline tab rather than "
-                    "M1."
-                    if latest else ""
+                    "The roster is the 211-facility C&T / TST list held in "
+                    "the app, so the denominator does not move when NDWH "
+                    "re-issues the workbook."
                 )
             ),
         })
@@ -3573,12 +3818,11 @@ def _build_payload():
     # Sourced from the NDWH's UJTP DWAPI upload workbook, NOT CHAK DHIS2,
     # so it is attached here rather than inside _compute_daraja_metrics.
     #
-    # It lands on the BASELINE tab ONLY.  The workbook is the August
-    # snapshot the Baseline is pinned to (MILESTONE_BASELINE_PERIOD); M1's
-    # own month is October and its coverage figure does not exist yet, so
-    # scoring M1 from this file would publish August's number under an
-    # October heading.  Attaching after the M1 re-score above also keeps it
-    # off M2–M6, which share the baseline's metrics list.
+    # It lands on the BASELINE tab ONLY.  The Baseline tab is the tracker's
+    # live read of the latest reported month, so the newest upload workbook
+    # belongs there and nowhere else; attaching it after the M1 re-score
+    # above also keeps it off M2–M6, which share the baseline's metrics
+    # list.
     #
     # Note this assigns row['perf'] directly instead of going through
     # _attach_perf(): that helper POPs 'perf' off every row whose id is
