@@ -74,6 +74,17 @@ _CHAK_COC_READ_TIMEOUT = float(
 _CHAK_PROBE_READ_TIMEOUT = float(
     os.getenv("CHAK_PROBE_READ_TIMEOUT", "6"))
 
+# Read budget for the RAW capture store (`/dataValueSets.json`).  The entire
+# 259-facility roster answers in one request in ~4 s, so this is generous
+# headroom rather than a real expectation.
+_CHAK_STORE_READ_TIMEOUT = float(
+    os.getenv("CHAK_STORE_READ_TIMEOUT", "120"))
+
+# A capture-store read is cached far longer than an analytics read: it only
+# ever targets CLOSED months (the roll-up's blind spot), and a closed month's
+# submission does not change.  6 h.
+_CHAK_STORE_TTL = float(os.getenv("CHAK_STORE_TTL", str(6 * 3600)))
+
 
 def chak_bases():
     """Ordered CHAK base URLs: last known good, then the default, then env."""
@@ -1173,6 +1184,91 @@ def _chak_coc_name_totals(dx_ids, ou_ids, pe="LAST_12_MONTHS",
                 continue
             out[pe_name] = out.get(pe_name, 0.0) + val
     cache_set(cache_key, out)
+    return out
+
+
+def _chak_datavalue_store_totals(de_id, ou_ids, periods, read_timeout=None):
+    """Sum one data element STRAIGHT FROM the CHAK capture store.
+
+    `/analytics.json` is a pre-aggregated READ MODEL, and on this instance that
+    model holds NO rows at all for the Jamii Tekelezi `TX_CURR` element
+    (`kgzd9LfXZXq`) before September 2026 — zero for the whole roster, zero for
+    a single facility, with and without `co:categoryOptions`.  The facilities
+    did upload the values, though, and `/dataValueSets.json` still has them:
+    June 2026 answers with 0 analytics rows but 3,476 captured cells totalling
+    40,929 across 160 facilities (the element's `lastUpdated` is 2026-09-17).
+
+    So any reader that must reach back past the analytics roll-up walks the
+    store instead.  Two facts about the endpoint decide the request shape:
+
+      * the OU list must be sent as REPEATED `orgUnit` params — one
+        semicolon-joined value is rejected with HTTP 409 "At least one
+        organisation unit or organisation unit group must be specified";
+      * it answers the whole 259-facility roster in ONE request (measured
+        ~4 s / ~1 MB), so there is no need to chunk.
+
+    `periods` is likewise sent as repeated `period` params.
+
+    Returns {period_id: total}.  `{}` on ANY failure, so a caller can treat
+    "no answer" as "no backfill available" and keep whatever reading it
+    already had — this helper can only ever fill a hole, never overwrite one.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    from requests.auth import HTTPBasicAuth
+
+    if isinstance(ou_ids, (list, set, tuple)):
+        ou_list = [str(o) for o in ou_ids if o]
+    else:
+        ou_list = [str(ou_ids)] if ou_ids else []
+    if isinstance(periods, (list, set, tuple)):
+        pe_list = [str(p) for p in periods if p]
+    else:
+        pe_list = [str(periods)] if periods else []
+    if not de_id or not ou_list or not pe_list:
+        return {}
+
+    cache_key = make_key(de_id, ou_list, ";".join(sorted(pe_list)),
+                         namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    pairs = [("dataElement", str(de_id))]
+    pairs.extend(("period", p) for p in pe_list)
+    pairs.extend(("orgUnit", o) for o in ou_list)
+    pairs.append(("paging", "false"))
+
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    try:
+        resp = chak_get("/dataValueSets.json", pairs,
+                        read_timeout=read_timeout or _CHAK_STORE_READ_TIMEOUT,
+                        auth=auth)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[DHIS2] CHAK capture-store fetch failed: {exc}")
+        return {}
+    if not resp.ok:
+        print(f"[DHIS2] CHAK capture-store fetch HTTP {resp.status_code}")
+        return {}
+    try:
+        cells = (resp.json() or {}).get("dataValues") or []
+    except ValueError as exc:
+        print(f"[DHIS2] CHAK capture-store body not JSON: {exc}")
+        return {}
+
+    out: dict[str, float] = {}
+    for cell in cells:
+        pe = str((cell or {}).get("period") or "")
+        if not pe:
+            continue
+        try:
+            val = float((cell or {}).get("value") or 0)
+        except (TypeError, ValueError):
+            continue
+        out[pe] = out.get(pe, 0.0) + val
+
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
     return out
 
 
