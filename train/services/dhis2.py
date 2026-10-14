@@ -1272,6 +1272,156 @@ def _chak_datavalue_store_totals(de_id, ou_ids, periods, read_timeout=None):
     return out
 
 
+def _chak_coc_option_ids(read_timeout=None):
+    """{categoryOptionCombo uid: frozenset(categoryOption uids)} from CHAK.
+
+    `/dataValueSets.json` answers at category-OPTION-COMBO grain, so an element
+    that only needs SOME of its outcomes — e.g. the three "Interruption in
+    Treatment" options of `C&T (facility) - Tx_ML, Outcomes` — cannot be
+    narrowed server-side the way `/analytics.json`'s `co:categoryOptions`
+    dimension would.  This resolves every combo back to the options it is built
+    from, so a caller can filter the store's cells itself.
+
+    The combo list is metadata and effectively static, so it is fetched once
+    per process and cached under the long-lived `chak_store` namespace.
+
+    Returns {} on any failure — callers must treat that as "cannot filter"
+    rather than "nothing to filter".
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    from requests.auth import HTTPBasicAuth
+
+    cache_key = make_key("categoryOptionCombos", "option-map",
+                         namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    try:
+        resp = chak_get("/categoryOptionCombos.json",
+                        {"fields": "id,categoryOptions", "paging": "false"},
+                        read_timeout=read_timeout or _CHAK_STORE_READ_TIMEOUT,
+                        auth=auth)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[DHIS2] CHAK categoryOptionCombos fetch failed: {exc}")
+        return {}
+    if not resp.ok:
+        print(f"[DHIS2] CHAK categoryOptionCombos HTTP {resp.status_code}")
+        return {}
+    try:
+        combos = (resp.json() or {}).get("categoryOptionCombos") or []
+    except ValueError as exc:
+        print(f"[DHIS2] CHAK categoryOptionCombos body not JSON: {exc}")
+        return {}
+
+    out: dict[str, frozenset] = {}
+    for combo in combos:
+        uid = str((combo or {}).get("id") or "")
+        if not uid:
+            continue
+        opts = []
+        for opt in (combo or {}).get("categoryOptions") or []:
+            opt_id = opt.get("id") if isinstance(opt, dict) else opt
+            if opt_id:
+                opts.append(str(opt_id))
+        out[uid] = frozenset(opts)
+
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
+    return out
+
+
+def _chak_datavalue_store_option_totals(de_id, ou_ids, periods, option_ids,
+                                        read_timeout=None):
+    """Sum ONE element's store cells that use any of `option_ids`.
+
+    The companion to `_chak_datavalue_store_totals` for elements whose rows
+    live inside a category breakdown instead of a flat `dx:` column.
+    `C&T (facility) - Tx_ML, Outcomes` (`bv9nAL9x5Q5`) is the case that needs
+    it: #9 counts only its three "Interruption in Treatment" options, and the
+    capture store carries every outcome option side by side.
+
+    A cell counts when its `categoryOptionCombo` resolves to a combo built
+    from at least one of `option_ids`.  Maps containing several interruption
+    options (age/sex breakdowns) still count once, because each cell is one
+    facility's value for one complete combination.
+
+    Returns {period_id: total}; {} on any failure, so the caller keeps
+    whatever reading it already had.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    from requests.auth import HTTPBasicAuth
+
+    if isinstance(ou_ids, (list, set, tuple)):
+        ou_list = [str(o) for o in ou_ids if o]
+    else:
+        ou_list = [str(ou_ids)] if ou_ids else []
+    if isinstance(periods, (list, set, tuple)):
+        pe_list = [str(p) for p in periods if p]
+    else:
+        pe_list = [str(periods)] if periods else []
+    if isinstance(option_ids, (list, set, tuple)):
+        opt_list = [str(o) for o in option_ids if o]
+    else:
+        opt_list = [str(option_ids)] if option_ids else []
+    if not de_id or not ou_list or not pe_list or not opt_list:
+        return {}
+
+    cache_key = make_key(de_id, ou_list, ";".join(sorted(pe_list)),
+                         ";".join(sorted(opt_list)), namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    combo_options = _chak_coc_option_ids(read_timeout=read_timeout)
+    if not combo_options:
+        return {}
+    wanted = frozenset(opt_list)
+
+    pairs = [("dataElement", str(de_id))]
+    pairs.extend(("period", p) for p in pe_list)
+    pairs.extend(("orgUnit", o) for o in ou_list)
+    pairs.append(("paging", "false"))
+
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    try:
+        resp = chak_get("/dataValueSets.json", pairs,
+                        read_timeout=read_timeout or _CHAK_STORE_READ_TIMEOUT,
+                        auth=auth)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[DHIS2] CHAK capture-store fetch failed: {exc}")
+        return {}
+    if not resp.ok:
+        print(f"[DHIS2] CHAK capture-store fetch HTTP {resp.status_code}")
+        return {}
+    try:
+        cells = (resp.json() or {}).get("dataValues") or []
+    except ValueError as exc:
+        print(f"[DHIS2] CHAK capture-store body not JSON: {exc}")
+        return {}
+
+    out: dict[str, float] = {}
+    for cell in cells:
+        pe = str((cell or {}).get("period") or "")
+        if not pe:
+            continue
+        combo = str((cell or {}).get("categoryOptionCombo") or "")
+        if not (combo_options.get(combo, frozenset()) & wanted):
+            continue
+        try:
+            val = float((cell or {}).get("value") or 0)
+        except (TypeError, ValueError):
+            continue
+        out[pe] = out.get(pe, 0.0) + val
+
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
+    return out
+
+
 def _find_dx_by_pattern(prefix_pattern, age_bands):
     """Find male & female DX IDs from the data element dictionary.
     prefix_pattern: e.g. 'Tx_New STA' or 'TX_Curr STA'
