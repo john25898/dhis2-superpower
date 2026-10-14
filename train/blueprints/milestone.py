@@ -1533,15 +1533,21 @@ def _prevq_close_periods():
 
 
 def _fetch_prevq_tx_curr_store():
-    """Jamii `TX_CURR` at each quarter close, read from the raw capture store.
+    """`TX_CURR` at each quarter close, read from the raw capture store.
 
     #9's denominator is `TX_CURR(previous quarter close) + TX_NEW(current
     quarter to date)`.  The CHAK analytics roll-up carries no rows for the
-    Jamii `TX_CURR` element (`_DE_TX_CURR`) before September 2026, so that
-    first term silently read 0 and the denominator collapsed to the quarter's
-    TX_NEW alone — which is what made #9 read 42% on the Baseline tab and
-    128% on M1.  The facilities did submit the values; they are still in the
-    capture store (`/dataValueSets.json`), so this reads them from there.
+    JAMII `TX_CURR` element (`_DE_TX_CURR`) before September 2026 — the
+    facilities filed those months under an attribute option combo the read
+    model never enumerated — so that first term silently read 0 and the
+    denominator collapsed to the quarter's TX_NEW alone, which is what made
+    #9 read 42% on the Baseline tab and 128% on M1.  The facilities did
+    submit the values; they are still in the capture store
+    (`/dataValueSets.json`), so this reads them from there.
+
+    Both funding namespaces are summed — Jamii `TX_CURR` plus the CHAP
+    Stawisha `TX_CURR` (`_DE_TX_CURR_62`) — because #9 counts both
+    populations in the numerator too.
 
     Deliberately NARROW — it serves #9's denominator ONLY.  The anchor-month
     `tx_curr` that #10/#11/#14/#15 divide by is still read from analytics, so
@@ -1557,28 +1563,33 @@ def _fetch_prevq_tx_curr_store():
         periods = _prevq_close_periods()
         if not ou_ids or not periods:
             return {}
-        totals = _chak_datavalue_store_totals(
-            _DE_TX_CURR, list(ou_ids), periods
-        ) or {}
         out = {}
-        for pe, total in totals.items():
-            key = _pe_key(pe)
-            if key[0]:
-                out[key] = float(total or 0.0)
+        for de_id in (_DE_TX_CURR, _DE_TX_CURR_62):
+            totals = _chak_datavalue_store_totals(
+                de_id, list(ou_ids), periods
+            ) or {}
+            for pe, total in totals.items():
+                key = _pe_key(pe)
+                if key[0]:
+                    out[key] = out.get(key, 0.0) + float(total or 0.0)
         return out
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK capture-store backfill fetch failed: {exc}")
         return {}
 
 
-def _fetch_jamii_tx_new_store():
-    """Jamii `TX_NEW` per month, read from the raw capture store.
+def _fetch_qtr_tx_new_store():
+    """`TX_NEW` per month, read from the raw capture store.
 
     The same analytics gap as `_DE_TX_CURR`: the roll-up has no rows for the
-    Jamii `TX_NEW` element (`_DE_TX_NEW`) before September 2026, so #9's
+    JAMII `TX_NEW` element (`_DE_TX_NEW`) before September 2026, so #9's
     quarter-to-date denominator term silently counted only the CHAP Stawisha
     twins — 242 where the quarter actually started 598 patients on ART.
-    Facilities filed July and August (211 and 145); this reads them back.
+    Facilities filed July and August; this reads them back.
+
+    Both funding namespaces are summed — Jamii `TX_NEW` plus the three CHAP
+    Stawisha TX_New twins (`_TX_NEW_62_ALL`) — matching the numerator, which
+    counts both populations' interruptions.
 
     Deliberately NARROW — it serves #9's denominator ONLY.  The anchor-month
     `tx_new` that #7 (linkage) divides by is still analytics-only, so no other
@@ -1593,8 +1604,43 @@ def _fetch_jamii_tx_new_store():
         periods = [p for p in _metric_periods().split(";") if p]
         if not ou_ids or not periods:
             return {}
+        out = {}
+        for de_id in [_DE_TX_NEW] + list(_TX_NEW_62_ALL):
+            totals = _chak_datavalue_store_totals(
+                de_id, list(ou_ids), periods
+            ) or {}
+            for pe, total in totals.items():
+                key = _pe_key(pe)
+                if key[0]:
+                    out[key] = out.get(key, 0.0) + float(total or 0.0)
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK TX_NEW capture-store backfill failed: {exc}")
+        return {}
+
+
+def _fetch_stawisha_iit_store():
+    """CHAP Stawisha `TX_IIT STA` per month, from the raw capture store.
+
+    Half of #9's numerator.  The flat `dx:` read answers every month of the
+    tracker window today, so this store read is normally unused — it exists
+    so the Stawisha side is treated exactly like the Jamii side, whose month
+    the analytics roll-up skips: a hole is filled the same way whichever
+    namespace it falls in.
+
+    Deliberately NARROW — it serves #9's numerator ONLY.
+
+    Returns {(year, month): total}; {} on any failure.
+    """
+    try:
+        from services.dhis2 import _chak_datavalue_store_totals
+
+        _names, ou_ids, _matched = _daraja_scope()
+        periods = [p for p in _metric_periods().split(";") if p]
+        if not ou_ids or not periods:
+            return {}
         totals = _chak_datavalue_store_totals(
-            _DE_TX_NEW, list(ou_ids), periods
+            _DE_TX_IIT_62, list(ou_ids), periods
         ) or {}
         out = {}
         for pe, total in totals.items():
@@ -1603,7 +1649,7 @@ def _fetch_jamii_tx_new_store():
                 out[key] = float(total or 0.0)
         return out
     except Exception as exc:  # noqa: BLE001
-        print(f"[MILESTONE] CHAK TX_NEW capture-store backfill failed: {exc}")
+        print(f"[MILESTONE] CHAK Stawisha IIT capture-store fetch failed: {exc}")
         return {}
 
 
@@ -2558,7 +2604,7 @@ def _eid_jt_coverage():
 
 def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
                             coc_by_period=None, prevq_tx_curr=None,
-                            jamii_tx_new=None):
+                            qtr_tx_new=None, stawisha_iit=None):
     """Compute the DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
@@ -2573,14 +2619,19 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     cannot be read from `data` (a flat `dx:` pull) — they need this second,
     category-option-broken read.
 
-    `prevq_tx_curr` is {(year, month): total} for the Jamii `TX_CURR` element
-    as captured in the raw store, supplied by `_fetch_prevq_tx_curr_store`.
-    It is consulted by #9's denominator ONLY, and only for a month the
-    analytics roll-up left empty — see the note on `tx_curr_prevq` below.
+    `prevq_tx_curr` is {(year, month): total} for `TX_CURR` — Jamii +
+    CHAP Stawisha — as captured in the raw store, supplied by
+    `_fetch_prevq_tx_curr_store`.  It is consulted by #9's denominator ONLY,
+    and only for a month the analytics roll-up left empty — see the note on
+    `tx_curr_prevq` below.
 
-    `jamii_tx_new` is the same shape for the Jamii `TX_NEW` element, supplied
-    by `_fetch_jamii_tx_new_store`, and is consulted by #9's quarter-to-date
-    denominator term under the same "only fill a hole" rule.
+    `qtr_tx_new` is the same shape for `TX_NEW` (Jamii + CHAP Stawisha),
+    supplied by `_fetch_qtr_tx_new_store`, and is consulted by #9's
+    quarter-to-date denominator term under the same "only fill a hole" rule.
+
+    `stawisha_iit` is the same shape for the CHAP Stawisha `TX_IIT STA`
+    element, supplied by `_fetch_stawisha_iit_store`; #9's numerator adds it
+    to the Jamii interruptions, again falling back only for a hole.
 
     `commodity` is the #21 KHIS commodity-reporting payload supplied by
     `_khis_commodity_reporting` — the one metric here that is NOT sourced
@@ -2623,15 +2674,19 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     # client screened for TB.  The arms are disjoint (see _DE_TX_TB_DEN_JTP).
     tx_tb_den = vsum(_DE_TX_TB_DEN_JTP, year, month) \
         + vsum(_DE_TX_TB_DEN_62, year, month)
-    # #9 numerator: the Jamii "Tx_ML, Outcomes → Interruption" options.
-    #
-    # ⚠ The CHAP Stawisha twin (`_DE_TX_IIT_62`, "TX_IIT STA") is deliberately
-    # NOT added here any more.  The denominator's TX_CURR is the single Jamii
-    # element (see the PBIX note below), so adding Stawisha interruptions to a
-    # Jamii population counted two different things in one ratio — 656
-    # interrupted against a denominator that only ever held Jamii patients.
-    # Both terms of #9 now cover the same population.
+    # #9 numerator: the Jamii "Tx_ML, Outcomes → Interruption" options PLUS
+    # the CHAP Stawisha twin (`_DE_TX_IIT_62`, "TX_IIT STA").  The Daraja
+    # roster reports into two funding namespaces, so #9 counts both — and the
+    # denominator below counts both too, keeping the ratio one population.
     iit_raw = float((iit_by_period or {}).get(anchor, 0) or 0)
+    staw_iit = val(_DE_TX_IIT_62, year, month)
+    iit_staw_src = ""
+    if not staw_iit:
+        stored = float((stawisha_iit or {}).get((year, month)) or 0)
+        if stored:
+            staw_iit = stored
+            iit_staw_src = "store"
+    iit_raw += staw_iit
 
     # New TX_CURR disaggregation elements (#10 DSD, #11 AHD, #15 TPT).
     # `_chak_analytics_coc_cells` already sums across the whole OU roster,
@@ -2650,44 +2705,48 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus
     # every TX_NEW recorded so far in the CURRENT quarter.
     #
-    # 🔥 The PBIX `%IIT` baseline is the SINGLE element `TX_CURR` — its DAX is
-    #   Baseline_TX_CURR = CALCULATE(SUM(Value),
-    #       'Data Elements'[Data Element] = "TX_CURR", Period = TX_CURR_Period)
-    # (and `TX_CURR_Previous_Quarter`, line 1466, is the same single element).
-    # Only the headline KPI / `TX_CURR_Monthly_Trend` uses all 9 TX_CURR-family
-    # elements.  Adding the CHAP Stawisha roll-up (_DE_TX_CURR_62) here inflated
-    # the denominator ~2.01x and halved `%IIT` versus the report.
+    # ⚠ Both terms are the SUM of the two Daraja funding namespaces — Jamii
+    # Tekelezi and CHAP Stawisha — matching the numerator, which counts both
+    # populations' interruptions.  One ratio, one population.
     #
-    # ⚠ Both TX_CURR and TX_NEW are read from the Jamii namespace alone, so the
-    # numerator and the denominator cover the same population.  The analytics
-    # roll-up has no rows for EITHER Jamii element before September 2026 (the
-    # facilities filed June–August under a different attribute-option combo,
-    # which the read model never enumerated), so any month it left empty falls
-    # back to the capture store: `_fetch_prevq_tx_curr_store` for the quarter
-    # close, `_fetch_jamii_tx_new_store` for the quarter to date.
+    # The CHAK analytics roll-up never enumerated the *Jamii* side for
+    # June–August 2026 (the facilities filed under a different attribute
+    # option combo), so both the Jamii `TX_CURR` and `TX_NEW` elements read 0
+    # for those months while the Stawisha twins answered normally.  Any month
+    # the roll-up left empty falls back to the capture store, which still
+    # holds it: `_fetch_prevq_tx_curr_store` for the quarter close,
+    # `_fetch_qtr_tx_new_store` for the quarter to date.
     #
     # The fallbacks are deliberately NARROW: they serve #9 ONLY.  The
     # anchor-month `tx_curr` and `tx_new` above — which #7/#10/#11/#14/#15
     # divide by — are still read from analytics alone, so no other milestone
     # moves with this.
-    tx_curr_prevq = val(_DE_TX_CURR, q_year, q_month)
+    # ── Quarter close: TX_CURR, both namespaces ──
+    # The analytics gap is NAMESPACE-selective: for June 2026 the Jamii half
+    # is absent while the Stawisha half answers normally (0 + 41,031).  So a
+    # plain "is the sum zero?" test would never fire.  The test is on the
+    # JAMII half: if it is missing, the whole term is taken from the capture
+    # store, which holds both namespaces for that month.
+    tx_curr_prevq = val(_DE_TX_CURR, q_year, q_month) \
+        + val(_DE_TX_CURR_62, q_year, q_month)
     tx_curr_prevq_src = ""
-    if not tx_curr_prevq:
+    if not val(_DE_TX_CURR, q_year, q_month):
         stored = float((prevq_tx_curr or {}).get((q_year, q_month)) or 0)
         if stored:
             tx_curr_prevq = stored
             tx_curr_prevq_src = "store"
 
+    # ── Quarter to date: TX_NEW, both namespaces, per month ──
     tx_new_qtr = 0.0
     tx_new_qtr_src = ""
     for y, m in _quarter_months_to(year, month):
-        jamii_new = val(_DE_TX_NEW, y, m)
-        if not jamii_new:
-            stored = float((jamii_tx_new or {}).get((y, m)) or 0)
-            if stored:
-                jamii_new = stored
+        if val(_DE_TX_NEW, y, m):
+            quarter_new = val(_DE_TX_NEW, y, m) + vsum(_TX_NEW_62_ALL, y, m)
+        else:
+            quarter_new = float((qtr_tx_new or {}).get((y, m)) or 0)
+            if quarter_new:
                 tx_new_qtr_src = "store"
-        tx_new_qtr += jamii_new
+        tx_new_qtr += quarter_new
     iit_denom = tx_curr_prevq + tx_new_qtr
 
     def fmt(v):
@@ -2744,10 +2803,12 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
 
     # ── #9 HIV Care, Treatment Continuity & Retention (IIT) ──
     #   Target: monthly IIT < 2.0% of patients on ART.
-    #   Numerator = Tx_ML, Outcomes → only the "Interruption in Treatment"
-    #     options of the JAMII element (<3 months · 3–5 months · 6+ months).
-    #   Denominator = TX_CURR (Jamii, close of the previous quarter)
-    #               + Σ TX_NEW (Jamii, current quarter, 1st month → anchor).
+    #   Numerator = (a) Tx_ML, Outcomes → the "Interruption in Treatment"
+    #     options of the Jamii element (<3 months · 3–5 months · 6+ months)
+    #     + (b) the CHAP Stawisha TX_IIT STA element.
+    #   Denominator = TX_CURR (both namespaces, close of the previous quarter)
+    #               + Σ TX_NEW (both namespaces, current quarter, 1st month
+    #                 → anchor).
     #   Quarters: Jan–Mar · Apr–Jun · Jul–Sep · Oct–Dec.
     if iit_denom:
         iit_pct = iit_raw / iit_denom * 100.0
@@ -2767,15 +2828,21 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
                 ". The quarter-to-date TX_NEW is read from the CHAK capture "
                 "store for the same reason"
             )
+        if iit_staw_src:
+            iit_src_note += (
+                ". The CHAP Stawisha interruptions are read from the CHAK "
+                "capture store for the same reason"
+            )
         metrics.append(_metric_doc(
             9, "HIV Care, Treatment Continuity & Retention", anchor,
             "Monthly IIT < 2.0% of patients on ART",
             f"{iit_pct:.2f}% · {fmt(iit_raw)} interrupted of {fmt(iit_denom)} "
             f"on ART (TX_CURR {fmt(tx_curr_prevq)} + TX_NEW {fmt(tx_new_qtr)})",
             iit_pct, unlock, band,
-            "(Tx_ML Outcomes → Interruption) ÷ [TX_CURR(previous quarter "
-            "close) + TX_NEW(current quarter to date)] × 100 — CHAK DHIS2, "
-            "both terms Jamii Tekelezi" + iit_src_note,
+            "[(Tx_ML Outcomes → Interruption, Jamii) + TX_IIT STA "
+            "(Stawisha)] ÷ [TX_CURR(previous quarter close) + TX_NEW(current "
+            "quarter to date)] × 100 — CHAK DHIS2, both terms Jamii Tekelezi "
+            "+ CHAP Stawisha" + iit_src_note,
         ))
 
     # ── #10 Differentiated Service Delivery (DSD) enrolment ──
@@ -3418,23 +3485,26 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         # blank five-minute dashboard cache.
         #
         # The MOH 731 roll-up, the Tx_ML (IIT) read, the new TX_CURR
-        # DSD/TPT/AHD breakdown, the #9 quarter-close backfill and the #9
-        # quarter-to-date TX_NEW backfill are INDEPENDENT queries against the
-        # same server and each takes 10-25 s, so they are issued concurrently.
-        # The retry loop for the roll-up is unchanged and still runs to
-        # completion; the other futures simply overlap it.
+        # DSD/TPT/AHD breakdown, the #9 quarter-close backfill, the #9
+        # quarter-to-date TX_NEW backfill and the #9 Stawisha IIT backfill
+        # are INDEPENDENT queries against the same server and each takes
+        # 10-25 s, so they are issued concurrently.  The retry loop for the
+        # roll-up is unchanged and still runs to completion; the other
+        # futures simply overlap it.
         from concurrent.futures import ThreadPoolExecutor
 
         data = {}
         iit_by_period = {}
         coc_by_period = {}
         prevq_tx_curr = {}
-        jamii_tx_new = {}
-        with ThreadPoolExecutor(max_workers=5) as ex:
+        qtr_tx_new = {}
+        stawisha_iit = {}
+        with ThreadPoolExecutor(max_workers=6) as ex:
             fut_iit = ex.submit(_fetch_iit_numerator, ou_ids)
             fut_coc = ex.submit(_fetch_coc_breakdowns, ou_ids)
             fut_prevq = ex.submit(_fetch_prevq_tx_curr_store)
-            fut_txnew = ex.submit(_fetch_jamii_tx_new_store)
+            fut_txnew = ex.submit(_fetch_qtr_tx_new_store)
+            fut_staw_iit = ex.submit(_fetch_stawisha_iit_store)
             for attempt in range(3):
                 data = _fetch_daraja_metrics_data(ou_ids)
                 if data:
@@ -3454,9 +3524,13 @@ def _compute_khis_metrics(target_period=None, default_period=None):
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK capture-store backfill failed: {exc}")
             try:
-                jamii_tx_new = fut_txnew.result() or {}
+                qtr_tx_new = fut_txnew.result() or {}
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK TX_NEW backfill failed: {exc}")
+            try:
+                stawisha_iit = fut_staw_iit.result() or {}
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK Stawisha IIT backfill failed: {exc}")
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
@@ -3509,7 +3583,7 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
             data, _anchor, iit_by_period, commodity, coc_by_period,
-            prevq_tx_curr, jamii_tx_new,
+            prevq_tx_curr, qtr_tx_new, stawisha_iit,
         )
         if not metrics:
             khis["status"] = "empty"
