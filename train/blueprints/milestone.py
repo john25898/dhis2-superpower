@@ -960,10 +960,17 @@ _IND_TB_PREV_DEN = "cJoXKb6p94M"    # TB_PREV Denominator Total (#15)
 # category combos noted below, and all 48 COCs resolve with the expected
 # display names.
 #
-# ⏳ As of 2026-10-06 none of the three carries any returns yet (they
-# were created 2026-10-05/06 and the site reports have not moved onto
-# them), so #10/#11/#15 all fall back to their previous rules until CHAK
-# starts populating them.  See the ⏳ FALLBACK notes at each metric.
+# #10 DSD is LIVE — the element carries returns from August 2026 (2,723)
+# and September 2026 (41,457).  It is read from the raw capture store by
+# CATEGORY OPTION, not by COC uid, because CHAK rebuilt its category combo
+# TWICE inside the window: the August cells sit under combo
+# "DSD Model, Coarse Age and Sex" (rwohez1KCe7), the element's own combo is
+# now "ver2026 DSD " (ttV542DV3gp), and the 28 COC uids.  Only the category
+# OPTION uids are common to every generation — see `_DSD_MODEL_OPTIONS`.
+#
+# ⏳ #11 (AHD) and #15 (TPT) still carry no returns (their elements were
+# created 2026-10-05/06 and the site reports have not moved onto them), so
+# both fall back to their previous rules.  See the ⏳ FALLBACK notes there.
 _DE_TX_CURR_DSD = "n2O2iO3h4wl"         # TX_CURR Differentiated Care Model
 _DE_TX_CURR_TPT_INIT = "Hvxl2zy6Ahi"    # TX_CURR TPT Initiation
 _DE_TX_CURR_AHD_SCREEN = "AhdScreen01"  # TX_CURR AHD Screening (CD4/WHO)
@@ -983,6 +990,27 @@ _DSD_MODEL_COCS = [
 ]
 # "No DSD, <15F / 15+F / <15M / 15+M" — the EXCLUDED row, kept for the record
 _NO_DSD_COCS = ["ablfhK3qO66", "JxKajLb6WIe", "CmlhtDJL9Pc", "Xx4xyFvPTP3"]
+
+# #10 numerator selector — the SEVEN *appropriate*-model CATEGORY OPTIONS of
+# the "TX_CURR Differentiated Care Model" element.  The capture store is
+# filtered on these (via `_chak_datavalue_store_option_totals`) instead of on
+# `_DSD_MODEL_COCS`, because a category OPTION uid survives a category-combo
+# rebuild while a COC uid does not: CHAK moved this element's data from
+# `f1veTDeEcmL` ("DSD Model, Coarse Age ,sex") to `rwohez1KCe7` (August) to
+# `ttV542DV3gp` ("ver2026 DSD ", the element's combo today), and only the
+# option ids are present in all three.  Matching the seven options also picks
+# up every age×sex combination of each model, including the "Unknown Age"
+# option the current combo added, which the 28 COC uids never covered.
+# "No DSD" (B8D3WzYOcnx) is the not-yet-enrolled remainder — EXCLUDED.
+_DSD_MODEL_OPTIONS = [
+    "Ms9pMOWFRrJ",   # Standard Care
+    "oQIFGeJkmip",   # Fast Track
+    "PMkhyqAqd6r",   # Facility ART Group
+    "GJpkqc5JNIk",   # Community ART Group
+    "Wbidb3kWGUd",   # Community ART Distribution Points
+    "bAhN5Z2uOt5",   # Community Pharmacy
+    "CphTBZuTCcp",   # Individual ART Distribution
+]
 
 # #15 TPT — category combo "TPT Status, Coarse Age , Sex": 3 status rows × 4
 # COCs.  The three rows are a TX_CURR disaggregation, so
@@ -1621,6 +1649,59 @@ def _fetch_qtr_tx_new_store():
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK TX_NEW capture-store backfill failed: {exc}")
         return {}
+
+
+def _fetch_dsd_inputs(ou_ids):
+    """#10's numerator AND denominator, both from the raw capture store.
+
+    Returns `(dsd_by_period, tx_curr_by_period)`, each keyed by period
+    label (the same format as `anchor`).
+
+    Two independent defects make the analytics roll-up unusable for #10:
+
+    * its category combo was rebuilt TWICE inside the reporting window.  The
+      August returns sit under `rwohez1KCe7` ("DSD Model, Coarse Age and
+      Sex"), September's under both that and the element's current
+      `ttV542DV3gp` ("ver2026 DSD ").  The 28 COC uids in `_DSD_MODEL_COCS`
+      name only the oldest generation, so a COC-based read reports 1,711 for
+      September where the facilities filed 41,457.  Selecting the seven
+      model CATEGORY OPTIONS is generation-proof.
+    * the roll-up also drops the Jamii `TX_CURR` namespace before September
+      2026, the same gap that made #9 read 42%/128%.  A roll-up denominator
+      would halve #10's baseline month.
+
+    Deliberately NARROW — it serves #10 ONLY; every other milestone keeps
+    reading the anchor-month `tx_curr`/`tx_new` from the roll-up.
+    """
+    try:
+        from services.dhis2 import (
+            _chak_datavalue_store_option_totals, _chak_datavalue_store_totals,
+        )
+
+        periods = [p for p in _metric_periods().split(";") if p]
+        if not ou_ids or not periods:
+            return {}, {}
+        ou_ids = list(ou_ids)
+        dsd, tx_curr = {}, {}
+        # Numerator: the seven appropriate model rows, every age×sex combo.
+        for pe, total in (_chak_datavalue_store_option_totals(
+                _DE_TX_CURR_DSD, ou_ids, periods,
+                _DSD_MODEL_OPTIONS) or {}).items():
+            label = _month_human(_pe_key(pe))
+            if label:
+                dsd[label] = dsd.get(label, 0.0) + float(total or 0.0)
+        # Denominator: TX_CURR, both funding namespaces.
+        for de_id in (_DE_TX_CURR, _DE_TX_CURR_62):
+            for pe, total in (_chak_datavalue_store_totals(
+                    de_id, ou_ids, periods) or {}).items():
+                label = _month_human(_pe_key(pe))
+                if label:
+                    tx_curr[label] = tx_curr.get(label, 0.0) \
+                        + float(total or 0.0)
+        return dsd, tx_curr
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK DSD capture-store fetch failed: {exc}")
+        return {}, {}
 
 
 def _khis_commodity_reporting(period):
@@ -2574,7 +2655,8 @@ def _eid_jt_coverage():
 
 def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
                             coc_by_period=None, prevq_tx_curr=None,
-                            qtr_tx_new=None):
+                            qtr_tx_new=None, dsd_by_period=None,
+                            anchor_tx_curr=None):
     """Compute the DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
@@ -2656,7 +2738,13 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     def csum(coc_ids):
         return sum(float(coc_cells.get(c, 0) or 0) for c in coc_ids)
 
-    dsd_enrolled = csum(_DSD_MODEL_COCS)
+    # #10 is the ONE milestone that does NOT read this roll-up.  Its element
+    # was rebuilt under three different category combos during the window and
+    # the roll-up answers a COC-selective zero for most of them, so both of
+    # its terms come from the raw capture store via `_fetch_dsd_inputs`.
+    dsd_enrolled = float((dsd_by_period or {}).get(anchor, 0) or 0)
+    dsd_tx_curr = float((anchor_tx_curr or {}).get(anchor, 0) or 0)
+
     ahd_screened = csum(_AHD_SCREEN_COCS)
     tpt_started = csum(_TPT_STARTED_COCS)
     tpt_on_tb_rx = csum(_TPT_ON_TB_RX_COCS)
@@ -2768,26 +2856,34 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     #   Points, Community Pharmacy, Individual ART Distribution.  The eighth
     #   row, "No DSD", is the not-yet-enrolled remainder and is EXCLUDED
     #   (including it would pin the ratio at 100%).  Denominator = TX_CURR.
-    #   ⏳ The element was created 2026-10-05 and carries no returns yet, so
-    #   this metric simply stays absent (rendered as "—") until CHAK starts
-    #   reporting into it — there is no legacy rule to fall back on.
-    if tx_curr and dsd_enrolled:
-        dsd_pct = min(100.0, dsd_enrolled / tx_curr * 100.0)
+    #   Both terms are read from the raw capture store.  The analytics
+    #   roll-up cannot be used here: CHAK rebuilt this element's category
+    #   combo twice inside the window (August cells under "DSD Model, Coarse
+    #   Age and Sex", the element now on "ver2026 DSD "), and the roll-up
+    #   enumerates the combos but returns zeros for every generation except
+    #   the oldest — 1,711 reported where the facilities actually filed
+    #   41,457.  Selecting the seven model CATEGORY OPTIONS instead of the 28
+    #   COC uids counts every generation.  The denominator is the store
+    #   TX_CURR for the same reason: the roll-up drops the Jamii namespace
+    #   before September 2026, which would halve it.
+    if dsd_tx_curr and dsd_enrolled:
+        dsd_pct = min(100.0, dsd_enrolled / dsd_tx_curr * 100.0)
         unlock, band = _unlock_bands("dsd", dsd_pct)
         metrics.append(_metric_doc(
             10, "Differentiated Service Delivery (DSD) Enrollment and "
                 "Referral",
             anchor,
             "\u226590% of PLHIV enrolled in an appropriate DSD model",
-            f"{dsd_pct:.1f}% \u00b7 {fmt(dsd_enrolled)} of {fmt(tx_curr)} "
-            "on ART enrolled in a DSD model",
+            f"{dsd_pct:.1f}% \u00b7 {fmt(dsd_enrolled)} of "
+            f"{fmt(dsd_tx_curr)} on ART enrolled in a DSD model",
             dsd_pct, unlock, band,
             "(\u03a3 Standard Care + Fast Track + Facility ART Group + "
             "Community ART Group + Community ART Distribution Points + "
             "Community Pharmacy + Individual ART Distribution) \u00f7 "
-            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 \"TX_CURR Differentiated "
-            "Care Model\" (n2O2iO3h4wl), DSD Model, Coarse Age ,sex, "
-            "\"No DSD\" row excluded",
+            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 capture store, \"TX_CURR "
+            "Differentiated Care Model\" (n2O2iO3h4wl) selected by the seven "
+            "DSD-model category options (every age\u00d7sex, all three "
+            "category-combo generations), \"No DSD\" row excluded",
         ))
 
     # ── #11 Advanced HIV Disease (AHD) identification & evaluation ──
@@ -3399,11 +3495,12 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         # blank five-minute dashboard cache.
         #
         # The MOH 731 roll-up, the Tx_ML (IIT) read, the new TX_CURR
-        # DSD/TPT/AHD breakdown, the #9 quarter-close backfill and the #9
-        # quarter-to-date TX_NEW backfill are INDEPENDENT queries against the
-        # same server and each takes 10-25 s, so they are issued concurrently.
-        # The retry loop for the roll-up is unchanged and still runs to
-        # completion; the other futures simply overlap it.
+        # DSD/TPT/AHD breakdown, the #9 quarter-close backfill, the #9
+        # quarter-to-date TX_NEW backfill and the #10 DSD store read are
+        # INDEPENDENT queries against the same server and each takes 10-25 s,
+        # so they are issued concurrently.  The retry loop for the roll-up is
+        # unchanged and still runs to completion; the other futures simply
+        # overlap it.
         from concurrent.futures import ThreadPoolExecutor
 
         data = {}
@@ -3411,11 +3508,14 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         coc_by_period = {}
         prevq_tx_curr = {}
         qtr_tx_new = {}
-        with ThreadPoolExecutor(max_workers=5) as ex:
+        dsd_by_period = {}
+        anchor_tx_curr = {}
+        with ThreadPoolExecutor(max_workers=6) as ex:
             fut_iit = ex.submit(_fetch_iit_numerator, ou_ids)
             fut_coc = ex.submit(_fetch_coc_breakdowns, ou_ids)
             fut_prevq = ex.submit(_fetch_prevq_tx_curr_store)
             fut_txnew = ex.submit(_fetch_qtr_tx_new_store)
+            fut_dsd = ex.submit(_fetch_dsd_inputs, ou_ids)
             for attempt in range(3):
                 data = _fetch_daraja_metrics_data(ou_ids)
                 if data:
@@ -3438,6 +3538,10 @@ def _compute_khis_metrics(target_period=None, default_period=None):
                 qtr_tx_new = fut_txnew.result() or {}
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK TX_NEW backfill failed: {exc}")
+            try:
+                dsd_by_period, anchor_tx_curr = fut_dsd.result() or ({}, {})
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK DSD store fetch failed: {exc}")
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
@@ -3490,7 +3594,7 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
             data, _anchor, iit_by_period, commodity, coc_by_period,
-            prevq_tx_curr, qtr_tx_new,
+            prevq_tx_curr, qtr_tx_new, dsd_by_period, anchor_tx_curr,
         )
         if not metrics:
             khis["status"] = "empty"
