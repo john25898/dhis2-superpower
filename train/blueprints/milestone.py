@@ -191,6 +191,13 @@ SUMMARY2_XLSX = BASE_DIR / "Milestones Summary2.xlsx"
 # stamps) is still on disk and is still the only source for the August
 # reading.  See _dwapi_coverages().
 #
+# Two copies of the SAME window must not both be on disk.  NDWH re-issues a
+# file when it is corrected (the September issue went 188 → 208 filers), and
+# the wildcard also matches the browser's "… (1).xlsx" download suffix — so
+# importing an update without deleting the superseded copy leaves two
+# readings for one month, in mtime order, last one scored winning.  Replace
+# the file (same name) instead.
+#
 # NOTE the workbook is *.xlsx, which this repository ignores by default — a
 # newly added file must be force-added (`git add -f`) or it never reaches
 # the server and that month's reading silently goes missing.
@@ -2397,7 +2404,14 @@ def _dwapi_coverage(path=None):
     on disk confirm the rule: the August-issued workbook stamps 2026-09 and
     gives 204 of 211 (96.7%) for August, and the September-issued
     "AFGHS-Chak Daraja Dwapi Uploads-September 2026.xlsx" stamps 2026-10
-    and gives 188 of 211 (89.1%) for September.
+    and gives 208 of 211 (98.6%) for September.
+
+    A RE-ISSUED workbook SUPERSEDES the earlier issue for the same window —
+    NDWH re-released the September issue with 20 more September filers
+    (188 → 208).  Both would stamp 2026-10, and the reader scores every
+    workbook on disk in mtime order, last write winning, so holding two
+    copies of one window means the older one can silently win.  Replace the
+    superseded file (same name) rather than adding a second copy.
 
     The facilities that are silent in the window (3 of which do not appear
     in the workbook at all, and the rest of which uploaded in an earlier
