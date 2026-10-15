@@ -1022,6 +1022,15 @@ _TPT_ON_TB_RX_COCS = ["t38X02PeBJC", "rPbK3vxOmyf", "EVvXOgggQrw",
 _TPT_NOT_ON_TPT_COCS = ["zeu0nIAO4aO", "DRjR6REBnlo", "qFCvRERXnPS",
                         "r57bPGgeBMr"]                    # Not on TPT
 
+# #15 numerator/denominator selector — the three TPT STATUS CATEGORY OPTIONS
+# behind `_TPT_*_COCS`, for exactly the reason `_DSD_MODEL_OPTIONS` exists
+# (a category OPTION uid survives a category-combo rebuild, a COC uid does
+# not).  Resolved live from the three COC groups: the status option is the
+# one shared by all four age×sex COCs of its row.
+_TPT_STARTED_OPTIONS = ["GNPFgeaxD2C"]      # Started TPT
+_TPT_ON_TB_RX_OPTIONS = ["HumDBm5W8yK"]     # On TB Treatment
+_TPT_NOT_ON_TPT_OPTIONS = ["oM5tLZrimD5"]   # Not on TPT
+
 # #11 AHD — category combo "Coarse Age Bands, Gender": 1 row × 4 COCs.
 # Deliberately the SAME category combo (and therefore the same four COC
 # uids) as "TX_CURR SHA Registration" (zo2kCCIXoKv) — only the data
@@ -1202,6 +1211,15 @@ _ALL_METRIC_DE_IDS = sorted({
 } | set(_DE_VL_62) | set(_DE_PREP_NEW_62)
   | set(_HTS_TESTED_62) | set(_HTS_POSITIVE_62)
   | set(_DE_TX_TB_DEN_JTP) | set(_DE_TX_TB_DEN_62))
+
+# The four ids above that are DHIS2 *indicators* (server-side expressions over
+# data elements) rather than data elements.  `/dataValueSets.json` holds data
+# elements only, so the capture store can never answer these — a store read
+# returns nothing for them, not a zero.  Anything scoring on them therefore
+# stays on the analytics roll-up, and the roll-up's namespace gap is a defect
+# this tracker cannot reach around (see the note on #7).
+_INDICATOR_DE_IDS = {_IND_HTS_TESTED, _IND_HTS_POSITIVE,
+                     _IND_TB_PREV_NUM, _IND_TB_PREV_DEN}
 
 _MONTH_ORD = {
     m: i for i, m in enumerate(
@@ -1652,10 +1670,10 @@ def _fetch_qtr_tx_new_store():
 
 
 def _fetch_dsd_inputs(ou_ids):
-    """#10's numerator AND denominator, both from the raw capture store.
+    """#10's numerator, from the raw capture store.
 
-    Returns `(dsd_by_period, tx_curr_by_period)`, each keyed by period
-    label (the same format as `anchor`).
+    Returns `{period_label: value}` for the seven *appropriate* DSD-model
+    rows.
 
     Two independent defects make the analytics roll-up unusable for #10:
 
@@ -1667,41 +1685,116 @@ def _fetch_dsd_inputs(ou_ids):
       September where the facilities filed 41,457.  Selecting the seven
       model CATEGORY OPTIONS is generation-proof.
     * the roll-up also drops the Jamii `TX_CURR` namespace before September
-      2026, the same gap that made #9 read 42%/128%.  A roll-up denominator
-      would halve #10's baseline month.
+      2026, which would have halved #10's denominator — that term is now the
+      anchor-month `tx_curr` from `_fetch_anchor_store_overlay`.
 
-    Deliberately NARROW — it serves #10 ONLY; every other milestone keeps
-    reading the anchor-month `tx_curr`/`tx_new` from the roll-up.
+    Deliberately NARROW: it serves #10's numerator ONLY.
     """
     try:
-        from services.dhis2 import (
-            _chak_datavalue_store_option_totals, _chak_datavalue_store_totals,
-        )
+        from services.dhis2 import _chak_datavalue_store_option_totals
 
         periods = [p for p in _metric_periods().split(";") if p]
         if not ou_ids or not periods:
-            return {}, {}
-        ou_ids = list(ou_ids)
-        dsd, tx_curr = {}, {}
+            return {}
+        dsd = {}
         # Numerator: the seven appropriate model rows, every age×sex combo.
         for pe, total in (_chak_datavalue_store_option_totals(
-                _DE_TX_CURR_DSD, ou_ids, periods,
+                _DE_TX_CURR_DSD, list(ou_ids), periods,
                 _DSD_MODEL_OPTIONS) or {}).items():
             label = _month_human(_pe_key(pe))
             if label:
                 dsd[label] = dsd.get(label, 0.0) + float(total or 0.0)
-        # Denominator: TX_CURR, both funding namespaces.
-        for de_id in (_DE_TX_CURR, _DE_TX_CURR_62):
-            for pe, total in (_chak_datavalue_store_totals(
-                    de_id, ou_ids, periods) or {}).items():
-                label = _month_human(_pe_key(pe))
-                if label:
-                    tx_curr[label] = tx_curr.get(label, 0.0) \
-                        + float(total or 0.0)
-        return dsd, tx_curr
+        return dsd
     except Exception as exc:  # noqa: BLE001
         print(f"[MILESTONE] CHAK DSD capture-store fetch failed: {exc}")
-        return {}, {}
+        return {}
+
+
+def _fetch_coc_store_inputs(ou_ids):
+    """#11 AHD and #15 TPT numerators, from the raw capture store.
+
+    Returns `{period_label: {"ahd": v, "tpt_started": v, "tpt_on_tb": v}}`.
+
+    Both elements are TX_CURR disaggregations, and the roll-up enumerates
+    only ONE category-combo generation of each — it answers 41,764 for
+    September's AHD screening element but nothing at all for August, and
+    reports zero TPT status rows for every month while the store holds 2,728
+    clients in August and 41,249 in September.  Selecting by category OPTION
+    counts every generation, so the tracker stops falling back to the
+    TB_PREV/CD4 rules for months that are actually reported.
+
+    Each of the three reads is one small request (element × option × period ×
+    roster).  A term CHAK has genuinely not filed is simply absent, and the
+    caller then keeps its existing reading.
+    """
+    try:
+        from services.dhis2 import _chak_datavalue_store_pivot
+
+        periods = [p for p in _metric_periods().split(";") if p]
+        if not ou_ids or not periods:
+            return {}
+        ou_ids = list(ou_ids)
+        out = {}
+        jobs = (
+            # AHD screening's combo is age × sex only ("Coarse Age Bands,
+            # Gender"), so the whole element IS the numerator — no option
+            # selector to apply.
+            ("ahd", _DE_TX_CURR_AHD_SCREEN, None),
+            ("tpt_started", _DE_TX_CURR_TPT_INIT, _TPT_STARTED_OPTIONS),
+            ("tpt_on_tb", _DE_TX_CURR_TPT_INIT, _TPT_ON_TB_RX_OPTIONS),
+        )
+        for key, element, options in jobs:
+            pivot = _chak_datavalue_store_pivot(
+                [element], ou_ids, periods, option_ids=options) or {}
+            for pe, per_ou in (pivot.get(element) or {}).items():
+                label = _month_human(_pe_key(pe))
+                total = sum(float(v or 0) for v in (per_ou or {}).values())
+                if label and total:
+                    out.setdefault(label, {})[key] = total
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK AHD/TPT capture-store fetch failed: {exc}")
+        return {}
+
+
+def _fetch_anchor_store_overlay(ou_ids):
+    """Every milestone ELEMENT's true total, month by month, from the store.
+
+    Returns `{(year, month): {de_id: total}}` — the anchor month is the one
+    every milestone is scored on.
+
+    The analytics roll-up on this instance never enumerated the Jamii
+    Tekelezi namespace before September 2026, so ELEVEN of the elements the
+    tracker divides by answer a flat zero for June–August: TX_CURR 40,913 of
+    a true 81,851, TX_TB 31,744 of 68,551, VL 31,999 of 62,742, TX_NEW 121 of
+    266.  Those are read-model defects, not missing submissions — the capture
+    store holds every month.  Milestones #11, #14, #15 and #16 all divide by
+    at least one of them, which is why their Baseline tab was understated.
+
+    Indicators (`_INDICATOR_DE_IDS`) have no capture-store rows and are
+    skipped by the store itself; the caller keeps the roll-up for those.
+    """
+    try:
+        from services.dhis2 import _chak_datavalue_store_pivot
+
+        periods = [p for p in _metric_periods().split(";") if p]
+        if not ou_ids or not periods:
+            return {}
+        pivot = _chak_datavalue_store_pivot(
+            _ALL_METRIC_DE_IDS, list(ou_ids), periods) or {}
+        out = {}
+        for de_id, by_pe in pivot.items():
+            for pe, per_ou in (by_pe or {}).items():
+                key = _pe_key(pe)
+                if not key[0]:
+                    continue
+                total = sum(float(v or 0) for v in (per_ou or {}).values())
+                if total:
+                    out.setdefault(key, {})[de_id] = total
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"[MILESTONE] CHAK anchor store overlay failed: {exc}")
+        return {}
 
 
 def _khis_commodity_reporting(period):
@@ -2656,7 +2749,7 @@ def _eid_jt_coverage():
 def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
                             coc_by_period=None, prevq_tx_curr=None,
                             qtr_tx_new=None, dsd_by_period=None,
-                            anchor_tx_curr=None):
+                            coc_store=None, store_overlay=None):
     """Compute the DHIS2-measurable milestones for the anchor month.
 
     `iit_by_period` is the #9 numerator series ({period_label: value} of
@@ -2686,32 +2779,67 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     `commodity` is the #21 KHIS commodity-reporting payload supplied by
     `_khis_commodity_reporting` — the one metric here that is NOT sourced
     from CHAK DHIS2.
+
+    `coc_store` ({period_label: {"ahd"/"tpt_started"/"tpt_on_tb": value}})
+    and `store_overlay` ({(year, month): {de_id: total}}) are the two
+    capture-store reads.  `store_overlay` is the important one: `val()` below
+    prefers it over the roll-up, which on this instance never enumerated the
+    Jamii namespace before September 2026 (see `_fetch_anchor_store_overlay`).
     """
     if not data or not anchor:
         return [], None
 
     periods = _pe_lookup(data)
+    # The capture store's reading of the ANCHOR month, which is the only month
+    # any of these milestones is scored on.
+    overlay = (store_overlay or {}).get(_pe_key(anchor)) or {}
 
-    def val(de_id, year, month):
+    def val(de_id, year, month, store=True):
+        """One element for one month.
+
+        The capture store wins when it holds a LARGER figure: the analytics
+        roll-up is a read model that under-enumerates this instance's two
+        funding namespaces on the older months, so `max()` can only ever
+        correct a reading downward-bounded by the truth — and if CHAK ever
+        catches the roll-up up, nothing regresses.
+        """
         label = periods.get((year, month))
         if not label:
             return 0.0
-        return float(data.get(de_id, {}).get(label, 0) or 0)
+        roll_up = float(data.get(de_id, {}).get(label, 0) or 0)
+        if not store:
+            return roll_up
+        captured = float(overlay.get(de_id) or 0)
+        return captured if captured > roll_up else roll_up
 
-    def vsum(de_ids, year, month):
+    def vsum(de_ids, year, month, store=True):
         """Sum a group of twin elements for one calendar month."""
-        return sum(val(d, year, month) for d in de_ids)
+        return sum(val(d, year, month, store) for d in de_ids)
 
     year, month = _pe_key(anchor)
     q_year, q_month = _prev_quarter_close(year, month)
 
     # Every measure is Jamii Tekelezi + CHAP Stawisha (the two AOCs never
     # overlap, so summing both namespaces gives the true Daraja total).
-    tested = val(_IND_HTS_TESTED, year, month) \
-        + vsum(_HTS_TESTED_62, year, month)
-    positive = val(_IND_HTS_POSITIVE, year, month) \
-        + vsum(_HTS_POSITIVE_62, year, month)
+    #
+    # #6 and #7 are the ONLY two milestones whose inputs are server-side
+    # INDICATORS ("HTS_TST : Numerator" / "HTS_TST_POS : Numerator"), and
+    # `/dataValueSets.json` holds data elements, not computed indicators — a
+    # store read returns NOTHING for them, not a zero.  They therefore stay
+    # wholly on the roll-up: the store cannot answer their dominant term, and
+    # pairing a store numerator with an indicator denominator would score two
+    # different populations against each other (measured: it would read
+    # 266/138 = 193% for August).  Their `store=False` is deliberate.
+    tested = val(_IND_HTS_TESTED, year, month, store=False) \
+        + vsum(_HTS_TESTED_62, year, month, store=False)
+    positive = val(_IND_HTS_POSITIVE, year, month, store=False) \
+        + vsum(_HTS_POSITIVE_62, year, month, store=False)
     tx_new = val(_DE_TX_NEW, year, month) + vsum(_TX_NEW_62_ALL, year, month)
+    # #7's numerator has to come from the SAME source as its denominator, so
+    # it keeps the roll-up reading while #11's legacy rule (below) uses the
+    # store-corrected one.  See the note above.
+    tx_new_rollup = val(_DE_TX_NEW, year, month, store=False) \
+        + vsum(_TX_NEW_62_ALL, year, month, store=False)
     tx_curr = val(_DE_TX_CURR, year, month) + val(_DE_TX_CURR_62, year, month)
     prep_new = val(_DE_PREP_NEW, year, month) + vsum(_DE_PREP_NEW_62, year, month)
     vl_done = val(_DE_VL_DONE, year, month) + vsum(_DE_VL_62, year, month)
@@ -2735,19 +2863,35 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     # month.  Empty when CHAK has no returns for the element yet.
     coc_cells = (coc_by_period or {}).get(anchor, {}) or {}
 
-    def csum(coc_ids):
-        return sum(float(coc_cells.get(c, 0) or 0) for c in coc_ids)
+    # `anchor_store` is the capture-store reading of the same three rows,
+    # selected by CATEGORY OPTION rather than COC uid, so it also covers the
+    # category-combo generations the roll-up answers zero for.
+    anchor_store = (coc_store or {}).get(anchor, {}) or {}
 
-    # #10 is the ONE milestone that does NOT read this roll-up.  Its element
-    # was rebuilt under three different category combos during the window and
-    # the roll-up answers a COC-selective zero for most of them, so both of
-    # its terms come from the raw capture store via `_fetch_dsd_inputs`.
+    def csum(coc_ids, key=None):
+        """One element's category rows for the anchor month.
+
+        `key` names the term in `anchor_store`; the store reading wins when
+        it is the larger, and the roll-up's COC total is the fallback.
+        """
+        roll_up = sum(float(coc_cells.get(c, 0) or 0) for c in coc_ids)
+        if not key:
+            return roll_up
+        stored = float(anchor_store.get(key) or 0)
+        return stored if stored > roll_up else roll_up
+
+    # #10's numerator is the ONE term that still needs its own read.  Its
+    # element was rebuilt under three different category combos during the
+    # window and the roll-up answers a COC-selective zero for most of them,
+    # so it comes from the raw capture store via `_fetch_dsd_inputs`,
+    # selected by the seven model category OPTIONS.  The denominator is the
+    # same store-corrected `tx_curr` every other milestone now divides by.
     dsd_enrolled = float((dsd_by_period or {}).get(anchor, 0) or 0)
-    dsd_tx_curr = float((anchor_tx_curr or {}).get(anchor, 0) or 0)
+    dsd_tx_curr = tx_curr
 
-    ahd_screened = csum(_AHD_SCREEN_COCS)
-    tpt_started = csum(_TPT_STARTED_COCS)
-    tpt_on_tb_rx = csum(_TPT_ON_TB_RX_COCS)
+    ahd_screened = csum(_AHD_SCREEN_COCS, "ahd")
+    tpt_started = csum(_TPT_STARTED_COCS, "tpt_started")
+    tpt_on_tb_rx = csum(_TPT_ON_TB_RX_COCS, "tpt_on_tb")
 
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus every
     # TX_NEW recorded so far in the CURRENT quarter.  Both are the SUM of the
@@ -2761,9 +2905,9 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     # for exactly the element that carries them.  The capture store holds
     # every month of the window for both namespaces.
     #
-    # NARROW BY DESIGN: these store reads serve #9 ONLY.  The anchor-month
-    # `tx_curr` and `tx_new` above — which #7/#10/#11/#14/#15 divide by — are
-    # still read from the roll-up, so no other milestone moves with this.
+    # The same defect understated the ANCHOR-month `tx_curr`/`tx_new` that
+    # #10/#11/#14/#15 divide by — those now read the store too, via the
+    # `store_overlay` supplied to `val()` above.
     tx_curr_prevq = float((prevq_tx_curr or {}).get((q_year, q_month)) or 0)
 
     tx_new_qtr = 0.0
@@ -2794,14 +2938,20 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
 
     # ── #7 Linkage of HIV-positive clients to ART ──
     #   Manager ruling: TX_NEW ÷ HTS_TST_POS × 100.  Target ≥95%.
+    #   ⚠ BOTH terms stay on the analytics roll-up.  The denominator is the
+    #   "HTS_TST_POS : Numerator" INDICATOR, which the capture store cannot
+    #   answer at all, and on this instance the roll-up does not enumerate its
+    #   Jamii side before September 2026 — so the numerator is taken from the
+    #   same read rather than from the store.  The store-overlay correction
+    #   that fixes #11/#14/#15/#16 would otherwise inflate this ratio.
     if positive:
-        pct7 = min(100.0, tx_new / positive * 100.0)
+        pct7 = min(100.0, tx_new_rollup / positive * 100.0)
         unlock, band = _unlock_bands("linkage", pct7)
         metrics.append(_metric_doc(
             7, "Linkage of HIV Positive Clients to ART", anchor,
             "≥95% of newly diagnosed linked to ART",
-            f"{pct7:.1f}% · {fmt(tx_new)} started on ART of {fmt(positive)} "
-            "positive",
+            f"{pct7:.1f}% · {fmt(tx_new_rollup)} started on ART of "
+            f"{fmt(positive)} positive",
             pct7, unlock, band,
             "TX_NEW ÷ HTS_TST_POS × 100 — CHAK DHIS2 "
             "(TX_NEW: Starting ART [Jamii] + TX_New CD4<200/>200/unknown "
@@ -3128,25 +3278,28 @@ _MILESTONE_MATRIX_SPECS = {
         "name": ("Differentiated Service Delivery (DSD) Enrollment and "
                  "Referral"),
         "note": ("Milestone = Σ the seven appropriate DSD models ÷ TX_CURR × "
-                 "100.  One column per model; the \"No DSD\" combos are "
-                 "excluded from the numerator by design."),
+                 "100.  One column per model, selected by category OPTION so "
+                 "every category-combo generation CHAK has used is counted; "
+                 "the \"No DSD\" option is excluded from the numerator by "
+                 "design."),
         "columns": [
-            {"kind": "coc", "label": "DSD model",
-             "element": _DE_TX_CURR_DSD, "ids": _DSD_MODEL_COCS},
+            {"kind": "coc", "label": "DSD model", "by": "co",
+             "element": _DE_TX_CURR_DSD, "ids": _DSD_MODEL_OPTIONS},
             {"kind": "de", "label": "TX_CURR (denominator)",
              "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
         ],
     },
     11: {
         "name": "Advanced HIV Disease (AHD) identification and evaluation",
-        "note": ("Current rule = AHD screened ÷ TX_CURR × 100.  Until the new "
-                 "screening element carries returns the tracker falls back to "
+        "note": ("Current rule = AHD screened ÷ TX_CURR × 100.  The AHD "
+                 "element's only category dimension is age × sex, so its "
+                 "whole value is the numerator — no row has to be selected "
+                 "out.  Until it carries returns the tracker falls back to "
                  "(TX_NEW CD4 <200 + ≥200) ÷ TX_NEW, so both readings are "
                  "given here for the month being viewed."),
         "columns": [
-            {"kind": "coc", "label": "Screened for AHD",
-             "element": _DE_TX_CURR_AHD_SCREEN, "ids": _AHD_SCREEN_COCS,
-             "group": None},
+            {"kind": "de", "label": "Screened for AHD",
+             "ids": [_DE_TX_CURR_AHD_SCREEN]},
             {"kind": "de", "label": "TX_CURR (denominator)",
              "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
             {"kind": "de", "label": "TX_NEW CD4 <200 (fallback)",
@@ -3174,14 +3327,16 @@ _MILESTONE_MATRIX_SPECS = {
     15: {
         "name": "TB Preventive Therapy",
         "note": ("Current rule = Started TPT ÷ (TX_CURR − On TB Treatment) × "
-                 "100.  Until that element carries returns the tracker falls "
-                 "back to TB_PREV Numerator ÷ Denominator, so both readings "
-                 "are given here."),
+                 "100.  One column per TPT status row, selected by category "
+                 "OPTION (a COC uid does not survive a category-combo "
+                 "rebuild).  Until that element carries returns the tracker "
+                 "falls back to TB_PREV Numerator ÷ Denominator, given here "
+                 "as the last two columns."),
         "columns": [
-            {"kind": "coc", "label": "TPT status",
+            {"kind": "coc", "label": "TPT status", "by": "co",
              "element": _DE_TX_CURR_TPT_INIT,
-             "ids": (_TPT_STARTED_COCS + _TPT_ON_TB_RX_COCS
-                     + _TPT_NOT_ON_TPT_COCS)},
+             "ids": (_TPT_STARTED_OPTIONS + _TPT_ON_TB_RX_OPTIONS
+                     + _TPT_NOT_ON_TPT_OPTIONS)},
             {"kind": "de", "label": "TX_CURR (denominator)",
              "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
             {"kind": "de", "label": "TB_PREV Numerator (fallback)",
@@ -3228,7 +3383,9 @@ def _chak_meta_names(kind, uids):
 
         from services.dhis2 import CHAK_PASS, CHAK_USER, chak_get
 
-        resource = "dataElements" if kind == "de" else "categoryOptionCombos"
+        resource = {"de": "dataElements",
+                    "co": "categoryOptions"}.get(kind,
+                                                 "categoryOptionCombos")
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
         for i in range(0, len(uid_list), 100):
             chunk = uid_list[i:i + 100]
@@ -3286,6 +3443,11 @@ def _matrix_columns(spec):
 
         element = col["element"]
         coc_elements.append(element)
+        # `by` says what the column's uids ARE: "coc" (a category-option
+        # COMBO) or "co" (a bare category OPTION).  Options are the only
+        # stable selector when CHAK has rebuilt an element's category combo
+        # — see `_DSD_MODEL_OPTIONS`.
+        by = col.get("by", "coc")
         if kind == "coc_name":
             columns.append({
                 "key": f"c{ci}",
@@ -3293,6 +3455,7 @@ def _matrix_columns(spec):
                 "group": None,
                 "kind": "coc_name",
                 "element": element,
+                "by": by,
                 "names": list(col.get("names") or ()),
                 "ids": [],
             })
@@ -3307,22 +3470,27 @@ def _matrix_columns(spec):
                 "group": None,
                 "kind": "coc",
                 "element": element,
+                "by": by,
                 "ids": list(col["ids"]),
             })
             continue
-        names = _chak_meta_names("coc", col["ids"])
+        names = _chak_meta_names(by, col["ids"])
         buckets = {}
         for uid in col["ids"]:
             name = names.get(uid, "")
             label = (name.split(",")[0].strip() if name else "") or uid
             buckets.setdefault(label, []).append(uid)
-        for gi, label in enumerate(sorted(buckets)):
+        # Insertion order, not alphabetical: the spec's uid order is the
+        # programme's own (e.g. Standard Care → … → Individual ART
+        # Distribution), and a DSD grid in the wrong order is unreadable.
+        for gi, label in enumerate(buckets):
             columns.append({
                 "key": f"c{ci}g{gi}",
                 "label": label,
                 "group": col["label"],
                 "kind": "coc",
                 "element": element,
+                "by": by,
                 "ids": buckets[label],
             })
     return columns, list(dict.fromkeys(de_ids)), list(dict.fromkeys(coc_elements))
@@ -3365,19 +3533,75 @@ def _facility_matrix(milestone_id, period=None):
 
     columns, de_ids, coc_elements = _matrix_columns(spec)
     ou_ids = [r["uid"] for r in roster]
+    period_id = period
 
-    from services.dhis2 import _chak_analytics_by_ou
+    # ── Source of truth: the RAW CAPTURE STORE, not the analytics roll-up ──
+    #
+    # The roll-up is a read model, and on this instance it is both
+    # namespace-selective and category-combo-selective: it reports 1,711 DSD
+    # enrolments where the facilities filed 41,457, and 40,913 on ART where
+    # the store holds 81,851.  A grid whose columns disagree with the
+    # milestone they explain is worse than no grid, so every cell is read
+    # from whatever the facilities actually submitted.
+    #
+    # ONE request serves all three column kinds (repeated `dataElement=`):
+    # `flat_cells[de][ou]` for the "de" columns, and `coc_of[element][coc]`
+    # for the category-broken ones, which are then folded by category OPTION
+    # where the spec asks for it.  The four server-side INDICATORS (#6/#7's
+    # HTS pair, #15's TB_PREV pair) have no store rows at all and are the one
+    # thing the roll-up must still answer.
+    from services.dhis2 import (
+        _chak_analytics_by_ou, _chak_coc_option_ids, _chak_store_cells,
+    )
 
-    flat = ()
-    if de_ids:
-        flat = _chak_analytics_by_ou(de_ids, ou_ids, period) or {}
-    disagg = {}
-    for element in coc_elements:
-        disagg[element] = _chak_analytics_by_ou(
-            [element], ou_ids, period, disaggregate=True) or {}
+    flat_cells = {}
+    coc_of = {}
+    for cell in _chak_store_cells(de_ids + coc_elements, ou_ids, period):
+        de_id, ou = cell["de"], cell["ou"]
+        bucket = flat_cells.setdefault(de_id, {})
+        bucket[ou] = bucket.get(ou, 0.0) + cell["value"]
+        by_coc = coc_of.setdefault(de_id, {}).setdefault(cell["coc"], {})
+        by_coc[ou] = by_coc.get(ou, 0.0) + cell["value"]
 
-    flat_cells = flat.get(period, {})
-    disagg_cells = {el: (d.get(period) or {}) for el, d in disagg.items()}
+    indicator_ids = [d for d in de_ids if d in _INDICATOR_DE_IDS]
+    if indicator_ids:
+        roll = _chak_analytics_by_ou(indicator_ids, ou_ids, period) or {}
+        for de_id, per_ou in (roll.get(period_id) or {}).items():
+            bucket = flat_cells.setdefault(de_id, {})
+            for ou, value in (per_ou or {}).items():
+                if value and value > bucket.get(ou, 0.0):
+                    bucket[ou] = value
+
+    # disagg_cells keeps the shape `cell_value` expects — {element:
+    # {"<element>.<uid>": {ou: value}}} — for both the combination and the
+    # category-option columns, so the closure below needs no branch.
+    disagg_cells = {}
+    combo_options = None
+    for col in columns:
+        if col["kind"] not in ("coc", "coc_name"):
+            continue
+        element = col["element"]
+        if col.get("by") == "co":
+            # Fold this element's cells onto the category OPTIONS the column
+            # names: a COC uid does not survive a category-combo rebuild, an
+            # option uid does.
+            if combo_options is None:
+                combo_options = _chak_coc_option_ids() or {}
+            per_option = {}
+            for coc, per_ou in (coc_of.get(element) or {}).items():
+                for option in combo_options.get(coc, ()):
+                    if option not in col["ids"]:
+                        continue
+                    bucket = per_option.setdefault(option, {})
+                    for ou, value in per_ou.items():
+                        bucket[ou] = bucket.get(ou, 0.0) + value
+            cells = disagg_cells.setdefault(element, {})
+            for option in col["ids"]:
+                cells[f"{element}.{option}"] = per_option.get(option, {})
+        else:
+            cells = disagg_cells.setdefault(element, {})
+            for coc, per_ou in (coc_of.get(element) or {}).items():
+                cells[f"{element}.{coc}"] = per_ou
 
     # Names for the coc_name columns, resolved once for the element.  Done
     # BEFORE cell_value is first called because that closure reads it.
@@ -3496,11 +3720,11 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         #
         # The MOH 731 roll-up, the Tx_ML (IIT) read, the new TX_CURR
         # DSD/TPT/AHD breakdown, the #9 quarter-close backfill, the #9
-        # quarter-to-date TX_NEW backfill and the #10 DSD store read are
-        # INDEPENDENT queries against the same server and each takes 10-25 s,
-        # so they are issued concurrently.  The retry loop for the roll-up is
-        # unchanged and still runs to completion; the other futures simply
-        # overlap it.
+        # quarter-to-date TX_NEW backfill, the #10 DSD store read and the
+        # anchor-month capture-store overlay are INDEPENDENT queries against
+        # the same server and each takes 10-30 s, so they are issued
+        # concurrently.  The retry loop for the roll-up is unchanged and still
+        # runs to completion; the other futures simply overlap it.
         from concurrent.futures import ThreadPoolExecutor
 
         data = {}
@@ -3509,13 +3733,16 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         prevq_tx_curr = {}
         qtr_tx_new = {}
         dsd_by_period = {}
-        anchor_tx_curr = {}
-        with ThreadPoolExecutor(max_workers=6) as ex:
+        coc_store = {}
+        store_overlay = {}
+        with ThreadPoolExecutor(max_workers=8) as ex:
             fut_iit = ex.submit(_fetch_iit_numerator, ou_ids)
             fut_coc = ex.submit(_fetch_coc_breakdowns, ou_ids)
             fut_prevq = ex.submit(_fetch_prevq_tx_curr_store)
             fut_txnew = ex.submit(_fetch_qtr_tx_new_store)
             fut_dsd = ex.submit(_fetch_dsd_inputs, ou_ids)
+            fut_coc_store = ex.submit(_fetch_coc_store_inputs, ou_ids)
+            fut_overlay = ex.submit(_fetch_anchor_store_overlay, ou_ids)
             for attempt in range(3):
                 data = _fetch_daraja_metrics_data(ou_ids)
                 if data:
@@ -3539,9 +3766,17 @@ def _compute_khis_metrics(target_period=None, default_period=None):
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK TX_NEW backfill failed: {exc}")
             try:
-                dsd_by_period, anchor_tx_curr = fut_dsd.result() or ({}, {})
+                dsd_by_period = fut_dsd.result() or {}
             except Exception as exc:  # noqa: BLE001
                 print(f"[MILESTONE] CHAK DSD store fetch failed: {exc}")
+            try:
+                coc_store = fut_coc_store.result() or {}
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK AHD/TPT store fetch failed: {exc}")
+            try:
+                store_overlay = fut_overlay.result() or {}
+            except Exception as exc:  # noqa: BLE001
+                print(f"[MILESTONE] CHAK anchor overlay fetch failed: {exc}")
         if not data:
             khis["status"] = "empty"
             khis["note"] = (
@@ -3594,7 +3829,8 @@ def _compute_khis_metrics(target_period=None, default_period=None):
         commodity = _khis_commodity_reporting(f"{_y:04d}{_m:02d}") if _y else {}
         metrics, anchor = _compute_daraja_metrics(
             data, _anchor, iit_by_period, commodity, coc_by_period,
-            prevq_tx_curr, qtr_tx_new, dsd_by_period, anchor_tx_curr,
+            prevq_tx_curr, qtr_tx_new, dsd_by_period, coc_store,
+            store_overlay,
         )
         if not metrics:
             khis["status"] = "empty"

@@ -1422,6 +1422,187 @@ def _chak_datavalue_store_option_totals(de_id, ou_ids, periods, option_ids,
     return out
 
 
+def _chak_store_cells(de_ids, ou_ids, periods, read_timeout=None):
+    """RAW `/dataValueSets.json` cells for many elements in ONE request.
+
+    Returns a list of `{"de": …, "pe": …, "ou": …, "coc": …, "value": float}`
+    — the capture store exactly as the facilities filed it, no aggregation.
+    The aggregators below (`…_pivot` by facility, `…_combo_totals` by category
+    option combo) are built on top, so one fetch can serve several shapes.
+
+    Why not `/analytics.json`: that endpoint is a pre-built READ MODEL and on
+    this instance it is **namespace-selective** — it stops enumerating the
+    Jamii Tekelezi side of several MOH 731 elements before September 2026 and
+    answers a flat zero for June–August, with, for `TX_CURR Differentiated
+    Care Model`, a zero for every category-combo generation but the oldest.
+    The underlying submissions are all still in the store, so anything that
+    must reach back into the reporting window has to be read from here.
+
+    Two endpoint facts decide the request shape: `orgUnit` must be REPEATED —
+    one semicolon-joined value is rejected with HTTP 409 — and
+    `paging=false` is required.  `dataElement` is repeated too, so the whole
+    element set costs ONE request rather than one per element.
+
+    Returns `[]` on ANY failure, so a caller keeps whatever reading it
+    already had; this can only ever fill a hole, never overwrite one.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    from requests.auth import HTTPBasicAuth
+
+    dx_list = _as_uid_list(de_ids)
+    ou_list = _as_uid_list(ou_ids)
+    pe_list = _as_uid_list(periods)
+    if not dx_list or not ou_list or not pe_list:
+        return []
+
+    cache_key = make_key(";".join(sorted(dx_list)), ou_list,
+                         ";".join(sorted(pe_list)), namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    pairs = [("dataElement", d) for d in dx_list]
+    pairs.extend(("period", p) for p in pe_list)
+    pairs.extend(("orgUnit", o) for o in ou_list)
+    pairs.append(("paging", "false"))
+
+    auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
+    try:
+        resp = chak_get("/dataValueSets.json", pairs,
+                        read_timeout=read_timeout or _CHAK_STORE_READ_TIMEOUT,
+                        auth=auth)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[DHIS2] CHAK capture-store fetch failed: {exc}")
+        return []
+    if not resp.ok:
+        print(f"[DHIS2] CHAK capture-store fetch HTTP {resp.status_code}")
+        return []
+    try:
+        raw = (resp.json() or {}).get("dataValues") or []
+    except ValueError as exc:
+        print(f"[DHIS2] CHAK capture-store body not JSON: {exc}")
+        return []
+
+    out = []
+    for cell in raw:
+        cell = cell or {}
+        dx = str(cell.get("dataElement") or "")
+        pe = str(cell.get("period") or "")
+        ou = str(cell.get("orgUnit") or "")
+        if not dx or not pe or not ou:
+            continue
+        try:
+            value = float(cell.get("value") or 0)
+        except (TypeError, ValueError):
+            continue
+        out.append({
+            "de": dx, "pe": pe, "ou": ou,
+            "coc": str(cell.get("categoryOptionCombo") or ""),
+            "value": value,
+        })
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
+    return out
+
+
+def _chak_datavalue_store_pivot(de_ids, ou_ids, periods, option_ids=None,
+                                read_timeout=None):
+    """MANY elements, MANY facilities → `{de_id: {pe: {org_unit: value}}}`.
+
+    Optionally narrowed to the cells whose `categoryOptionCombo` is built from
+    at least one of `option_ids` — the ONLY safe way to select part of an
+    element whose category combo CHAK has since rebuilt, because a category
+    OPTION uid survives a rebuild and a COC uid does not.
+
+    Returns `{}` on any failure.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    dx_list = _as_uid_list(de_ids)
+    ou_list = _as_uid_list(ou_ids)
+    pe_list = _as_uid_list(periods)
+    opt_list = _as_uid_list(option_ids)
+    if not dx_list or not ou_list or not pe_list:
+        return {}
+
+    cache_key = make_key(";".join(sorted(dx_list)), ou_list,
+                         ";".join(sorted(pe_list)),
+                         ";".join(sorted(opt_list)) or "-",
+                         namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    combo_options = {}
+    wanted = frozenset()
+    if opt_list:
+        combo_options = _chak_coc_option_ids(read_timeout=read_timeout)
+        if not combo_options:
+            return {}
+        wanted = frozenset(opt_list)
+
+    cells = _chak_store_cells(dx_list, ou_list, pe_list,
+                              read_timeout=read_timeout)
+    out: dict[str, dict[str, dict[str, float]]] = {}
+    for cell in cells:
+        if wanted and not (combo_options.get(cell["coc"], frozenset())
+                           & wanted):
+            continue
+        bucket = out.setdefault(cell["de"], {}).setdefault(cell["pe"], {})
+        bucket[cell["ou"]] = bucket.get(cell["ou"], 0.0) + cell["value"]
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
+    return out
+
+
+def _chak_datavalue_store_combo_totals(de_ids, ou_ids, periods,
+                                      read_timeout=None):
+    """MANY elements, MANY facilities → `{de_id: {pe: {coc: value}}}`.
+
+    The capture-store counterpart of `_chak_analytics_coc_cells`: the sum of
+    every facility's cell for one category-option COMBO of one element.  Used
+    by the milestones that score a ROW inside an element's category breakdown
+    (#11 AHD screening, #15 TPT status), where the roll-up may enumerate only
+    one combo generation.
+
+    Returns `{}` on any failure.
+    """
+    from services.analytics_cache import get as cache_get, make_key, store as cache_set
+
+    dx_list = _as_uid_list(de_ids)
+    ou_list = _as_uid_list(ou_ids)
+    pe_list = _as_uid_list(periods)
+    if not dx_list or not ou_list or not pe_list:
+        return {}
+
+    cache_key = make_key("combo", ";".join(sorted(dx_list)), ou_list,
+                         ";".join(sorted(pe_list)), namespace="chak_store")
+    hit = cache_get(cache_key)
+    if hit is not None:
+        return hit
+
+    cells = _chak_store_cells(dx_list, ou_list, pe_list,
+                              read_timeout=read_timeout)
+    out: dict[str, dict[str, dict[str, float]]] = {}
+    for cell in cells:
+        coc = cell["coc"]
+        if not coc:
+            continue
+        bucket = out.setdefault(cell["de"], {}).setdefault(cell["pe"], {})
+        bucket[coc] = bucket.get(coc, 0.0) + cell["value"]
+    if out:
+        cache_set(cache_key, out, ttl=_CHAK_STORE_TTL)
+    return out
+
+
+def _as_uid_list(value):
+    """Normalise an id, or list/set/tuple of ids, into a list of strings."""
+    if isinstance(value, (list, set, tuple)):
+        return [str(v) for v in value if v]
+    return [str(value)] if value else []
+
+
 def _find_dx_by_pattern(prefix_pattern, age_bands):
     """Find male & female DX IDs from the data element dictionary.
     prefix_pattern: e.g. 'Tx_New STA' or 'TX_Curr STA'
