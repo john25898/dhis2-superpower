@@ -4428,6 +4428,77 @@ def _attach_perf(rows, metrics):
                 row["alertsSource"] = "baseline"
 
 
+def _scored_row_count(month):
+    """How many rows on this month's tab carry a live CHAK perf block."""
+    return sum(1 for row in (month.get("rows") or []) if row.get("perf"))
+
+
+def _restore_blanked_months(payload):
+    """Re-fill any project month that a PARTIAL harvest emptied out.
+
+    _build_locked()'s baseline guard only inspects the TOP-LEVEL khis, which
+    is the pinned baseline month.  When CHAK answered for August but timed out
+    for September the whole payload was therefore accepted — and persisted —
+    with an empty M1 attached, so every September CHAK milestone rendered
+    "—" until a later rebuild happened to succeed (observed live on
+    2026-10-17: baseline scored 9 of 9 while M1 returned 0 of 9).
+
+    A month that had scores last build and has none now is a harvest failure,
+    not a real reading: CHAK never publishes "the cohort disappeared".  So
+    copy the previous scores back row by row and say so on that tab.  Blanks
+    are only ever FILLED here — nothing that the new build did manage to
+    score is overwritten.
+
+    Returns the number of rows restored.
+    """
+    prev_by_key = {}
+    for prev_month in (_MILESTONE_CACHE or {}).get("months") or []:
+        prev_by_key[prev_month.get("key")] = prev_month
+    if not prev_by_key:
+        return 0
+
+    restored = 0
+    for month in payload.get("months") or []:
+        prev_month = prev_by_key.get(month.get("key"))
+        if not prev_month:
+            continue
+        if _scored_row_count(month) or not _scored_row_count(prev_month):
+            continue
+        prev_metrics = {
+            metric.get("id"): metric
+            for metric in (prev_month.get("khis") or {}).get("metrics") or []
+        }
+        filled = 0
+        for row in month.get("rows") or []:
+            if row.get("perf"):
+                continue
+            prev_metric = prev_metrics.get(row.get("id"))
+            if not prev_metric:
+                continue
+            row["perf"] = dict(prev_metric)
+            filled += 1
+            if not row.get("alerts"):
+                alert = _alert_for_unlock(prev_metric.get("unlock"))
+                if alert:
+                    row["alerts"] = alert
+                    row["alertsSource"] = "baseline"
+        if not filled:
+            continue
+        khis = dict(prev_month.get("khis") or {})
+        note = (khis.get("note") or "").strip()
+        note = (note + " " if note else "") + (
+            "[Kept this month's scores — the refresh returned no "
+            "CHAK DHIS2 rows for it]")
+        khis["note"] = note
+        month["khis"] = khis
+        month["perfAsOf"] = prev_month.get("perfAsOf")
+        restored += filled
+        print(f"[MILESTONE] kept {filled} scores on the "
+              f"{month.get('label') or month.get('key')} tab — the rebuild "
+              f"returned no CHAK DHIS2 rows for that month")
+    return restored
+
+
 def _build_payload():
     """Parse the two workbooks once and shape the tracker API response."""
     # Open in read-only streaming mode: the parsers only ever read values,
@@ -4753,6 +4824,11 @@ def _build_locked():
         khis["note"] = note
         kept["khis"] = khis
         rebuilt = kept
+    # The guard above only covers the TOP-LEVEL (pinned baseline) month.  A
+    # harvest that answers for August but times out for September passes it
+    # while blanking every M1 CHAK milestone, so each project month needs the
+    # same protection measured on its own rows.
+    _restore_blanked_months(rebuilt)
     _MILESTONE_CACHE = rebuilt
     _MILESTONE_CACHE_AT = time.time()
     # Persist only a payload that actually scored, so the next restart has
@@ -4762,6 +4838,7 @@ def _build_locked():
             and rebuilt.get("months")):
         _save_snapshot(rebuilt)
     return _MILESTONE_CACHE
+
 
 
 _BACKGROUND_REFRESH = False
