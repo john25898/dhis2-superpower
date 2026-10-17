@@ -1018,6 +1018,31 @@ _DSD_MODEL_OPTIONS = [
     "bAhN5Z2uOt5",   # Community Pharmacy
     "CphTBZuTCcp",   # Individual ART Distribution
 ]
+# "No DSD" as a CATEGORY OPTION — the counterpart of `_NO_DSD_COCS`.  It is
+# still EXCLUDED from #10's numerator, but it is the row that closes the
+# partition: the seven models PLUS this one must equal TX_CURR, and that is
+# how the tracker decides whether the element was actually reported at all
+# in a given month (see `_NEW_ELEMENT_COVERAGE_SHARE`).
+_DSD_NO_DSD_OPTIONS = ["B8D3WzYOcnx"]   # No DSD
+
+# How much of the Jamii ART cohort a new TX_CURR disaggregation must ACCOUNT
+# FOR before the month may be scored off it.
+#
+# #10 "TX_CURR Differentiated Care Model" and #15 "TX_CURR TPT Initiation"
+# both PARTITION TX_CURR: their row values sum to the facility's whole ART
+# cohort.  So the sum of the rows is a direct, value-free test of whether the
+# element is being reported — a facility that never filed the form
+# contributes nothing to either side of the partition.
+#
+# That test is what stops August 2026 being scored off them.  Both elements
+# were introduced at the very end of August: on 202608 CHAK holds returns
+# from exactly ONE facility (Embu Provincial General Hospital, 2,728 of the
+# 40,938 Jamii ART cohort), so dividing the drop-in-the-bucket numerator by
+# the national denominator read 3.3% for #10 and 3.1% for #15 — a perfect
+# payment-denying score fabricated entirely by a form that did not exist
+# yet.  September is fully reported (158 of 160 facilities, 94–103% of the
+# cohort) and scores normally.
+_NEW_ELEMENT_COVERAGE_SHARE = 0.5
 
 # #15 TPT — category combo "TPT Status, Coarse Age , Sex": 3 status rows × 4
 # COCs.  The three rows are a TX_CURR disaggregation, so
@@ -1749,6 +1774,13 @@ def _fetch_coc_store_inputs(ou_ids):
             ("ahd", _DE_TX_CURR_AHD_SCREEN, None),
             ("tpt_started", _DE_TX_CURR_TPT_INIT, _TPT_STARTED_OPTIONS),
             ("tpt_on_tb", _DE_TX_CURR_TPT_INIT, _TPT_ON_TB_RX_OPTIONS),
+            # The third row of the same partition.  #15 only divides to
+            # "Started TPT + On TB Treatment + Not on TPT", so this term is
+            # what tells a genuinely low TPT uptake from an unreported form.
+            ("tpt_not_on", _DE_TX_CURR_TPT_INIT, _TPT_NOT_ON_TPT_OPTIONS),
+            # #10's eighth row — excluded from its numerator, but it closes
+            # the DSD partition, so the same reported-or-not test applies.
+            ("dsd_no", _DE_TX_CURR_DSD, _DSD_NO_DSD_OPTIONS),
         )
         for key, element, options in jobs:
             pivot = _chak_datavalue_store_pivot(
@@ -2898,14 +2930,35 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     # element was rebuilt under three different category combos during the
     # window and the roll-up answers a COC-selective zero for most of them,
     # so it comes from the raw capture store via `_fetch_dsd_inputs`,
-    # selected by the seven model category OPTIONS.  The denominator is the
-    # same store-corrected `tx_curr` every other milestone now divides by.
+    # selected by the seven model category OPTIONS.
     dsd_enrolled = float((dsd_by_period or {}).get(anchor, 0) or 0)
-    dsd_tx_curr = tx_curr
 
     ahd_screened = csum(_AHD_SCREEN_COCS, "ahd")
     tpt_started = csum(_TPT_STARTED_COCS, "tpt_started")
     tpt_on_tb_rx = csum(_TPT_ON_TB_RX_COCS, "tpt_on_tb")
+    # The two partition-closing rows and the ONE denominator those three new
+    # elements may be divided by.
+    #
+    # All three elements — "TX_CURR Differentiated Care Model", "TX_CURR TPT
+    # Initiation" and "TX_CURR Advanced HIV Disease (AHD) Screening" — are
+    # disaggregations of the JAMII `TX_CURR`, and CHAK's CHAP Stawisha
+    # namespace has no counterpart at all (searched: no element name
+    # containing "Differentiated", and no AHD-screening or TPT-initiation
+    # element carries a `_62` twin).  Measured on 202609: 158 of the 160
+    # facilities that report the Jamii TX_CURR carry a DSD row, while only 2
+    # of the 62 CHAP Stawisha facilities do — and those two are the ones that
+    # file under BOTH namespaces.
+    #
+    # Dividing their numerator by `tx_curr` (Jamii + Stawisha, 86,082) was
+    # therefore dividing by a population that can never appear in the
+    # numerator, and it roughly HALVED all three percentages.  Their
+    # denominator is the Jamii cohort — the population the element
+    # partitions.
+    tx_curr_jamii = val(_DE_TX_CURR, year, month)
+    # Store-only, deliberately: these two rows are selected by CATEGORY
+    # OPTION, and `csum` would hand their option ids to a COC-keyed read.
+    dsd_no_dsd = float(anchor_store.get("dsd_no") or 0)
+    tpt_not_on_tpt = float(anchor_store.get("tpt_not_on") or 0)
 
     # #9 denominator: TX_CURR at the close of the PREVIOUS quarter, plus every
     # TX_NEW recorded so far in the CURRENT quarter.  Both are the SUM of the
@@ -3030,25 +3083,54 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     #   COC uids counts every generation.  The denominator is the store
     #   TX_CURR for the same reason: the roll-up drops the Jamii namespace
     #   before September 2026, which would halve it.
-    if dsd_tx_curr and dsd_enrolled:
-        dsd_pct = min(100.0, dsd_enrolled / dsd_tx_curr * 100.0)
-        unlock, band = _unlock_bands("dsd", dsd_pct)
-        metrics.append(_metric_doc(
-            10, "Differentiated Service Delivery (DSD) Enrollment and "
-                "Referral",
-            anchor,
-            "\u226590% of PLHIV enrolled in an appropriate DSD model",
-            f"{dsd_pct:.1f}% \u00b7 {fmt(dsd_enrolled)} of "
-            f"{fmt(dsd_tx_curr)} on ART enrolled in a DSD model",
-            dsd_pct, unlock, band,
-            "(\u03a3 Standard Care + Fast Track + Facility ART Group + "
-            "Community ART Group + Community ART Distribution Points + "
-            "Community Pharmacy + Individual ART Distribution) \u00f7 "
-            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 capture store, \"TX_CURR "
-            "Differentiated Care Model\" (n2O2iO3h4wl) selected by the seven "
-            "DSD-model category options (every age\u00d7sex, all three "
-            "category-combo generations), \"No DSD\" row excluded",
-        ))
+    #
+    #   ⚠ TWO GUARDS, both learned the hard way:
+    #   (1) the denominator is the JAMII `TX_CURR` alone — this element has
+    #       no CHAP Stawisha counterpart, so dividing by the two-namespace
+    #       total scored September at 52.4% instead of 103.5%, i.e. it
+    #       invented a "50–69% enrolled — 50% payment" band out of a fully
+    #       enrolled cohort;
+    #   (2) the month is only scored when the element actually ACCOUNTS for
+    #       the cohort — the seven models plus "No DSD" must close on
+    #       TX_CURR.  CHAK created this element at the end of August and only
+    #       Embu Provincial General Hospital back-entered the month, so the
+    #       unguarded reading was 2,723 ÷ 81,851 = 3.3%, "no payment", off a
+    #       form the other 258 facilities had not yet been given.  With the
+    #       guard, August is simply not scored.
+    if tx_curr_jamii and dsd_enrolled:
+        _dsd_share = (dsd_enrolled + dsd_no_dsd) / tx_curr_jamii
+        if _dsd_share >= _NEW_ELEMENT_COVERAGE_SHARE:
+            dsd_tx_curr = tx_curr_jamii
+            dsd_pct = min(100.0, dsd_enrolled / dsd_tx_curr * 100.0)
+            unlock, band = _unlock_bands("dsd", dsd_pct)
+            metrics.append(_metric_doc(
+                10, "Differentiated Service Delivery (DSD) Enrollment and "
+                    "Referral",
+                anchor,
+                "\u226590% of PLHIV enrolled in an appropriate DSD model",
+                f"{dsd_pct:.1f}% \u00b7 {fmt(dsd_enrolled)} of "
+                f"{fmt(dsd_tx_curr)} on ART enrolled in a DSD model",
+                dsd_pct, unlock, band,
+                "(\u03a3 Standard Care + Fast Track + Facility ART Group + "
+                "Community ART Group + Community ART Distribution Points + "
+                "Community Pharmacy + Individual ART Distribution) \u00f7 "
+                "TX_CURR [Jamii Tekelezi \u2014 the only namespace that "
+                "carries this element] \u00d7 100 \u2014 CHAK DHIS2 capture "
+                "store, \"TX_CURR Differentiated Care Model\" (n2O2iO3h4wl) "
+                "selected by the seven DSD-model category options (every "
+                "age\u00d7sex, all three category-combo generations), "
+                "\"No DSD\" row excluded.  Scored only when the models plus "
+                "\"No DSD\" close on the cohort, so a month in which CHAK "
+                "had not yet issued the form is not reported as 0%.",
+            ))
+        else:
+            print(
+                f"[MILESTONE] #10 DSD not scored for {anchor}: the element "
+                f"accounts for {_dsd_share * 100:.1f}% of the {fmt(tx_curr_jamii)} "
+                f"Jamii ART cohort ({fmt(dsd_enrolled)} in a model + "
+                f"{fmt(dsd_no_dsd)} \"No DSD\"), below the "
+                f"{_NEW_ELEMENT_COVERAGE_SHARE * 100:.0f}% reported threshold "
+                f"\u2014 CHAK had not issued the form that month")
 
     # ── #11 Advanced HIV Disease (AHD) identification & evaluation ──
     #   Manager ruling (2026-10): AHD = "total AHD / TX_CURR" — the new
@@ -3061,13 +3143,21 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     #   used — (TX_NEW CD4 <200 + TX_NEW CD4 >=200) ÷ TX_NEW, i.e. of every
     #   client newly started on ART, the share whose CD4 was established.
     #   The `formula` string always names the rule actually applied.
-    if tx_curr and ahd_screened:
-        ahd_pct = min(100.0, ahd_screened / tx_curr * 100.0)
+    #
+    #   ⚠ Denominator is the JAMII TX_CURR, not the two-namespace total.
+    #   "AhdScreen01" disaggregates the Jamii cohort only and has no CHAP
+    #   Stawisha twin, so dividing by 86,082 (Jamii + Stawisha) scored a
+    #   fully-screened September at 48.5% — a fabricated "50% payment" band.
+    #   The CD4 fallback below is unaffected: its numerator and denominator
+    #   are both two-namespace, so they cancel the same way.
+    if tx_curr_jamii and ahd_screened:
+        ahd_pct = min(100.0, ahd_screened / tx_curr_jamii * 100.0)
         ahd_detail = (f"{ahd_pct:.1f}% \u00b7 {fmt(ahd_screened)} screened "
-                      f"for AHD of {fmt(tx_curr)} on ART")
+                      f"for AHD of {fmt(tx_curr_jamii)} on ART")
         ahd_formula = (
             "TX_CURR Advanced HIV Disease (AHD) Screening (CD4/WHO) \u00f7 "
-            "TX_CURR \u00d7 100 \u2014 CHAK DHIS2 \"AhdScreen01\" "
+            "TX_CURR [Jamii Tekelezi \u2014 the only namespace that carries "
+            "this element] \u00d7 100 \u2014 CHAK DHIS2 \"AhdScreen01\" "
             "(Coarse Age Bands, Gender)"
         )
     elif tx_new:
@@ -3134,19 +3224,38 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
             "[CHAP Stawisha])",
         ))
 
-    if tpt_started and (tx_curr - tpt_on_tb_rx) > 0:
-        tpt_eligible = tx_curr - tpt_on_tb_rx
+    #   ⚠ THREE guards, all learned the hard way:
+    #   (1) the denominator is the JAMII TX_CURR — this element disaggregates
+    #       the Jamii cohort only and has no CHAP Stawisha twin, so dividing
+    #       by the two-namespace 86,082 halved a fully-reported September
+    #       (45.2% instead of 96.1%);
+    #   (2) "On TB Treatment" is subtracted from that same Jamii cohort, so
+    #       numerator and subtrahend stay on one population;
+    #   (3) the month is only scored when its three status rows actually sum
+    #       to the cohort.  August 2026 is the case that matters: CHAK
+    #       created this element at the very end of the month and only Embu
+    #       Provincial General Hospital back-entered it, so Started TPT read
+    #       2,530 against an 81,832 denominator — 3.1%, "no payment" — when
+    #       the other 258 facilities had simply never been given the form.
+    #       TB_PREV answers instead, as it did before the element existed.
+    tpt_accounted = tpt_started + tpt_on_tb_rx + tpt_not_on_tpt
+    tpt_reported = bool(tx_curr_jamii) and (
+        tpt_accounted >= tx_curr_jamii * _NEW_ELEMENT_COVERAGE_SHARE)
+    if tpt_reported and tpt_started and (tx_curr_jamii - tpt_on_tb_rx) > 0:
+        tpt_eligible = tx_curr_jamii - tpt_on_tb_rx
         tpt_pct = min(100.0, tpt_started / tpt_eligible * 100.0)
         tpt_detail = (
             f"{tpt_pct:.1f}% \u00b7 {fmt(tpt_started)} started TPT of "
-            f"{fmt(tpt_eligible)} eligible (TX_CURR {fmt(tx_curr)} \u2212 "
-            f"on TB treatment {fmt(tpt_on_tb_rx)})"
+            f"{fmt(tpt_eligible)} eligible (TX_CURR {fmt(tx_curr_jamii)} "
+            f"\u2212 on TB treatment {fmt(tpt_on_tb_rx)})"
         )
         tpt_formula = (
             "Started TPT \u00f7 (TX_CURR \u2212 On TB Treatment) \u00d7 100 "
             "\u2014 CHAK DHIS2 \"TX_CURR TPT Initiation\" (Hvxl2zy6Ahi), "
             "TPT Status, Coarse Age , Sex \u2014 \"Started TPT\" and "
-            "\"On TB Treatment\" rows"
+            "\"On TB Treatment\" rows, over TX_CURR [Jamii Tekelezi \u2014 "
+            "the only namespace that carries this element].  Scored only "
+            "when the three status rows sum to the cohort."
         )
     elif tb_prev_den:
         tpt_pct = tb_prev_num / tb_prev_den * 100.0
@@ -3155,8 +3264,13 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
         tpt_formula = (
             "TB_PREV Numerator Total \u00f7 TB_PREV Denominator Total "
             "\u00d7 100 (CHAK DHIS2 indicator \u2014 reported by the CHAP "
-            "Stawisha dataset).  (Legacy rule \u2014 the new TX_CURR TPT "
-            "Initiation element has no returns yet.)"
+            "Stawisha dataset).  (Legacy rule \u2014 the TX_CURR TPT "
+            "Initiation element did not account for the cohort this month: "
+            + (f"{fmt(tpt_started)} started + {fmt(tpt_on_tb_rx)} on TB + "
+               f"{fmt(tpt_not_on_tpt)} not on TPT = {fmt(tpt_accounted)} "
+               f"of {fmt(tx_curr_jamii)} on ART."
+               if tx_curr_jamii else "no Jamii TX_CURR in the store.")
+            + ")"
         )
     else:
         tpt_pct = None
@@ -3291,31 +3405,45 @@ _MILESTONE_MATRIX_SPECS = {
     10: {
         "name": ("Differentiated Service Delivery (DSD) Enrollment and "
                  "Referral"),
-        "note": ("Milestone = Σ the seven appropriate DSD models ÷ TX_CURR × "
-                 "100.  One column per model, selected by category OPTION so "
-                 "every category-combo generation CHAK has used is counted; "
-                 "the \"No DSD\" option is excluded from the numerator by "
-                 "design."),
+        "note": ("Milestone = Σ the seven appropriate DSD models ÷ TX_CURR "
+                 "[Jamii Tekelezi] × 100.  One column per model, selected by "
+                 "category OPTION so every category-combo generation CHAK "
+                 "has used is counted; the \"No DSD\" option is excluded "
+                 "from the numerator by design (but it is the row that "
+                 "closes the partition, so it is what proves the month was "
+                 "reported at all).  The denominator is the Jamii TX_CURR "
+                 "because this element has no CHAP Stawisha counterpart."),
         "columns": [
             {"kind": "coc", "label": "DSD model", "by": "co",
              "element": _DE_TX_CURR_DSD, "ids": _DSD_MODEL_OPTIONS},
-            {"kind": "de", "label": "TX_CURR (denominator)",
-             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+            {"kind": "de",
+             "label": "TX_CURR — Jamii (denominator DSD is scored against)",
+             "ids": [_DE_TX_CURR]},
+            {"kind": "de",
+             "label": "TX_CURR — CHAP Stawisha (not in DSD numerator)",
+             "ids": [_DE_TX_CURR_62]},
         ],
     },
     11: {
         "name": "Advanced HIV Disease (AHD) identification and evaluation",
-        "note": ("Current rule = AHD screened ÷ TX_CURR × 100.  The AHD "
-                 "element's only category dimension is age × sex, so its "
-                 "whole value is the numerator — no row has to be selected "
-                 "out.  Until it carries returns the tracker falls back to "
-                 "(TX_NEW CD4 <200 + ≥200) ÷ TX_NEW, so both readings are "
-                 "given here for the month being viewed."),
+        "note": ("Current rule = AHD screened ÷ TX_CURR [Jamii Tekelezi] "
+                 "× 100.  The AHD element's only category dimension is age "
+                 "× sex, so its whole value is the numerator — no row has "
+                 "to be selected out.  It has no CHAP Stawisha counterpart, "
+                 "so the two-namespace TX_CURR would halve the score.  "
+                 "Until it carries returns the tracker falls back to "
+                 "(TX_NEW CD4 <200 + ≥200) ÷ TX_NEW, which spans both "
+                 "namespaces on both sides; the columns for that reading "
+                 "follow."),
         "columns": [
             {"kind": "de", "label": "Screened for AHD",
              "ids": [_DE_TX_CURR_AHD_SCREEN]},
-            {"kind": "de", "label": "TX_CURR (denominator)",
-             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+            {"kind": "de",
+             "label": "TX_CURR — Jamii (denominator AHD is scored against)",
+             "ids": [_DE_TX_CURR]},
+            {"kind": "de",
+             "label": "TX_CURR — CHAP Stawisha (not in AHD numerator)",
+             "ids": [_DE_TX_CURR_62]},
             {"kind": "de", "label": "TX_NEW CD4 <200 (fallback)",
              "ids": [_DE_TX_NEW_CD4_LT200, _DE_TX_NEW_62_CD4_LT200]},
             {"kind": "de", "label": "TX_NEW CD4 ≥200 (fallback)",
@@ -3340,19 +3468,25 @@ _MILESTONE_MATRIX_SPECS = {
     },
     15: {
         "name": "TB Preventive Therapy",
-        "note": ("Current rule = Started TPT ÷ (TX_CURR − On TB Treatment) × "
-                 "100.  One column per TPT status row, selected by category "
-                 "OPTION (a COC uid does not survive a category-combo "
-                 "rebuild).  Until that element carries returns the tracker "
-                 "falls back to TB_PREV Numerator ÷ Denominator, given here "
-                 "as the last two columns."),
+        "note": ("Current rule = Started TPT ÷ (TX_CURR [Jamii Tekelezi] − "
+                 "On TB Treatment) × 100.  One column per TPT status row, "
+                 "selected by category OPTION (a COC uid does not survive a "
+                 "category-combo rebuild).  This element partitions the "
+                 "Jamii cohort only, so both terms use the Jamii TX_CURR.  "
+                 "Until the three status rows sum to that cohort the "
+                 "tracker falls back to TB_PREV Numerator ÷ Denominator, "
+                 "given here as the last two columns."),
         "columns": [
             {"kind": "coc", "label": "TPT status", "by": "co",
              "element": _DE_TX_CURR_TPT_INIT,
              "ids": (_TPT_STARTED_OPTIONS + _TPT_ON_TB_RX_OPTIONS
                      + _TPT_NOT_ON_TPT_OPTIONS)},
-            {"kind": "de", "label": "TX_CURR (denominator)",
-             "ids": [_DE_TX_CURR, _DE_TX_CURR_62]},
+            {"kind": "de",
+             "label": "TX_CURR — Jamii (denominator TPT is scored against)",
+             "ids": [_DE_TX_CURR]},
+            {"kind": "de",
+             "label": "TX_CURR — CHAP Stawisha (not in TPT numerator)",
+             "ids": [_DE_TX_CURR_62]},
             {"kind": "de", "label": "TB_PREV Numerator (fallback)",
              "ids": [_IND_TB_PREV_NUM]},
             {"kind": "de", "label": "TB_PREV Denominator (fallback)",
