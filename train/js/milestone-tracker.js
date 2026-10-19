@@ -336,6 +336,29 @@ function msPaidCell(row) {
   return `<span class="whitespace-nowrap text-[12px] font-semibold text-slate-700" title="${escapeHtml(title)}">${fmtMoney(amt)}</span>`;
 }
 
+// "Monthly Balance" = what the month EARNED minus what CHAK has PAID, the
+// same two figures the two columns to its left show, so the three can never
+// disagree. Both sides must exist: with no recorded payment the balance is
+// unknown, not zero — "not yet paid" and "nothing still owed" are different
+// claims, so the cell stays blank exactly as the Paid column does. A fully
+// earned, fully paid milestone therefore reads $0, which is the answer the
+// programme asked for.
+function msBalanceCell(row) {
+  const bal = row && row.monthlyBalance;
+  if (!bal || bal.amount === null || bal.amount === undefined)
+    return milestoneEmptyCell();
+  const amt = Number(bal.amount);
+  if (!Number.isFinite(amt)) return milestoneEmptyCell();
+  const title =
+    fmtMoney(bal.earned) +
+    " earned (schedule max × unlock) − " +
+    fmtMoney(bal.paid) +
+    " paid in CHAK DHIS2 · as of " +
+    (bal.asOf || "latest reporting month");
+  const cls = amt > 0 ? "text-amber-600" : "text-emerald-600";
+  return `<span class="whitespace-nowrap text-[12px] font-semibold ${cls}" title="${escapeHtml(title)}">${fmtMoney(amt)}</span>`;
+}
+
 function msKhisChipHtml(khis) {
   if (!khis) return "";
   if (khis.status === "ok") {
@@ -453,7 +476,7 @@ function msKhisNoteHtml(khis) {
     (Number(khis.matched) || 0) +
     " of " +
     (Number(khis.total) || 0) +
-    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, SHA, reporting, records-based items) stay “—” until their record-based verification. Two are the exceptions: #22 Digital Health Systems &amp; Electronic Reporting Coverage is scored on the Baseline tab from the NDWH upload log, and #12 Integrated eVTP Services Cascade is scored on the M1 (September) tab from the JAMII TEKELEZI EID test-outcome line list — of the HIV-exposed infants whose initial PCR (birth testing / first contact) sample was COLLECTED in the reporting month, the share whose sample was collected at 0–12 months × 100, banded on the registry's ≥95 / 85–94 / 75–84 / &lt;75 scale. That extract is read once, when a new line list is issued, and its figures are then held in the app rather than re-read on every load. “Monthly Payments - Paid” is the amount CHAK has entered in the “Monthly Paid” cell of the three Daraja Milestone data sets, for all 26 milestones — a milestone whose cell is still blank stays “—”."
+    " Daraja facilities reporting in ereporting. “Monthly Payments - Earned” = the schedule max × the unlock % the baseline earns — an estimate that GOR verification of each project month replaces with confirmed values. Their Alerts chip is banded from the same baseline: a full unlock is On Track, a partial unlock is Watch, and no unlock is Off Track (marked with · to distinguish it from a verified tracker status). Milestones without a DHIS2 source (DSD, SHA, reporting, records-based items) stay “—” until their record-based verification. Two are the exceptions: #22 Digital Health Systems &amp; Electronic Reporting Coverage is scored on the Baseline tab from the NDWH upload log, and #12 Integrated eVTP Services Cascade is scored on the M1 (September) tab from the JAMII TEKELEZI EID test-outcome line list — of the HIV-exposed infants whose initial PCR (birth testing / first contact) sample was COLLECTED in the reporting month, the share whose birth-testing or 6-8 week PCR sample was collected before 3 months of age × 100 (two contacts in one window — birth test at 0–2 weeks and 2nd PCR at 6–8 weeks — and 3 months itself is excluded, so a sample drawn at 6 or 12 months is a repeat test, not a timely early contact), banded on the registry's ≥95 / 85–94 / 75–84 / &lt;75 scale. That extract is read once, when a new line list is issued, and its figures are then held in the app rather than re-read on every load. “Monthly Payments - Paid” is the amount CHAK has entered in the “Monthly Paid” cell of the three Daraja Milestone data sets, for all 26 milestones — a milestone whose cell is still blank stays “—”."
   );
 }
 
@@ -631,7 +654,7 @@ function msAnalyticsCardHtml(stats, activeKey, activeMonth) {
     " — the tier / payment filters above apply only to the table below.";
 
   const foot = [
-    "Status buckets use the Milestone Summary2 tracker vocabulary. M1 milestones 1–3 carry a verified tracker seed; milestones with a live CHAK DHIS2 baseline (6–9, 11, 14, 15, 16, 21) are banded from that baseline and marked with a · pending GOR verification. Everything else stays grey as “Not yet assessed” until its month is verified.",
+    "Status buckets use the Milestone Summary2 tracker vocabulary. Milestones 1–5 and 20 / 23–26 are banded from the programme's own adjudication in the CHAK “Daraja Milestone-*” data sets (a full unlock is On Track, a partial unlock Watch, no unlock Off Track); milestones with a live CHAK DHIS2 baseline (6–9, 11, 14, 15, 16, 21) are banded the same way from that baseline. Both are measurements rather than a GOR-verified status, and are marked with a ·. Everything else stays grey as “Not yet assessed” until its month is verified.",
     stats.isFinalPay
       ? "M6 (Final Pay) has no fixed schedule — its month total is $0 because final-pay amounts are performance-tiered and set at year-end close-out."
       : "",
@@ -1470,8 +1493,7 @@ async function renderMilestoneTrackerPage() {
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts, row.alertsSource)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, false)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msPaidCell(row)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msBalanceCell(row)}</td>
         <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
       </tr>`;
     })
@@ -1519,7 +1541,8 @@ async function renderMilestoneTrackerPage() {
         </table>
       </div>
       <div class="mt-2 text-[10px] text-slate-400">
-        Placeholders (—) are populated after each month is verified.
+        Monthly Balance is earned minus what CHAK records as paid. Overall Balance is the
+        6-month cumulative and is left for the verified tracker workbook.
       </div>
     </div>`;
 
@@ -1564,8 +1587,7 @@ async function renderMilestoneTrackerPage() {
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneAlertChip(row.alerts, row.alertsSource)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msEarnedCell(row, activeMonth.isFinalPay)}</td>
         <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msPaidCell(row)}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
-        <td class="px-3 py-2.5 text-right text-[12px] text-slate-500 whitespace-nowrap">${milestoneEmptyCell()}</td>
+        <td class="px-3 py-2.5 text-right align-top whitespace-nowrap">${msBalanceCell(row)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestonePaymentChip(status)}</td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">${milestoneVerifiedChip(row.verified)}</td>
       </tr>`;
@@ -1684,7 +1706,9 @@ async function renderMilestoneTrackerPage() {
           "Milestones Summary2" tracker layout. The 6-Month Allocation and Overall Balance
           columns live on the 🏠 Home tab (they are plan-level figures, identical on every
           month), so this per-month table stays focused on the month being read.
-          Placeholders (—) are populated after each month is verified.${msKhisNoteHtml(activeKhis)}${msDwapiNoteHtml(activeMonth && activeMonth.dwapi)}
+          Monthly Balance is earned minus what CHAK records as paid, so it shows a figure
+          only for a milestone that has actually been paid; Overall Balance is the 6-month
+          cumulative and is not derived from a single month's schedule.${msKhisNoteHtml(activeKhis)}${msDwapiNoteHtml(activeMonth && activeMonth.dwapi)}
         </div>
       </div>
       `

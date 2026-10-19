@@ -60,6 +60,13 @@ _pmtct_data.json
 *_metadata.csv
 KHIS_MOH711_DE_COC_AOC.csv
 
+# Patient-level line lists.  The EID test-outcome exports behind milestone #12
+# carry System ID, DOB, sex, the mother's CCC number and her last viral load,
+# so they must never be committed.  #12 is scored from the figures hard-coded
+# in train/blueprints/milestone.py instead (see the _EID_* constants).
+*EID TEST OUTCOMES*.csv
+*vtp_cascade*
+
 # PBIX exploration workspace
 CHAK_Visuals_4_explore/
 
@@ -72,3 +79,6 @@ train/data/facility_ward_mapping.json
 train/data/ward_facilities_mapping.json
 train/data/moh717_full.json
 train/data/moh717_mapping.json
+
+# Milestone payload snapshot — a build artefact, rebuilt at boot
+train/data/_milestone_payload.json

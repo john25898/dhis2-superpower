@@ -12,9 +12,10 @@ Parses local workbooks (in train/):
 Milestones 6-9, 11, 14, 15, 16 and 21 are measured from CHAK DHIS2 MOH 731
 returns (and KHIS national commodity returns for #21).  #22 is measured
 from the NDWH upload workbook above — see _dwapi_coverage() — and #12 from
-the JAMII TEKELEZI EID test-outcome line list, whose figures were extracted
+the programme's EID test-outcome line list (train/vtp_cascade.xlsx, which
+is patient-level and therefore NOT shipped), whose figures were extracted
 once and are now held as the `_EID_*` constants below rather than re-read
-from the CSV on every build — see _eid_jt_coverage().
+on every build — see _eid_jt_coverage().
 
 Serves a single read-only API:  GET /api/milestone/data
 """
@@ -458,23 +459,78 @@ _M22_CT_TST_MFLS = tuple(code for code, _n, _c in _M22_CT_TST_ROSTER)
 # Nothing at runtime reads the CSV any more.  To move the reading, replace
 # the figures below — that is the whole job.
 #
-# The values are for the export whose extract window opens in September 2026
-# ("… FOR  IN 01SEP2026  08OCT2026 (1).csv"): of its 200 rows, 58 carried an
-# initial PCR, 40 of those 58 were COLLECTED outside September (the extract
-# window is keyed on Date Tested, not Date Collected) and all 18 that were
-# collected in September were collected at 0-12 months of age.
+# The values are for the September 2026 export, `train/vtp_cascade.xlsx`
+# (Sheet1).  It is a WIDER export than the CSV it replaces — it carries BOTH
+# partner programmes, so it spans 315 rows rather than 200:
+#
+#   rows                 315
+#   birth-testing PCRs    83   (80 'Birth testing (0-2 weeks) or first
+#                               contact' + 3 'Initial PCR (6 week or first
+#                               contact)')
+#   2nd PCR (6-8weeks)    93
+#   3rd/4th/other        139   (72 '3rd PCR (6 months)', 59 '4th PCR
+#                               (12months)', 4 confirmatory, 2 '2nd PCR
+#                               (6 months)', 1 redraw, 1 '3rd PCR (12
+#                               months)') — repeats, always excluded
+#   collected in Sep      63   (29 birth-testing + 34 '2nd PCR (6-8weeks)')
+#                               the other 113 were COLLECTED before
+#                               September — the extract window is keyed on
+#                               Date Tested, so it reaches back into
+#                               August and July, and even April)
+#   age 0-3 months        48   -> 48 / 63 = 76.2%   (month 3 excluded)
+#
+# PCR TYPES — the national EID algorithm's first two contacts, and only
+# those:
+#
+#     'Birth testing (0-2 weeks) or first contact'
+#     'Initial PCR (6 week or first contact)'
+#     '2nd PCR (6-8weeks)'
+#
+# The 6-8 week 2nd PCR is part of the algorithm the milestone's own target
+# names ("EID testing as per the national EID algorithm"), so leaving it out
+# measured only half of the under-3-month cascade.  Every 3rd/4th PCR,
+# confirmatory and redraw row is a repeat and stays out.
+#
+# AGE WINDOW — 0-3 MONTHS, EXCLUSIVE.  The window is "collected before 3
+# months of age", so a sample collected ON or AFTER the 3-month
+# anniversary of DOB does not count.  Both contacts fit inside it — a birth
+# test at 0.0-0.2 months and a 6-8 week 2nd PCR at 1.4-1.8 — with room to
+# spare for late presentation.  A 0-12 window would count samples drawn at
+# 6 and 12 months as on-time testing, which is what the old 0-12 reading of
+# 100% was doing.
+#
+# ⚠ The 15 rows over the window are not all birth tests.  Several are filed
+# as '2nd PCR (6-8weeks)' but were collected at 3.8, 5.2, 5.9, 6.0, 6.0,
+# 6.1, 6.1, 6.2, 6.6, 6.8, 6.8, 11.9, 12.0 and 12.1 months — i.e.
+# mis-typed repeats carrying a 2nd-PCR PCR Type.  The window is what
+# catches them, which is the reason it is kept.
+#
+# ⚠ The partners differ and that is the story: CHAK CHAP STAWISHA 16/19 =
+# 84.2%, Jamii Tekelezi 32/44 = 72.7%.
+#
+# The 63 samples were collected 2026-09-01 … 2026-09-18; the 48 in the
+# numerator came from 24 facilities across Embu, Kiambu, Kitui, Meru,
+# Nakuru, Nyandarua and Tharaka Nithi (47 Negative, 1 Collect New Sample).
+#
+# The boundary is exclusive and the two readings agree: a calendar window
+# (Date Collected < DOB + 3 months) and a day-count window
+# (days ÷ 30.4375 < 3) both give 48/63 = 76.2%, so the figure is not
+# sensitive to how the month is measured.
 _EID_REPORTING_YM = (2026, 9)      # the month the extract OPENS in
-_EID_SOURCE_FILE = (
-    "JAMII TEKELEZI  PROGRAM EID TEST OUTCOMES FOR  IN 01SEP2026  "
-    "08OCT2026 (1).csv"
+_EID_SOURCE_FILE = "vtp_cascade.xlsx (Sheet1)"
+_EID_PCR_TYPES = (
+    "Birth testing (0-2 weeks) or first contact",
+    "Initial PCR (6 week or first contact)",
+    "2nd PCR (6-8weeks)",
 )
-_EID_ROWS = 200              # rows in the export
-_EID_DENOMINATOR = 18        # initial PCRs COLLECTED in the reporting month
-_EID_NUMERATOR = 18          # …whose age at collection was 0-12 months
-_EID_OVER_12 = 0             # initial PCRs collected older than 12 months
-_EID_UNKNOWN_AGE = 0         # initial PCRs with an unusable DOB/collect date
-_EID_OUT_OF_MONTH = 40       # initial PCRs collected outside the month
-_EID_COLLECTION_WINDOW = "2026-09-01 \u2026 2026-09-17"
+_EID_MAX_AGE_MONTHS = 3      # collected BEFORE this age — month 3 excluded
+_EID_ROWS = 315              # rows in the export
+_EID_DENOMINATOR = 63        # those PCR types COLLECTED in the month
+_EID_NUMERATOR = 48          # …whose age at collection was under 3 months
+_EID_OVER_AGE = 15           # those PCR types collected at 3 months or older
+_EID_UNKNOWN_AGE = 0         # rows with an unusable DOB/collect date
+_EID_OUT_OF_MONTH = 113      # those PCR types collected outside the month
+_EID_COLLECTION_WINDOW = "2026-09-01 \u2026 2026-09-18"
 
 # Payment-status values a milestone row can take (Summary2 seeds only).
 _STATUS_SET = {"Fully Paid", "Partially Paid", "Not Paid"}
@@ -1082,10 +1138,15 @@ _AHD_SCREEN_COCS = ["OevHfyGgInv", "DWqTykR3F4M", "ZdCFqMGcaS0",
 #   CHAP Stawisha (Stawisha TB Reports, xGYwTcfvEH5):
 #     TX_TB Denominator Negative Screen Already on ART / New on ART
 #     TX_TB Denominator Positive Screen Already on ART / New on ART
-# Verified live 202608: Jamii 36,777 + Stawisha 31,744 = 68,521 against
-# TX_CURR 81,042 => 84.5%.  Disjointness proven: across the 259-facility
-# roster 159 are Jamii-only and 62 Stawisha-only, 0 report into both,
-# and each subset reproduces only its own arm (36,777 / 0 and 0 / 31,744).
+# Verified live 202608: Jamii 36,807 + Stawisha 31,744 = 68,551 against
+# TX_CURR 81,851 => 83.75%.  Disjoint in 202608: across the 259-facility
+# roster 158 are Jamii-only and 62 Stawisha-only, 0 report into both, and
+# each subset reproduces only its own arm (36,807 / 0 and 0 / 31,744).
+# From 202609 onward two dual-funded sites (Holy Family Githunguri, Laare
+# HC) file both quartets with an identical TX_CURR in each namespace, so the
+# sum counts their cohort twice (2,409 of 86,082 ART = 2.8%).  Left as-is:
+# de-duplicating would read 88.9% instead of 88.1% - same 80-90% band, and a
+# genuine two-cohort site must not be silently halved.
 # NOTE: deliberately NOT clamped to 100 — the FAA workbook warns this
 # measure can exceed 100% when screened counts outrun the TX_CURR
 # snapshot, so the raw percentage is shown as-is.
@@ -2688,29 +2749,40 @@ def _dwapi_coverages():
 def _eid_jt_coverage():
     """Milestone 12's reading — the EID figures embedded in this module.
 
-    The indicator is "proportion of HIV-exposed infants with an initial PCR
-    (EID) test done who were tested by 12 months of age":
+    The indicator is "proportion of HIV-exposed infants whose first two
+    EID contacts were sampled before 3 months of age":
 
-        denominator = the line list's INITIAL PCRs — PCR Type is 'Birth
-                      testing (0-2 weeks) or first contact' (or the
-                      equivalent 'Initial PCR (6 week or first contact)') —
-                      whose DATE COLLECTED falls in the reporting month.
-                      Every 2nd/3rd/4th PCR, confirmatory PCR and sample
-                      redraw is a repeat and is excluded, which is also
-                      what "count each infant once, at their first PCR"
-                      asks for.
-        numerator   = those initial PCRs whose age at SAMPLE COLLECTION
-                      (Date Collected − DOB, day-precise) is 0–12 months.
+        denominator = the line list's first-two-contact PCRs — PCR Type is
+                      'Birth testing (0-2 weeks) or first contact',
+                      'Initial PCR (6 week or first contact)' or
+                      '2nd PCR (6-8weeks)' — whose DATE COLLECTED falls in
+                      the reporting month.  Every 3rd/4th PCR,
+                      confirmatory PCR and sample redraw is a repeat and is
+                      excluded.
+        numerator   = those rows whose age at SAMPLE COLLECTION
+                      (Date Collected − DOB) is UNDER 3 months — month 3
+                      itself is excluded.
         pct         = numerator ÷ denominator × 100, banded on the
                       registry's ≥95 / 85–94 / 75–84 / <75 scale.
+
+    Both contacts fit inside the window with room to spare — a birth test
+    at 0.0–0.2 months and a 6-8 week 2nd PCR at 1.4–1.8 — so one window
+    scores both and still tolerates late presentation.  Counting only the
+    birth test measured half of the cascade the milestone's target names
+    ("as per the national EID algorithm"); counting 0–12 months counted
+    samples drawn at 6 and 12 months as on-time testing.
+
+    The window also does real work: rows typed '2nd PCR (6-8weeks)' but
+    collected at 3.8–12.1 months are mis-typed repeats, and they are the
+    bulk of the 15 excluded rows.
 
     Date Collected is ALSO scoped to the reporting month, because that is
     what the indicator counts: infants whose sample was COLLECTED in the
     month under review.  This is not redundant with the extract's own
-    window — that window is keyed on Date TESTED (the September export
-    tested 197 of its 200 rows in September) while only about a third of
+    window — that window is keyed on Date Tested (the September export
+    tested 299 of its 315 rows in September) while fewer than half of
     those samples were collected in September, so without this filter the
-    reading would silently absorb the two preceding months' samples.
+    reading would silently absorb the preceding months' samples.
 
     The arithmetic is kept here rather than the percentage being written out
     as a literal, so the band and the wording still follow from the numbers
@@ -2719,7 +2791,8 @@ def _eid_jt_coverage():
     """
     denominator = _EID_DENOMINATOR
     numerator = _EID_NUMERATOR
-    over12 = _EID_OVER_12
+    over_age = _EID_OVER_AGE
+    max_age = _EID_MAX_AGE_MONTHS
     unknown_age = _EID_UNKNOWN_AGE
     out_of_month = _EID_OUT_OF_MONTH
     human = _month_human(_EID_REPORTING_YM)
@@ -2727,8 +2800,8 @@ def _eid_jt_coverage():
 
     out = {
         "status": "empty",
-        "source": ("JAMII TEKELEZI programme — NASCOP EID website "
-                   "test-outcome line list"),
+        "source": ("JAMII TEKELEZI + CHAK CHAP STAWISHA programmes — "
+                   "NASCOP EID website test-outcome line list"),
         "file": _EID_SOURCE_FILE,
         "period": human or None,
         "asOf": human or None,
@@ -2755,34 +2828,44 @@ def _eid_jt_coverage():
         "pct": round(pct, 1),
         "unlock": unlock,
         "band": band,
-        "actual": (f"{numerator} of {denominator} initial PCRs "
-                   f"collected at 0\u201312 months"),
+        "actual": (f"{numerator} of {denominator} birth-testing and "
+                   f"6-8 week PCRs collected before {max_age} months"),
+        "maxAgeMonths": max_age,
+        "pcrTypes": list(_EID_PCR_TYPES),
         "rows": _EID_ROWS,
-        "monthRows": denominator + over12 + unknown_age,
+        # Initial-PCR rows collected in the month = the numerator plus the
+        # over-age rows (both are known-age) plus any unusable-age row.
+        "monthRows": denominator + unknown_age,
         "outOfMonth": out_of_month,
-        "over12": over12,
+        "overAge": over_age,
+        "over12": over_age,
         "unknownAge": unknown_age,
         "collectionWindow": window,
         "formula": (
-            "Infants whose initial PCR sample was collected at 0\u201312 "
-            "months \u00f7 infants with an initial PCR collected at any "
-            "age \u00d7 100. Line list (JAMII TEKELEZI EID test "
-            "outcomes, exported from the NASCOP EID website): keep PCR "
-            "Type = 'Birth testing (0-2 weeks) or first contact' (or "
-            "'Initial PCR (6 week or first contact)'), keep only rows "
+            f"Infants whose birth-testing / 6-8 week PCR sample was "
+            f"collected before {max_age} months of age \u00f7 infants with "
+            f"such a sample collected at any age \u00d7 100. Line list (EID "
+            "test outcomes for both partner programmes — JAMII TEKELEZI "
+            "and CHAK CHAP STAWISHA — exported from the NASCOP EID "
+            "website): keep PCR "
+            "Type = 'Birth testing (0-2 weeks) or first contact', "
+            "'Initial PCR (6 week or first contact)' or "
+            "'2nd PCR (6-8weeks)', keep only rows "
             "whose Date Collected is in the reporting month, and drop "
-            "every 2nd/3rd/4th, confirmatory and redraw row; "
+            "every 3rd/4th, confirmatory and redraw row; "
             "age = Date Collected \u2212 DOB. Source: " + _EID_SOURCE_FILE
         ),
         "note": (
             f"{numerator} of {denominator} HIV-exposed infants whose "
-            f"initial PCR sample was collected in the reporting month "
-            f"were tested by 12 months ({pct:.1f}%)"
-            + (f"; {over12} were older than 12 months at collection"
-               if over12 else "")
+            f"birth-testing or 6-8 week PCR sample was collected in the "
+            f"reporting month were sampled before {max_age} months of "
+            f"age ({pct:.1f}%)"
+            + (f"; {over_age} were {max_age} months or older at "
+               f"collection"
+               if over_age else "")
             + (f"; {unknown_age} had an unusable DOB or collection date"
                if unknown_age else "")
-            + (f"; {out_of_month} initial-PCR rows were collected "
+            + (f"; {out_of_month} such rows were collected "
                f"outside the reporting month and excluded"
                if out_of_month else "")
             + (f". Samples counted were collected {window}."
@@ -2895,7 +2978,8 @@ def _compute_daraja_metrics(data, anchor, iit_by_period=None, commodity=None,
     tb_prev_num = val(_IND_TB_PREV_NUM, year, month)
     tb_prev_den = val(_IND_TB_PREV_DEN, year, month)
     # #14 numerator: the TX_TB *denominator* of both namespaces - every ART
-    # client screened for TB.  The arms are disjoint (see _DE_TX_TB_DEN_JTP).
+    # client screened for TB.  The arms are disjoint for 202608 and diverge
+    # only at 2 dual-funded sites from 202609 (see _DE_TX_TB_DEN_JTP).
     tx_tb_den = vsum(_DE_TX_TB_DEN_JTP, year, month) \
         + vsum(_DE_TX_TB_DEN_62, year, month)
     # #9 numerator: both namespaces' interruptions, read from the raw capture
@@ -4038,9 +4122,12 @@ def _compute_khis_metrics(target_period=None, default_period=None):
 #     adjudicated here (`_MILESTONE_PERF_IDS`) instead of measured off the
 #     facility returns.
 #   • 'Monthly Paid' — the amount actually paid, for EVERY M-1…M-26.
+#   • 'Verified' — the programme's own approve/reject flag on the claimed
+#     result, read for EVERY M-1…M-26 so the tracker's Verified column
+#     quotes CHAK instead of the workbook's 'Yes/No' template stub.
 #
-# Nothing else is taken from these data sets: the allocated-amount, earned
-# and verified cells belong to the programme's own accounting, not to this
+# Nothing else is taken from these data sets: the allocated-amount and
+# earned cells belong to the programme's own accounting, not to this
 # tracker.  The performance scale of the adjudicated ids comes from the milestone
 # registry, not from a single house rule: ids 1–4 are a one-time
 # approve/reject verdict (100 or 0), while id 20 (PT pass rate),
@@ -4171,15 +4258,32 @@ def _milestone_paid_coc():
     return _milestone_coc_map()["Monthly Paid"]
 
 
+def _verified_flag(raw):
+    """Normalise a 'Verified' cell to 'Yes' / 'No' (None when unreadable).
+
+    The programme types this cell as a 1/0 flag, but a hand-edited import
+    can leave 'Yes'/'true' in it, so both spellings are accepted rather
+    than silently dropping a verified milestone.
+    """
+    txt = str(raw if raw is not None else "").strip().lower()
+    if txt in {"1", "1.0", "yes", "y", "true"}:
+        return "Yes"
+    if txt in {"0", "0.0", "no", "n", "false"}:
+        return "No"
+    return None
+
+
 def _fetch_milestone_cells():
-    """'Performance Percent' for the adjudicated ids, 'Monthly Paid' for all.
+    """'Performance Percent' for the adjudicated ids, 'Monthly Paid' and
+    'Verified' for all.
 
-    Two different breadths deliberately, because the programme uses these
-    two cells for two different jobs:
+    Three different breadths deliberately, because the programme uses these
+    cells for three different jobs:
 
-      * 'Monthly Paid' is wanted for EVERY M-1…M-26 — it is the amount
-        actually paid, and is filled in for milestones whose performance is
-        measured off the facility returns just as much as for the
+      * 'Monthly Paid' and 'Verified' are wanted for EVERY M-1…M-26 — they
+        are the money that moved and the programme's own sign-off on the
+        claimed result, and are filled in for milestones whose performance
+        is measured off the facility returns just as much as for the
         adjudicated ones.
       * 'Performance Percent' is wanted ONLY for the adjudicated ids
         (`_MILESTONE_PERF_IDS`).  The other milestones are scored from
@@ -4191,8 +4295,9 @@ def _fetch_milestone_cells():
     wanted cells are taken off that one response.
 
     Returns {id: {'pct', 'pct_period', 'pct_asOf', 'paid', 'paid_period',
-    'paid_asOf', 'element', 'dataset'}} covering every id in the family; a
-    cell that is blank — or not wanted for that id — comes back None.
+    'paid_asOf', 'verified', 'verified_period', 'verified_asOf', 'element',
+    'dataset'}} covering every id in the family; a cell that is blank — or
+    not wanted for that id — comes back None.
     Returns {} only when CHAK itself is unreachable, so the caller can tell
     "nothing recorded" from "could not ask".
 
@@ -4213,6 +4318,11 @@ def _fetch_milestone_cells():
         auth = HTTPBasicAuth(CHAK_USER, CHAK_PASS)
         perf_coc = _milestone_perf_coc()
         paid_coc = _milestone_paid_coc()
+        # 'Verified' is the programme's own approve/reject flag on the same
+        # category combo (1 = verified, 0 = not).  Looked up by NAME, and
+        # None when CHAK could not be asked, so this read simply
+        # contributes nothing rather than failing the whole fetch.
+        verified_coc = _milestone_coc_map().get("Verified")
         # element uid -> the job it does here.  It is the same element that
         # carries both cells, so one element may legitimately contribute a
         # paid figure and, if adjudicated, a performance figure too.
@@ -4239,13 +4349,24 @@ def _fetch_milestone_cells():
                 coc = v.get("categoryOptionCombo")
                 if v.get("value") in (None, ""):
                     continue
+                if verified_coc and coc == verified_coc:
+                    flag = _verified_flag(v.get("value"))
+                    if flag is None:
+                        continue
+                    pe = str(v.get("period") or "")
+                    slots = seen.setdefault(uid, {})
+                    prev = slots.get("verified")
+                    if prev and _pe_key(prev[1]) >= _pe_key(pe):
+                        continue
+                    slots["verified"] = (_pe_key(pe), pe, flag)
+                    continue
                 if coc == paid_coc:
                     field = "paid"
                 elif (coc == perf_coc
                         and element_of[uid] in _MILESTONE_PERF_IDS):
                     field = "pct"
                 else:
-                    continue      # allocated amount / earned / verified
+                    continue      # allocated amount / earned
                 pe = str(v.get("period") or "")
                 try:
                     val = float(v["value"])
@@ -4259,7 +4380,7 @@ def _fetch_milestone_cells():
         for mid, (uid, dataset) in _MILESTONE_ELEMENTS.items():
             slots = seen.get(uid) or {}
             rec = {"element": uid, "dataset": dataset}
-            for field in ("pct", "paid"):
+            for field in ("pct", "paid", "verified"):
                 hit = slots.get(field)
                 rec[field] = hit[2] if hit else None
                 rec[field + "_period"] = hit[1] if hit else None
@@ -4304,7 +4425,15 @@ def _assign_milestone_perf(months, perf_by_id):
 
     Applied AFTER every `_attach_perf` pass, because that helper strips
     `perf` off any row it was not handed — running this first would be
-    undone.  A GOR-verified Summary2 seed keeps its own Alerts chip.
+    undone.
+
+    The Alerts chip is taken from the live verdict and NOT from the
+    Summary2 seed.  The workbook's Alerts column is a template stub for
+    ids 1–3 — it carries the literal words 'Watch' and 'Off Track' beside
+    a blank Performance column and '$$$' placeholders — and letting it win
+    left #2 and #3 flagged off track while CHAK records 100% delivered and
+    the full payment earned.  A live adjudication is a measurement; the
+    stub is not.
 
     The payment scale is per-milestone (`_MILESTONE_PERF_BAND`): the
     one-time ids climb a binary yes/no, the graded ids climb the registry
@@ -4343,11 +4472,14 @@ def _assign_milestone_perf(months, perf_by_id):
                 f"Performance {rec['pct']:,.0f}%",
                 rec["pct"], unlock, band, formula,
             )
-            if not row.get("alerts"):
-                alert = _alert_for_unlock(unlock)
-                if alert:
-                    row["alerts"] = alert
-                    row["alertsSource"] = "dhis2"
+            # The adjudicated verdict outranks the Summary2 Alerts stub —
+            # see this function's docstring.  A month with no verdict at all
+            # (CHAK unreachable) never reaches here: `perf_by_id` is empty
+            # and the function returns above, leaving the seed in place.
+            alert = _alert_for_unlock(unlock)
+            if alert:
+                row["alerts"] = alert
+                row["alertsSource"] = "dhis2"
 
 
 def _assign_milestone_paid(months, cells):
@@ -4384,6 +4516,69 @@ def _assign_milestone_paid(months, cells):
                          or "latest reporting month"),
                 "dataset": rec.get("dataset"),
                 "element": rec.get("element"),
+            }
+
+
+def _assign_milestone_verified(months, cells):
+    """Layer each milestone's recorded 'Verified' flag onto every month tab.
+
+    Read from the same three 'Daraja Milestone-*' data sets as the money, so
+    the tracker's Verified column quotes what the programme actually signed
+    off in CHAK instead of the workbook's 'Yes/No' template stub.
+
+    A BLANK cell is not a "No": only a flagged 1/0 changes the row, and the
+    Summary2 seed (when the workbook carries one) is left untouched.
+    """
+    if not cells:
+        return
+    for month in months:
+        for row in month.get("rows") or []:
+            rec = cells.get(row.get("id"))
+            flag = (rec or {}).get("verified")
+            if flag not in ("Yes", "No"):
+                continue
+            row["verified"] = flag
+            row["verifiedSource"] = "dhis2"
+            row["verifiedAsOf"] = (rec.get("verified_asOf")
+                                   or rec.get("verified_period"))
+
+
+def _assign_milestone_balance(months):
+    """Monthly Balance = what the month EARNED minus what CHAK has PAID.
+
+    Both sides have to exist before a balance means anything, so the rule
+    mirrors `msPaidCell`: with no recorded payment the cell stays blank.
+    "Not yet paid" and "nothing still owed" are different claims, and only
+    a paid figure can tell them apart — a fully-earned, fully-paid
+    milestone reads $0 here, one with nothing disbursed reads "—" rather
+    than inventing a debt equal to its whole allocation.
+
+    Earned is the same figure the front-end's "Monthly Payments - Earned"
+    cell shows (schedule max × unlock %), so the two columns can never
+    disagree.  Overall Balance is deliberately NOT derived here: it is a
+    6-month cumulative and these tabs each carry one month's schedule.
+    """
+    for month in months:
+        for row in month.get("rows") or []:
+            row.pop("monthlyBalance", None)
+            paid = row.get("monthlyPaid") or {}
+            paid_amt = paid.get("amount")
+            if paid_amt is None:
+                continue
+            try:
+                amt = float(row.get("amount") or 0)
+                unlock = float((row.get("perf") or {}).get("unlock") or 0)
+                paid_amt = float(paid_amt)
+            except (TypeError, ValueError):
+                continue
+            if not amt > 0:
+                continue
+            earned = round(amt * unlock / 100.0)
+            row["monthlyBalance"] = {
+                "amount": round(earned - paid_amt, 2),
+                "earned": earned,
+                "paid": paid_amt,
+                "asOf": paid.get("asOf"),
             }
 
 
@@ -4767,11 +4962,19 @@ def _build_payload():
     # `_attach_perf` passes above strip `perf` off rows they were not given.
     _assign_milestone_perf(months, _fetch_milestone_performance())
 
-    # ── 'Monthly Paid' for all 26 milestones ────────────────────────────
-    # The amount CHAK has actually paid per milestone, read from the same
-    # three data sets.  Read once and reused: _fetch_milestone_performance()
-    # above shares the same cache, so this costs no extra CHAK round-trips.
-    _assign_milestone_paid(months, _fetch_milestone_cells())
+    # ── 'Monthly Paid' and 'Verified' for all 26 milestones ─────────────
+    # The amount CHAK has actually paid per milestone and the programme's
+    # own sign-off on the claimed result, read from the same three data
+    # sets.  Read once and reused: _fetch_milestone_performance() above
+    # shares the same cache, so this costs no extra CHAK round-trips.
+    _milestone_cells = _fetch_milestone_cells()
+    _assign_milestone_paid(months, _milestone_cells)
+    _assign_milestone_verified(months, _milestone_cells)
+
+    # ── Monthly Balance = earned − paid ─────────────────────────────────
+    # MUST run last: it reads `perf.unlock` (attached above) and
+    # `monthlyPaid` (attached one line earlier).
+    _assign_milestone_balance(months)
 
     return {
         "ok": True,
